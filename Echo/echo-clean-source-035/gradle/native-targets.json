@@ -1,0 +1,56 @@
+{
+  "macos-aarch64": {
+    "rust": "aarch64-apple-darwin",
+    "lwjgl": "natives-macos-arm64",
+    "os": "osx",
+    "arch": "arm64",
+    "prefix": "lib",
+    "suffix": ".dylib",
+    "media": false
+  },
+  "macos-x86_64": {
+    "rust": "x86_64-apple-darwin",
+    "lwjgl": "natives-macos",
+    "os": "osx",
+    "arch": "x86_64",
+    "prefix": "lib",
+    "suffix": ".dylib",
+    "media": false
+  },
+  "linux-x86_64": {
+    "rust": "x86_64-unknown-linux-gnu",
+    "lwjgl": "natives-linux",
+    "os": "linux",
+    "arch": "x86_64",
+    "prefix": "lib",
+    "suffix": ".so",
+    "media": false
+  },
+  "linux-aarch64": {
+    "rust": "aarch64-unknown-linux-gnu",
+    "lwjgl": "natives-linux-arm64",
+    "os": "linux",
+    "arch": "arm64",
+    "prefix": "lib",
+    "suffix": ".so",
+    "media": false
+  },
+  "windows-x86_64": {
+    "rust": "x86_64-pc-windows-gnu",
+    "lwjgl": "natives-windows",
+    "os": "windows",
+    "arch": "x86_64",
+    "prefix": "",
+    "suffix": ".dll",
+    "media": true
+  },
+  "windows-aarch64": {
+    "rust": "aarch64-pc-windows-msvc",
+    "lwjgl": "natives-windows-arm64",
+    "os": "windows",
+    "arch": "arm64",
+    "prefix": "",
+    "suffix": ".dll",
+    "media": false
+  }
+}

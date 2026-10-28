@@ -1,0 +1,37 @@
+[
+  {
+    "source": "com/github/weisj/jsvg/parser/SVGLoader.java",
+    "upstream_sha256": "a7c1b025b519e8415e86ec2f55f518953a1454e73625820c102d12f04addf228",
+    "patched_sha256": "df06d8ea2094ed8ec3c83e3a543f7472f886991bf30211e028de2bcd50705ad2"
+  },
+  {
+    "source": "com/github/weisj/jsvg/parser/impl/ExternalDocumentLoader.java",
+    "upstream_sha256": "80ffcb5923015bf24bc1813f3be549ac838d1f8729846a0ac40a1f2b1b97d1a9",
+    "patched_sha256": "eb8947b480d8a3cc0ed4054e25ca00900c576a12c44a407e1e0ed02d320e18d6"
+  },
+  {
+    "source": "com/github/weisj/jsvg/util/ResourceUtil.java",
+    "upstream_sha256": "b240d8288df004c051c753646aca4991c6310691e85640b9ad116d3ce84342b3",
+    "patched_sha256": "d4c6cca504a3b07a882211845a2a17753f0a4a9300859750863eabea5e7a06e7"
+  },
+  {
+    "source": "org/mozilla/javascript/commonjs/module/provider/UrlModuleSourceProvider.java",
+    "upstream_sha256": "c29ad1fd9dca90d159843f8399b730a27fabc69b45f2a743e89165fd0f25883f",
+    "patched_sha256": "0da5660274bc1f08c699feccc17c04be3d6ca5fe752f9a0f30084de97e9c42e8"
+  },
+  {
+    "source": "org/mozilla/javascript/tools/SourceReader.java",
+    "upstream_sha256": "9d2cd80b9272783ff4eafbe929d270a73a89eef659164868f5253891e37187f8",
+    "patched_sha256": "873bafc4fb6e8aa0e24df3ad5ae55c9bc4079e5f67dc77f1b6853253977ee889"
+  },
+  {
+    "source": "org/mozilla/javascript/tools/debugger/Dim.java",
+    "upstream_sha256": "0830b7ee46a8579e8b8e3b2fa864b4135464918b04f8e32150749a5309bca7d0",
+    "patched_sha256": "0b071bbdd33e5abfeeb654df85372af5c33263ede68b1511be940b42057d925c"
+  },
+  {
+    "source": "org/mozilla/javascript/tools/shell/Global.java",
+    "upstream_sha256": "2a4f29485e16c661f2aedc5fdc3cd3e4ae45fa28e35371fddf4bddaeff825399",
+    "patched_sha256": "70e9f3e09605a004d8d2ad25f059621c8ba5bb36e4beaff600eea34db6a33559"
+  }
+]

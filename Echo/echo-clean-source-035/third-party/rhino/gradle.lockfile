@@ -1,0 +1,6 @@
+# This is a Gradle generated file for dependency locking.
+# Manual edits can break the build and are not advised.
+# This file is expected to be part of source control.
+org.jetbrains:annotations:26.0.2=compileClasspath
+org.mozilla:rhino:1.7.15=compileClasspath,upstreamBinary,upstreamSources
+empty=annotationProcessor,runtimeClasspath,testAnnotationProcessor,testCompileClasspath,testRuntimeClasspath

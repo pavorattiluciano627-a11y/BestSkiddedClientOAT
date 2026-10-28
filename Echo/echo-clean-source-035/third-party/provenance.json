@@ -1,0 +1,30 @@
+[
+  {
+    "coordinate": "com.github.weisj:jsvg:2.1.0",
+    "url": "https://repo.maven.apache.org/maven2/com/github/weisj/jsvg/2.1.0/jsvg-2.1.0.jar",
+    "path": "upstream/artifacts/jsvg-2.1.0.jar",
+    "sha256": "a538142d27c57c55066da02a535cc8eee3afd0d37b3daff8eba6344bd0ffc1b6",
+    "bytes": 784004
+  },
+  {
+    "coordinate": "com.github.weisj:jsvg:2.1.0:sources",
+    "url": "https://repo.maven.apache.org/maven2/com/github/weisj/jsvg/2.1.0/jsvg-2.1.0-sources.jar",
+    "path": "upstream/artifacts/jsvg-2.1.0-sources.jar",
+    "sha256": "6616050e4b185d5a7313f8ea9f4c5446a1d26ac880e1c35cccf44c9176bbd866",
+    "bytes": 606797
+  },
+  {
+    "coordinate": "org.mozilla:rhino:1.7.15",
+    "url": "https://repo.maven.apache.org/maven2/org/mozilla/rhino/1.7.15/rhino-1.7.15.jar",
+    "path": "upstream/artifacts/rhino-1.7.15.jar",
+    "sha256": "2427fdcbc149ca0a25ccfbb7c71b01f39ad42708773a47816cd2342861766b63",
+    "bytes": 1407735
+  },
+  {
+    "coordinate": "org.mozilla:rhino:1.7.15:sources",
+    "url": "https://repo.maven.apache.org/maven2/org/mozilla/rhino/1.7.15/rhino-1.7.15-sources.jar",
+    "path": "upstream/artifacts/rhino-1.7.15-sources.jar",
+    "sha256": "d3be964dc5fd505b79432a3d57659420d3ad6a8be9eea8406e1b0a4e7c6f06f2",
+    "bytes": 1008329
+  }
+]

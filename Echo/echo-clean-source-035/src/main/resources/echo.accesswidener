@@ -1,0 +1,20 @@
+accessWidener v2 official
+# Original widened palette method and chunk-map fields, in Minecraft 26.2's official namespace.
+accessible method net/minecraft/world/chunk/PalettedContainer get (I)Ljava/lang/Object;
+accessible field net/minecraft/client/world/ClientChunkManager chunks Lnet/minecraft/client/world/ClientChunkManager$ClientChunkMap;
+accessible field net/minecraft/client/world/ClientChunkManager$ClientChunkMap chunks Ljava/util/concurrent/atomic/AtomicReferenceArray;
+# Expose the nested declaring type for ordinary named Java compilation.
+accessible class net/minecraft/client/world/ClientChunkManager$ClientChunkMap
+
+# Original direct Minecraft fields used by OutputAdapter's ordinary Java recovery.
+# Merge with the parent-owned application widener; this file is not runtime dispatch.
+accessible field net/minecraft/client/font/TextRenderer fonts Lnet/minecraft/client/font/TextRenderer$GlyphsProvider;
+accessible field net/minecraft/client/font/BakedGlyphImpl textureView Lcom/mojang/blaze3d/textures/GpuTextureView;
+accessible field net/minecraft/client/font/BakedGlyphImpl minU F
+accessible field net/minecraft/client/font/BakedGlyphImpl maxU F
+accessible field net/minecraft/client/font/BakedGlyphImpl minV F
+accessible field net/minecraft/client/font/BakedGlyphImpl maxV F
+accessible field net/minecraft/client/font/BakedGlyphImpl minX F
+accessible field net/minecraft/client/font/BakedGlyphImpl maxX F
+accessible field net/minecraft/client/font/BakedGlyphImpl minY F
+accessible field net/minecraft/client/font/BakedGlyphImpl maxY F

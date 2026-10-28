@@ -1,0 +1,46 @@
+{
+  "status": "verified_title_bootstrap_runtime_milestone",
+  "artifact_sha256": "ac2565742ff0974032690fa1eadfd16b073e430754275733a21229d5166b3fc9",
+  "provenance_sha256": "1f233286c38b58535bbec9ff5bca5f50b0116bf8e57dc60a41f3bca2d9cabb27",
+  "stable_title_ticks": 120,
+  "total_ticks": 155,
+  "elapsed_seconds": 16.68261324999912,
+  "exit_code": 0,
+  "world_present": false,
+  "successful_shutdown_cause": "Observer finish -> scheduleStop after terminal success",
+  "earlier_unexplained_exit_cause_claimed": false,
+  "settings_measured": false,
+  "UI_interaction_or_gameplay_parity_verified": false,
+  "global_fidelity_or_release_approved": false,
+  "bootstrap": {
+    "allocatedFeatures": 98,
+    "categories": 6,
+    "categorizedFeatures": 97,
+    "classAlreadyInitialized": true,
+    "failure": null,
+    "readMode": "existing fields only; unsynchronized diagnostic snapshot",
+    "registeredFeatures": 97,
+    "resultPresent": true,
+    "skippedFeatures": 0,
+    "state": "INITIALIZED",
+    "uniqueFeatureClasses": 98
+  },
+  "application_java_sources": 977,
+  "scope": "Historical actual034 runtime milestone; this035 source package adds the separately reviewed ASSOC1466 initializer correction and is not itself runtime-approved",
+  "subsequent_reviewed_source_corrections": [
+    {
+      "request": "ASSOC-1466",
+      "source": "src/main/java/dev/echo/client/screens/dashboard/DashboardController.java",
+      "preimage_sha256": "8f08b2b0ceaf2e67e3f716628e0f640fa19dd060a83c4ecc84c7c5c2e28fe14a",
+      "postimage_sha256": "1f95d20ab2e1dd582b2074e045e8c6c3774e622414e20b9ac11b522ac4d06864",
+      "034_artifact_unchanged": true
+    },
+    {
+      "request": "ASSOC-1773",
+      "source": "src/main/java/dev/echo/client/utils/placement/ScaffoldController.java",
+      "preimage_sha256": "65b179528a1333098d88594a31cffa152104f97dab197809759e537514af164b",
+      "postimage_sha256": "13d46ec29ba54a9f4ec9b2165a4fe0f2c64cf6ad4bbab5369368e87183a8a849",
+      "034_artifact_unchanged": true
+    }
+  ]
+}

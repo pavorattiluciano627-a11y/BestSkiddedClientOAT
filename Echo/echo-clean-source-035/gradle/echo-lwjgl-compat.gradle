@@ -1,0 +1,91 @@
+import groovy.json.JsonOutput
+import groovy.json.JsonSlurper
+
+// Apply after echo-native-runtime.gradle. Root intake owns applying this script,
+// Fabric metadata registration, the native archive exact-set update, and the
+// source-bound completion.native_artifacts record. Those gates remain required.
+def compatibilityRoot = project.hasProperty('echoCompatibilityRoot') ? file(echoCompatibilityRoot) : rootDir
+def compatibilitySourceRoot = project.hasProperty('echoNativeSourceRoot') ? file(echoNativeSourceRoot) : rootDir
+def compatibilityNativeRoot = project.hasProperty('echoCompatibilitySourceRoot') ? file(echoCompatibilitySourceRoot) : compatibilitySourceRoot
+def runtimeIntegrationRoot = project.hasProperty('echoIntegrationRoot') ? file(echoIntegrationRoot) : rootDir
+def os = System.getProperty('os.name').toLowerCase(Locale.ROOT)
+def arch = System.getProperty('os.arch').toLowerCase(Locale.ROOT)
+def hostOs = os.contains('mac') || os.contains('darwin') ? 'macos' : os.contains('windows') ? 'windows' : os.contains('linux') ? 'linux' : 'unsupported'
+def hostArch = arch in ['aarch64', 'arm64'] ? 'aarch64' : arch in ['amd64', 'x86_64'] ? 'x86_64' : 'unsupported'
+def selected = providers.gradleProperty('echoNativeTarget').getOrElse("${hostOs}-${hostArch}".toString())
+def compatibilityOutput = layout.buildDirectory.dir("echo-stb-legacy-native/${selected}")
+def auditSources = new File(compatibilityRoot, 'tools/build/lwjgl-compat/java')
+def auditResources = new File(compatibilityRoot, 'tools/build/lwjgl-compat/resources')
+
+tasks.register('buildLegacyStbNative', Exec) {
+    group = 'build'
+    description = 'Build pinned official STB1 and ordinary Rust JNI compatibility'
+    inputs.file new File(compatibilityRoot, 'gradle/lwjgl-compat-inputs.json')
+    inputs.file new File(runtimeIntegrationRoot, 'gradle/native-targets.json')
+    inputs.files fileTree(new File(compatibilityNativeRoot, 'native/lwjgl-compat'))
+    inputs.files fileTree(new File(compatibilityNativeRoot, 'third-party/stb-legacy'))
+    inputs.file new File(compatibilityRoot, 'tools/build/build_legacy_stb.py')
+    inputs.property 'target', selected
+    outputs.upToDateWhen { false }
+    commandLine 'python3', new File(compatibilitySourceRoot, 'tools/with_heavy_tool.py'), '--',
+            'python3', new File(compatibilityRoot, 'tools/build/build_legacy_stb.py'),
+            '--root', compatibilityNativeRoot,
+             '--pins', new File(compatibilityRoot, 'gradle/lwjgl-compat-inputs.json'),
+             '--toolchain-pins', new File(runtimeIntegrationRoot, 'gradle/windows-gnu-toolchain.json'),
+            '--targets', new File(runtimeIntegrationRoot, 'gradle/native-targets.json'),
+            '--target', selected, '--output', compatibilityOutput.get().asFile
+}
+tasks.named('stageEchoNatives') {
+    dependsOn 'buildLegacyStbNative'
+    from compatibilityOutput.map { it.dir('resources') }
+}
+tasks.named('compileEchoRuntimeAudit', JavaCompile) {
+    dependsOn 'compileJava'
+    setSource fileTree(auditSources) { include '**/*.java' }
+    classpath = configurations.compileClasspath + sourceSets.main.output.classesDirs
+}
+tasks.named('verifyEchoMinecraftRuntimeCompatibility', JavaExec) {
+    description = 'Verify real required Mixins, exact five redirects, and zero unresolved transformed runtime members'
+    mainClass = 'compatcheck.MinecraftLwjglCompatibilityAudit'
+    classpath = files(layout.buildDirectory.dir('echo-runtime-audit/classes'), auditResources,
+            new File(compatibilityRoot, 'src/main/resources')) + sourceSets.main.output.classesDirs + configurations.runtimeClasspath
+    systemProperty 'mixin.debug.countInjections', 'true'
+    def capture = new ByteArrayOutputStream()
+    standardOutput = capture
+    doLast {
+        def text = capture.toString('UTF-8')
+        logger.lifecycle(text)
+        def match = text =~ /MINECRAFT_COMPATIBILITY classes=(\d+) original_members=(\d+) original_failures=(\d+) transformed_members=(\d+) transformed_failures=(\d+) target_classes=(\d+) redirects=(\d+)/
+        if (!match.find()) throw new GradleException('Missing successful real-Mixin compatibility result')
+        def report = [status: 'passed', classes: match.group(1).toInteger(), original_members: match.group(2).toInteger(),
+                      original_failures: match.group(3).toInteger(), transformed_members: match.group(4).toInteger(),
+                      transformed_failures: match.group(5).toInteger(), target_classes: match.group(6).toInteger(), redirects: match.group(7).toInteger(),
+                      scope: 'isolated compatibility Mixins and real source adapters; full production Mixin set/game not executed']
+        def output = layout.buildDirectory.file('reports/lwjgl-compat/verification.json').get().asFile
+        output.parentFile.mkdirs()
+        output.text = JsonOutput.prettyPrint(JsonOutput.toJson(report)) + '\n'
+    }
+    argumentProviders.add({
+        def providers = sourceSets.main.output.classesDirs.files.collect {
+            new File(it, 'dev/echo/render/window/SdlWindowSystem.class')
+        }.findAll { it.isFile() }
+        if (providers.size() != 1) throw new GradleException('Exact source-compiled SDL provider missing/duplicated in compatibility audit')
+        providers.collect { it.absolutePath }
+    } as CommandLineArgumentProvider)
+    // Existing doFirst still supplies the actual named Minecraft JAR. The audit
+    // proves its raw two-failure control and transforms all four required targets.
+}
+tasks.register('verifyCompatibilityFabricRegistration') {
+    group = 'verification'
+    inputs.file file('src/main/resources/fabric.mod.json')
+    inputs.file new File(compatibilityRoot, 'src/main/resources/echo.lwjgl-compat.mixins.json')
+    doLast {
+        def mod = new JsonSlurper().parse(file('src/main/resources/fabric.mod.json'))
+        def configs = (mod.mixins ?: []).collect { it instanceof Map ? it.config : it }
+        if (configs.count('echo.lwjgl-compat.mixins.json') != 1) throw new GradleException('Register the required compatibility Mixin configuration exactly once')
+        def mixins = new JsonSlurper().parse(new File(compatibilityRoot, 'src/main/resources/echo.lwjgl-compat.mixins.json'))
+        if (mixins.required != true || mixins.client.size() != 4 || mixins.injectors.defaultRequire != 1) throw new GradleException('Compatibility Mixin requirements changed')
+    }
+}
+tasks.named('jar') { dependsOn 'verifyCompatibilityFabricRegistration' }
+import org.gradle.process.CommandLineArgumentProvider

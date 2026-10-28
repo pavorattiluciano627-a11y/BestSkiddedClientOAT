@@ -1,0 +1,13 @@
+{
+  "required": true,
+  "minVersion": "0.8.7",
+  "package": "dev.echo.compat.lwjgl.mixin",
+  "compatibilityLevel": "JAVA_21",
+  "client": [
+    "NativeImageLegacyResizeMixin",
+    "MinecraftLegacyDialogMixin",
+    "NarratorLegacyDialogMixin",
+    "WindowLegacyDialogMixin"
+  ],
+  "injectors": { "defaultRequire": 1 }
+}

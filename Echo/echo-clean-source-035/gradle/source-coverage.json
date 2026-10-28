@@ -1,0 +1,3276 @@
+{
+  "schema": 1,
+  "expected_features": 98,
+  "expected_settings": 477,
+  "expected_registered_features": 97,
+  "features": [
+    {
+      "id": "Array List",
+      "category": "RENDER"
+    },
+    {
+      "id": "Timer",
+      "category": "MOVEMENT"
+    },
+    {
+      "id": "Auto Tool",
+      "category": "WORLD"
+    },
+    {
+      "id": "Replenish",
+      "category": "UTILITY"
+    },
+    {
+      "id": "Hitboxes",
+      "category": "COMBAT"
+    },
+    {
+      "id": "Backtrack",
+      "category": "COMBAT"
+    },
+    {
+      "id": "Trigger Bot",
+      "category": "COMBAT"
+    },
+    {
+      "id": "Totem Hit",
+      "category": "COMBAT"
+    },
+    {
+      "id": "Trajectories",
+      "category": "RENDER"
+    },
+    {
+      "id": "Targets",
+      "category": "INTERNALS"
+    },
+    {
+      "id": "Multi Use",
+      "category": "UTILITY"
+    },
+    {
+      "id": "Self Destruct",
+      "category": "INTERNALS"
+    },
+    {
+      "id": "Potion Effects",
+      "category": "RENDER"
+    },
+    {
+      "id": "Prevent",
+      "category": "INTERNALS"
+    },
+    {
+      "id": "Shield Breaker",
+      "category": "COMBAT"
+    },
+    {
+      "id": "Player ESP",
+      "category": "RENDER"
+    },
+    {
+      "id": "Dive Bomb",
+      "category": "MOVEMENT"
+    },
+    {
+      "id": "China Hat",
+      "category": "RENDER"
+    },
+    {
+      "id": "Target ESP",
+      "category": "RENDER"
+    },
+    {
+      "id": "Auto Totem",
+      "category": "UTILITY"
+    },
+    {
+      "id": "Fast Stairs",
+      "category": "MOVEMENT"
+    },
+    {
+      "id": "View Model",
+      "category": "RENDER"
+    },
+    {
+      "id": "Auto Mace",
+      "category": "COMBAT"
+    },
+    {
+      "id": "Elytra Swap",
+      "category": "UTILITY"
+    },
+    {
+      "id": "Pearl Catch",
+      "category": "UTILITY"
+    },
+    {
+      "id": "Ambience",
+      "category": "RENDER"
+    },
+    {
+      "id": "MLG",
+      "category": "UTILITY"
+    },
+    {
+      "id": "Armor Status",
+      "category": "RENDER"
+    },
+    {
+      "id": "Chams",
+      "category": "RENDER"
+    },
+    {
+      "id": "Spear Reach",
+      "category": "COMBAT"
+    },
+    {
+      "id": "Hand Chams",
+      "category": "RENDER"
+    },
+    {
+      "id": "Key Pearl",
+      "category": "UTILITY"
+    },
+    {
+      "id": "No Slow",
+      "category": "MOVEMENT"
+    },
+    {
+      "id": "Protect",
+      "category": "INTERNALS"
+    },
+    {
+      "id": "Mace Swap",
+      "category": "COMBAT"
+    },
+    {
+      "id": "Chest Stealer",
+      "category": "WORLD"
+    },
+    {
+      "id": "Criticals",
+      "category": "COMBAT"
+    },
+    {
+      "id": "Auto Cart",
+      "category": "COMBAT"
+    },
+    {
+      "id": "Anti Trap",
+      "category": "UTILITY"
+    },
+    {
+      "id": "Speed",
+      "category": "MOVEMENT"
+    },
+    {
+      "id": "Storage ESP",
+      "category": "RENDER"
+    },
+    {
+      "id": "Sprint",
+      "category": "MOVEMENT"
+    },
+    {
+      "id": "Aim Visualizer",
+      "category": "RENDER"
+    },
+    {
+      "id": "High Jump",
+      "category": "MOVEMENT"
+    },
+    {
+      "id": "Coordinates",
+      "category": "RENDER"
+    },
+    {
+      "id": "Smart Pot",
+      "category": "UTILITY"
+    },
+    {
+      "id": "Knockback Delay",
+      "category": "COMBAT"
+    },
+    {
+      "id": "Xray",
+      "category": "RENDER"
+    },
+    {
+      "id": "Step",
+      "category": "MOVEMENT"
+    },
+    {
+      "id": "Auto Crystal",
+      "category": "COMBAT"
+    },
+    {
+      "id": "Transactions",
+      "category": "INTERNALS"
+    },
+    {
+      "id": "Offhand",
+      "category": "RENDER"
+    },
+    {
+      "id": "Totem Hand",
+      "category": "UTILITY"
+    },
+    {
+      "id": "Aim Assist",
+      "category": "COMBAT"
+    },
+    {
+      "id": "Auto Trap",
+      "category": "UTILITY"
+    },
+    {
+      "id": "Auto Clicker",
+      "category": "COMBAT"
+    },
+    {
+      "id": "Info Bar",
+      "category": "RENDER"
+    },
+    {
+      "id": "Jump Reset",
+      "category": "MOVEMENT"
+    },
+    {
+      "id": "Swing Speed",
+      "category": "RENDER"
+    },
+    {
+      "id": "No Break Delay",
+      "category": "WORLD"
+    },
+    {
+      "id": "Notifications",
+      "category": "RENDER"
+    },
+    {
+      "id": "XBow",
+      "category": "COMBAT"
+    },
+    {
+      "id": "Tunneler",
+      "category": "WORLD"
+    },
+    {
+      "id": "Silent Aim",
+      "category": "INTERNALS"
+    },
+    {
+      "id": "Trails",
+      "category": "RENDER"
+    },
+    {
+      "id": "Velocity",
+      "category": "MOVEMENT"
+    },
+    {
+      "id": "Key Charge",
+      "category": "MOVEMENT"
+    },
+    {
+      "id": "Crystal Optimizer",
+      "category": "COMBAT"
+    },
+    {
+      "id": "Displace",
+      "category": "COMBAT"
+    },
+    {
+      "id": "Block Bruteforcer",
+      "category": "WORLD"
+    },
+    {
+      "id": "Music",
+      "category": "RENDER"
+    },
+    {
+      "id": "Keep Sprint",
+      "category": "MOVEMENT"
+    },
+    {
+      "id": "Particles",
+      "category": "RENDER"
+    },
+    {
+      "id": "Attribute Mine",
+      "category": "WORLD"
+    },
+    {
+      "id": "Null Move",
+      "category": "MOVEMENT"
+    },
+    {
+      "id": "Freecam",
+      "category": "RENDER"
+    },
+    {
+      "id": "Pot Refill",
+      "category": "UTILITY"
+    },
+    {
+      "id": "Auto Anchor",
+      "category": "COMBAT"
+    },
+    {
+      "id": "Spear Assist",
+      "category": "COMBAT"
+    },
+    {
+      "id": "Keybinds",
+      "category": "RENDER"
+    },
+    {
+      "id": "Fast Use",
+      "category": "UTILITY"
+    },
+    {
+      "id": "Click GUI",
+      "category": "INTERNALS"
+    },
+    {
+      "id": "Scaffold",
+      "category": "WORLD"
+    },
+    {
+      "id": "Auto Walk",
+      "category": "MOVEMENT"
+    },
+    {
+      "id": "Full Bright",
+      "category": "RENDER"
+    },
+    {
+      "id": "Sprint Reset",
+      "category": "MOVEMENT"
+    },
+    {
+      "id": "Light ESP",
+      "category": "RENDER"
+    },
+    {
+      "id": "Sky Shaders",
+      "category": "RENDER"
+    },
+    {
+      "id": "No Jump Delay",
+      "category": "MOVEMENT"
+    },
+    {
+      "id": "Pearl Grapple",
+      "category": "UTILITY"
+    },
+    {
+      "id": "GUI Walk",
+      "category": "MOVEMENT"
+    },
+    {
+      "id": "Search",
+      "category": "RENDER"
+    },
+    {
+      "id": "Spear Lunge",
+      "category": "COMBAT"
+    },
+    {
+      "id": "Hotbar",
+      "category": "RENDER"
+    },
+    {
+      "id": "Piercing",
+      "category": "COMBAT"
+    },
+    {
+      "id": "Item ESP",
+      "category": "RENDER"
+    },
+    {
+      "id": "No Render",
+      "category": "RENDER"
+    },
+    {
+      "id": "Target",
+      "category": "RENDER"
+    }
+  ],
+  "settings": [
+    {
+      "id": "Array List::0",
+      "feature": "Array List",
+      "ordinal": 0,
+      "name": "Visibility filter"
+    },
+    {
+      "id": "Array List::1",
+      "feature": "Array List",
+      "ordinal": 1,
+      "name": "Lowercase"
+    },
+    {
+      "id": "Array List::2",
+      "feature": "Array List",
+      "ordinal": 2,
+      "name": "Suffix Enabled"
+    },
+    {
+      "id": "Timer::0",
+      "feature": "Timer",
+      "ordinal": 0,
+      "name": "Timer"
+    },
+    {
+      "id": "Auto Tool::0",
+      "feature": "Auto Tool",
+      "ordinal": 0,
+      "name": "Require click"
+    },
+    {
+      "id": "Auto Tool::1",
+      "feature": "Auto Tool",
+      "ordinal": 1,
+      "name": "Switch back"
+    },
+    {
+      "id": "Auto Tool::2",
+      "feature": "Auto Tool",
+      "ordinal": 2,
+      "name": "Require shift"
+    },
+    {
+      "id": "Replenish::0",
+      "feature": "Replenish",
+      "ordinal": 0,
+      "name": "Min %"
+    },
+    {
+      "id": "Replenish::1",
+      "feature": "Replenish",
+      "ordinal": 1,
+      "name": "Cursor Speed"
+    },
+    {
+      "id": "Hitboxes::0",
+      "feature": "Hitboxes",
+      "ordinal": 0,
+      "name": "Static Hitbox"
+    },
+    {
+      "id": "Hitboxes::1",
+      "feature": "Hitboxes",
+      "ordinal": 1,
+      "name": "Expand X"
+    },
+    {
+      "id": "Hitboxes::2",
+      "feature": "Hitboxes",
+      "ordinal": 2,
+      "name": "Uniform"
+    },
+    {
+      "id": "Hitboxes::3",
+      "feature": "Hitboxes",
+      "ordinal": 3,
+      "name": "Expand Y Up"
+    },
+    {
+      "id": "Hitboxes::4",
+      "feature": "Hitboxes",
+      "ordinal": 4,
+      "name": "Expand Z"
+    },
+    {
+      "id": "Hitboxes::5",
+      "feature": "Hitboxes",
+      "ordinal": 5,
+      "name": "Expand Size"
+    },
+    {
+      "id": "Hitboxes::6",
+      "feature": "Hitboxes",
+      "ordinal": 6,
+      "name": "Expand Y Down"
+    },
+    {
+      "id": "Backtrack::0",
+      "feature": "Backtrack",
+      "ordinal": 0,
+      "name": "Hotbar Whitelist"
+    },
+    {
+      "id": "Backtrack::1",
+      "feature": "Backtrack",
+      "ordinal": 1,
+      "name": "Outline Color"
+    },
+    {
+      "id": "Backtrack::2",
+      "feature": "Backtrack",
+      "ordinal": 2,
+      "name": "Maximum Hurt Time"
+    },
+    {
+      "id": "Backtrack::3",
+      "feature": "Backtrack",
+      "ordinal": 3,
+      "name": "Hold Time"
+    },
+    {
+      "id": "Backtrack::4",
+      "feature": "Backtrack",
+      "ordinal": 4,
+      "name": "Item Whitelist"
+    },
+    {
+      "id": "Backtrack::5",
+      "feature": "Backtrack",
+      "ordinal": 5,
+      "name": "Fill Color"
+    },
+    {
+      "id": "Trigger Bot::0",
+      "feature": "Trigger Bot",
+      "ordinal": 0,
+      "name": "Cooldown"
+    },
+    {
+      "id": "Trigger Bot::1",
+      "feature": "Trigger Bot",
+      "ordinal": 1,
+      "name": "Crit Mode"
+    },
+    {
+      "id": "Trigger Bot::2",
+      "feature": "Trigger Bot",
+      "ordinal": 2,
+      "name": "Reaction Delay"
+    },
+    {
+      "id": "Trigger Bot::3",
+      "feature": "Trigger Bot",
+      "ordinal": 3,
+      "name": "Crit only on space"
+    },
+    {
+      "id": "Trigger Bot::4",
+      "feature": "Trigger Bot",
+      "ordinal": 4,
+      "name": "Attack Delay"
+    },
+    {
+      "id": "Trigger Bot::5",
+      "feature": "Trigger Bot",
+      "ordinal": 5,
+      "name": "Item Whitelist"
+    },
+    {
+      "id": "Trigger Bot::6",
+      "feature": "Trigger Bot",
+      "ordinal": 6,
+      "name": "Attack Distance"
+    },
+    {
+      "id": "Trigger Bot::7",
+      "feature": "Trigger Bot",
+      "ordinal": 7,
+      "name": "No Sweep or Pick Hits"
+    },
+    {
+      "id": "Trigger Bot::8",
+      "feature": "Trigger Bot",
+      "ordinal": 8,
+      "name": "Hotbar Whitelist"
+    },
+    {
+      "id": "Trigger Bot::9",
+      "feature": "Trigger Bot",
+      "ordinal": 9,
+      "name": "HurtTime Check"
+    },
+    {
+      "id": "Trigger Bot::10",
+      "feature": "Trigger Bot",
+      "ordinal": 10,
+      "name": "Attack Shields"
+    },
+    {
+      "id": "Trigger Bot::11",
+      "feature": "Trigger Bot",
+      "ordinal": 11,
+      "name": "Crit Range"
+    },
+    {
+      "id": "Trigger Bot::12",
+      "feature": "Trigger Bot",
+      "ordinal": 12,
+      "name": "Crit Cooldown"
+    },
+    {
+      "id": "Totem Hit::0",
+      "feature": "Totem Hit",
+      "ordinal": 0,
+      "name": "Delay"
+    },
+    {
+      "id": "Totem Hit::1",
+      "feature": "Totem Hit",
+      "ordinal": 1,
+      "name": "Silent Swap"
+    },
+    {
+      "id": "Trajectories::0",
+      "feature": "Trajectories",
+      "ordinal": 0,
+      "name": "Arrow Color"
+    },
+    {
+      "id": "Trajectories::1",
+      "feature": "Trajectories",
+      "ordinal": 1,
+      "name": "Pearl Color"
+    },
+    {
+      "id": "Trajectories::2",
+      "feature": "Trajectories",
+      "ordinal": 2,
+      "name": "Wind Charge Color"
+    },
+    {
+      "id": "Trajectories::3",
+      "feature": "Trajectories",
+      "ordinal": 3,
+      "name": "Potion Color"
+    },
+    {
+      "id": "Trajectories::4",
+      "feature": "Trajectories",
+      "ordinal": 4,
+      "name": "Firework Color"
+    },
+    {
+      "id": "Trajectories::5",
+      "feature": "Trajectories",
+      "ordinal": 5,
+      "name": "Bow Color"
+    },
+    {
+      "id": "Trajectories::6",
+      "feature": "Trajectories",
+      "ordinal": 6,
+      "name": "Crossbow Color"
+    },
+    {
+      "id": "Trajectories::7",
+      "feature": "Trajectories",
+      "ordinal": 7,
+      "name": "Trajectories"
+    },
+    {
+      "id": "Targets::0",
+      "feature": "Targets",
+      "ordinal": 0,
+      "name": "AntiBot"
+    },
+    {
+      "id": "Targets::1",
+      "feature": "Targets",
+      "ordinal": 1,
+      "name": "Keep Target Range"
+    },
+    {
+      "id": "Targets::2",
+      "feature": "Targets",
+      "ordinal": 2,
+      "name": "Ignore Friends"
+    },
+    {
+      "id": "Targets::3",
+      "feature": "Targets",
+      "ordinal": 3,
+      "name": "Last Attacked"
+    },
+    {
+      "id": "Targets::4",
+      "feature": "Targets",
+      "ordinal": 4,
+      "name": "Shield Ticks"
+    },
+    {
+      "id": "Targets::5",
+      "feature": "Targets",
+      "ordinal": 5,
+      "name": "AntiBot Checks"
+    },
+    {
+      "id": "Targets::6",
+      "feature": "Targets",
+      "ordinal": 6,
+      "name": "Manual Target Select"
+    },
+    {
+      "id": "Targets::7",
+      "feature": "Targets",
+      "ordinal": 7,
+      "name": "Shield Detection"
+    },
+    {
+      "id": "Targets::8",
+      "feature": "Targets",
+      "ordinal": 8,
+      "name": "Ignore Teams"
+    },
+    {
+      "id": "Targets::9",
+      "feature": "Targets",
+      "ordinal": 9,
+      "name": "Entity Types"
+    },
+    {
+      "id": "Targets::10",
+      "feature": "Targets",
+      "ordinal": 10,
+      "name": "Team Checks"
+    },
+    {
+      "id": "Targets::11",
+      "feature": "Targets",
+      "ordinal": 11,
+      "name": "Keep Target"
+    },
+    {
+      "id": "Targets::12",
+      "feature": "Targets",
+      "ordinal": 12,
+      "name": "Friend Bind"
+    },
+    {
+      "id": "Targets::13",
+      "feature": "Targets",
+      "ordinal": 13,
+      "name": "Ping Compensation"
+    },
+    {
+      "id": "Self Destruct::0",
+      "feature": "Self Destruct",
+      "ordinal": 0,
+      "name": "Replace Mods"
+    },
+    {
+      "id": "Self Destruct::1",
+      "feature": "Self Destruct",
+      "ordinal": 1,
+      "name": "URL"
+    },
+    {
+      "id": "Prevent::0",
+      "feature": "Prevent",
+      "ordinal": 0,
+      "name": "Prevent With"
+    },
+    {
+      "id": "Prevent::1",
+      "feature": "Prevent",
+      "ordinal": 1,
+      "name": "No Air Hits"
+    },
+    {
+      "id": "Prevent::2",
+      "feature": "Prevent",
+      "ordinal": 2,
+      "name": "No Shield With Blocks"
+    },
+    {
+      "id": "Prevent::3",
+      "feature": "Prevent",
+      "ordinal": 3,
+      "name": "In Hotbar"
+    },
+    {
+      "id": "Prevent::4",
+      "feature": "Prevent",
+      "ordinal": 4,
+      "name": "Untotem"
+    },
+    {
+      "id": "Prevent::5",
+      "feature": "Prevent",
+      "ordinal": 5,
+      "name": "On Obsidian"
+    },
+    {
+      "id": "Prevent::6",
+      "feature": "Prevent",
+      "ordinal": 6,
+      "name": "Prevent With"
+    },
+    {
+      "id": "Prevent::7",
+      "feature": "Prevent",
+      "ordinal": 7,
+      "name": "No Mining"
+    },
+    {
+      "id": "Prevent::8",
+      "feature": "Prevent",
+      "ordinal": 8,
+      "name": "EChest Open"
+    },
+    {
+      "id": "Prevent::9",
+      "feature": "Prevent",
+      "ordinal": 9,
+      "name": "In Inventory"
+    },
+    {
+      "id": "Prevent::10",
+      "feature": "Prevent",
+      "ordinal": 10,
+      "name": "Anchor Charge"
+    },
+    {
+      "id": "Shield Breaker::0",
+      "feature": "Shield Breaker",
+      "ordinal": 0,
+      "name": "Unblock Own Shield"
+    },
+    {
+      "id": "Shield Breaker::1",
+      "feature": "Shield Breaker",
+      "ordinal": 1,
+      "name": "Hotbar Whitelist"
+    },
+    {
+      "id": "Shield Breaker::2",
+      "feature": "Shield Breaker",
+      "ordinal": 2,
+      "name": "Return Slots"
+    },
+    {
+      "id": "Shield Breaker::3",
+      "feature": "Shield Breaker",
+      "ordinal": 3,
+      "name": "Swap Back"
+    },
+    {
+      "id": "Shield Breaker::4",
+      "feature": "Shield Breaker",
+      "ordinal": 4,
+      "name": "Return To"
+    },
+    {
+      "id": "Shield Breaker::5",
+      "feature": "Shield Breaker",
+      "ordinal": 5,
+      "name": "Mode"
+    },
+    {
+      "id": "Shield Breaker::6",
+      "feature": "Shield Breaker",
+      "ordinal": 6,
+      "name": "Attack Delay"
+    },
+    {
+      "id": "Shield Breaker::7",
+      "feature": "Shield Breaker",
+      "ordinal": 7,
+      "name": "Auto Swap"
+    },
+    {
+      "id": "Shield Breaker::8",
+      "feature": "Shield Breaker",
+      "ordinal": 8,
+      "name": "Reaction Delay"
+    },
+    {
+      "id": "Shield Breaker::9",
+      "feature": "Shield Breaker",
+      "ordinal": 9,
+      "name": "Return Items"
+    },
+    {
+      "id": "Shield Breaker::10",
+      "feature": "Shield Breaker",
+      "ordinal": 10,
+      "name": "Stun"
+    },
+    {
+      "id": "Shield Breaker::11",
+      "feature": "Shield Breaker",
+      "ordinal": 11,
+      "name": "Swap Back Delay"
+    },
+    {
+      "id": "Shield Breaker::12",
+      "feature": "Shield Breaker",
+      "ordinal": 12,
+      "name": "Item Whitelist"
+    },
+    {
+      "id": "Player ESP::0",
+      "feature": "Player ESP",
+      "ordinal": 0,
+      "name": "Health Color"
+    },
+    {
+      "id": "Player ESP::1",
+      "feature": "Player ESP",
+      "ordinal": 1,
+      "name": "Color"
+    },
+    {
+      "id": "Player ESP::2",
+      "feature": "Player ESP",
+      "ordinal": 2,
+      "name": "Team Color"
+    },
+    {
+      "id": "Player ESP::3",
+      "feature": "Player ESP",
+      "ordinal": 3,
+      "name": "Full Health Color"
+    },
+    {
+      "id": "Player ESP::4",
+      "feature": "Player ESP",
+      "ordinal": 4,
+      "name": "Render Self"
+    },
+    {
+      "id": "Player ESP::5",
+      "feature": "Player ESP",
+      "ordinal": 5,
+      "name": "Show Name"
+    },
+    {
+      "id": "Player ESP::6",
+      "feature": "Player ESP",
+      "ordinal": 6,
+      "name": "Health Bar Color"
+    },
+    {
+      "id": "Player ESP::7",
+      "feature": "Player ESP",
+      "ordinal": 7,
+      "name": "Show Held Item"
+    },
+    {
+      "id": "Player ESP::8",
+      "feature": "Player ESP",
+      "ordinal": 8,
+      "name": "Fill"
+    },
+    {
+      "id": "Player ESP::9",
+      "feature": "Player ESP",
+      "ordinal": 9,
+      "name": "Tracers"
+    },
+    {
+      "id": "Player ESP::10",
+      "feature": "Player ESP",
+      "ordinal": 10,
+      "name": "Low Health Color"
+    },
+    {
+      "id": "Player ESP::11",
+      "feature": "Player ESP",
+      "ordinal": 11,
+      "name": "Modes"
+    },
+    {
+      "id": "Player ESP::12",
+      "feature": "Player ESP",
+      "ordinal": 12,
+      "name": "Health Bar"
+    },
+    {
+      "id": "Dive Bomb::0",
+      "feature": "Dive Bomb",
+      "ordinal": 0,
+      "name": "Tick Delay"
+    },
+    {
+      "id": "Dive Bomb::1",
+      "feature": "Dive Bomb",
+      "ordinal": 1,
+      "name": "Auto Jump"
+    },
+    {
+      "id": "Dive Bomb::2",
+      "feature": "Dive Bomb",
+      "ordinal": 2,
+      "name": "Instant Dive Bomb"
+    },
+    {
+      "id": "Dive Bomb::3",
+      "feature": "Dive Bomb",
+      "ordinal": 3,
+      "name": "Silent Aim"
+    },
+    {
+      "id": "Dive Bomb::4",
+      "feature": "Dive Bomb",
+      "ordinal": 4,
+      "name": "Dive Bomb"
+    },
+    {
+      "id": "Dive Bomb::5",
+      "feature": "Dive Bomb",
+      "ordinal": 5,
+      "name": "Switchback"
+    },
+    {
+      "id": "China Hat::0",
+      "feature": "China Hat",
+      "ordinal": 0,
+      "name": "Height"
+    },
+    {
+      "id": "China Hat::1",
+      "feature": "China Hat",
+      "ordinal": 1,
+      "name": "Mode"
+    },
+    {
+      "id": "China Hat::2",
+      "feature": "China Hat",
+      "ordinal": 2,
+      "name": "Spin Speed"
+    },
+    {
+      "id": "China Hat::3",
+      "feature": "China Hat",
+      "ordinal": 3,
+      "name": "Color"
+    },
+    {
+      "id": "China Hat::4",
+      "feature": "China Hat",
+      "ordinal": 4,
+      "name": "Outline"
+    },
+    {
+      "id": "China Hat::5",
+      "feature": "China Hat",
+      "ordinal": 5,
+      "name": "Radius"
+    },
+    {
+      "id": "China Hat::6",
+      "feature": "China Hat",
+      "ordinal": 6,
+      "name": "Opacity"
+    },
+    {
+      "id": "Target ESP::0",
+      "feature": "Target ESP",
+      "ordinal": 0,
+      "name": "Color"
+    },
+    {
+      "id": "Target ESP::1",
+      "feature": "Target ESP",
+      "ordinal": 1,
+      "name": "Mode"
+    },
+    {
+      "id": "Auto Totem::0",
+      "feature": "Auto Totem",
+      "ordinal": 0,
+      "name": "Health Swap"
+    },
+    {
+      "id": "Auto Totem::1",
+      "feature": "Auto Totem",
+      "ordinal": 1,
+      "name": "Restore Item"
+    },
+    {
+      "id": "Auto Totem::2",
+      "feature": "Auto Totem",
+      "ordinal": 2,
+      "name": "Slot to Refill Totem"
+    },
+    {
+      "id": "Auto Totem::3",
+      "feature": "Auto Totem",
+      "ordinal": 3,
+      "name": "Restore Above"
+    },
+    {
+      "id": "Auto Totem::4",
+      "feature": "Auto Totem",
+      "ordinal": 4,
+      "name": "Equip Below"
+    },
+    {
+      "id": "Auto Totem::5",
+      "feature": "Auto Totem",
+      "ordinal": 5,
+      "name": "Refill Hotbar"
+    },
+    {
+      "id": "View Model::0",
+      "feature": "View Model",
+      "ordinal": 0,
+      "name": "PosX Off"
+    },
+    {
+      "id": "View Model::1",
+      "feature": "View Model",
+      "ordinal": 1,
+      "name": "RotX Main"
+    },
+    {
+      "id": "View Model::2",
+      "feature": "View Model",
+      "ordinal": 2,
+      "name": "EatingBob"
+    },
+    {
+      "id": "View Model::3",
+      "feature": "View Model",
+      "ordinal": 3,
+      "name": "RotY Main"
+    },
+    {
+      "id": "View Model::4",
+      "feature": "View Model",
+      "ordinal": 4,
+      "name": "Styles"
+    },
+    {
+      "id": "View Model::5",
+      "feature": "View Model",
+      "ordinal": 5,
+      "name": "Strength Off"
+    },
+    {
+      "id": "View Model::6",
+      "feature": "View Model",
+      "ordinal": 6,
+      "name": "Strength Main"
+    },
+    {
+      "id": "View Model::7",
+      "feature": "View Model",
+      "ordinal": 7,
+      "name": "Scale Off"
+    },
+    {
+      "id": "View Model::8",
+      "feature": "View Model",
+      "ordinal": 8,
+      "name": "RotY Off"
+    },
+    {
+      "id": "View Model::9",
+      "feature": "View Model",
+      "ordinal": 9,
+      "name": "PosX Main"
+    },
+    {
+      "id": "View Model::10",
+      "feature": "View Model",
+      "ordinal": 10,
+      "name": "RotZ Main"
+    },
+    {
+      "id": "View Model::11",
+      "feature": "View Model",
+      "ordinal": 11,
+      "name": "Scale Main"
+    },
+    {
+      "id": "View Model::12",
+      "feature": "View Model",
+      "ordinal": 12,
+      "name": "PosY Off"
+    },
+    {
+      "id": "View Model::13",
+      "feature": "View Model",
+      "ordinal": 13,
+      "name": "RotZ Off"
+    },
+    {
+      "id": "View Model::14",
+      "feature": "View Model",
+      "ordinal": 14,
+      "name": "Eating Animation"
+    },
+    {
+      "id": "View Model::15",
+      "feature": "View Model",
+      "ordinal": 15,
+      "name": "PosZ Main"
+    },
+    {
+      "id": "View Model::16",
+      "feature": "View Model",
+      "ordinal": 16,
+      "name": "PosZ Off"
+    },
+    {
+      "id": "View Model::17",
+      "feature": "View Model",
+      "ordinal": 17,
+      "name": "RotX Off"
+    },
+    {
+      "id": "View Model::18",
+      "feature": "View Model",
+      "ordinal": 18,
+      "name": "PosY Main"
+    },
+    {
+      "id": "Auto Mace::0",
+      "feature": "Auto Mace",
+      "ordinal": 0,
+      "name": "CPS"
+    },
+    {
+      "id": "Auto Mace::1",
+      "feature": "Auto Mace",
+      "ordinal": 1,
+      "name": "Work With Mace Swap"
+    },
+    {
+      "id": "Auto Mace::2",
+      "feature": "Auto Mace",
+      "ordinal": 2,
+      "name": "Multipoint"
+    },
+    {
+      "id": "Auto Mace::3",
+      "feature": "Auto Mace",
+      "ordinal": 3,
+      "name": "Pitch FOV"
+    },
+    {
+      "id": "Auto Mace::4",
+      "feature": "Auto Mace",
+      "ordinal": 4,
+      "name": "Target Priority"
+    },
+    {
+      "id": "Auto Mace::5",
+      "feature": "Auto Mace",
+      "ordinal": 5,
+      "name": "Range"
+    },
+    {
+      "id": "Auto Mace::6",
+      "feature": "Auto Mace",
+      "ordinal": 6,
+      "name": "Re-Equip Elytra"
+    },
+    {
+      "id": "Auto Mace::7",
+      "feature": "Auto Mace",
+      "ordinal": 7,
+      "name": "Silent Rotations"
+    },
+    {
+      "id": "Auto Mace::8",
+      "feature": "Auto Mace",
+      "ordinal": 8,
+      "name": "Fall Distance"
+    },
+    {
+      "id": "Auto Mace::9",
+      "feature": "Auto Mace",
+      "ordinal": 9,
+      "name": "Automatically Unequip Elytra"
+    },
+    {
+      "id": "Auto Mace::10",
+      "feature": "Auto Mace",
+      "ordinal": 10,
+      "name": "Auto Aim"
+    },
+    {
+      "id": "Auto Mace::11",
+      "feature": "Auto Mace",
+      "ordinal": 11,
+      "name": "Random"
+    },
+    {
+      "id": "Auto Mace::12",
+      "feature": "Auto Mace",
+      "ordinal": 12,
+      "name": "Vertical Speed"
+    },
+    {
+      "id": "Auto Mace::13",
+      "feature": "Auto Mace",
+      "ordinal": 13,
+      "name": "Through Walls"
+    },
+    {
+      "id": "Auto Mace::14",
+      "feature": "Auto Mace",
+      "ordinal": 14,
+      "name": "Yaw FOV"
+    },
+    {
+      "id": "Auto Mace::15",
+      "feature": "Auto Mace",
+      "ordinal": 15,
+      "name": "Unequip Timing"
+    },
+    {
+      "id": "Auto Mace::16",
+      "feature": "Auto Mace",
+      "ordinal": 16,
+      "name": "Horizontal Speed"
+    },
+    {
+      "id": "Auto Mace::17",
+      "feature": "Auto Mace",
+      "ordinal": 17,
+      "name": "Late Window"
+    },
+    {
+      "id": "Auto Mace::18",
+      "feature": "Auto Mace",
+      "ordinal": 18,
+      "name": "Aim Math"
+    },
+    {
+      "id": "Auto Mace::19",
+      "feature": "Auto Mace",
+      "ordinal": 19,
+      "name": "Aim Vector"
+    },
+    {
+      "id": "Elytra Swap::0",
+      "feature": "Elytra Swap",
+      "ordinal": 0,
+      "name": "Switch Back"
+    },
+    {
+      "id": "Elytra Swap::1",
+      "feature": "Elytra Swap",
+      "ordinal": 1,
+      "name": "Activate Key"
+    },
+    {
+      "id": "Pearl Catch::0",
+      "feature": "Pearl Catch",
+      "ordinal": 0,
+      "name": "Low Pearl Catch"
+    },
+    {
+      "id": "Pearl Catch::1",
+      "feature": "Pearl Catch",
+      "ordinal": 1,
+      "name": "Auto Aim"
+    },
+    {
+      "id": "Pearl Catch::2",
+      "feature": "Pearl Catch",
+      "ordinal": 2,
+      "name": "Instant Pearl Catch"
+    },
+    {
+      "id": "Pearl Catch::3",
+      "feature": "Pearl Catch",
+      "ordinal": 3,
+      "name": "High Delay"
+    },
+    {
+      "id": "Pearl Catch::4",
+      "feature": "Pearl Catch",
+      "ordinal": 4,
+      "name": "Switch Back"
+    },
+    {
+      "id": "Pearl Catch::5",
+      "feature": "Pearl Catch",
+      "ordinal": 5,
+      "name": "Retry"
+    },
+    {
+      "id": "Pearl Catch::6",
+      "feature": "Pearl Catch",
+      "ordinal": 6,
+      "name": "High Pearl Catch"
+    },
+    {
+      "id": "Pearl Catch::7",
+      "feature": "Pearl Catch",
+      "ordinal": 7,
+      "name": "Silent Aim"
+    },
+    {
+      "id": "Ambience::0",
+      "feature": "Ambience",
+      "ordinal": 0,
+      "name": "Gradient color"
+    },
+    {
+      "id": "Ambience::1",
+      "feature": "Ambience",
+      "ordinal": 1,
+      "name": "Fog color"
+    },
+    {
+      "id": "Ambience::2",
+      "feature": "Ambience",
+      "ordinal": 2,
+      "name": "Time"
+    },
+    {
+      "id": "Ambience::3",
+      "feature": "Ambience",
+      "ordinal": 3,
+      "name": "Fog color"
+    },
+    {
+      "id": "Ambience::4",
+      "feature": "Ambience",
+      "ordinal": 4,
+      "name": "Gradient"
+    },
+    {
+      "id": "Ambience::5",
+      "feature": "Ambience",
+      "ordinal": 5,
+      "name": "Weather"
+    },
+    {
+      "id": "Ambience::6",
+      "feature": "Ambience",
+      "ordinal": 6,
+      "name": "Fog distance"
+    },
+    {
+      "id": "Ambience::7",
+      "feature": "Ambience",
+      "ordinal": 7,
+      "name": "Custom time"
+    },
+    {
+      "id": "Ambience::8",
+      "feature": "Ambience",
+      "ordinal": 8,
+      "name": "Modify weather"
+    },
+    {
+      "id": "MLG::0",
+      "feature": "MLG",
+      "ordinal": 0,
+      "name": "Distance To Ground"
+    },
+    {
+      "id": "MLG::1",
+      "feature": "MLG",
+      "ordinal": 1,
+      "name": "Items"
+    },
+    {
+      "id": "MLG::2",
+      "feature": "MLG",
+      "ordinal": 2,
+      "name": "Fall Distance Threshold"
+    },
+    {
+      "id": "MLG::3",
+      "feature": "MLG",
+      "ordinal": 3,
+      "name": "Auto Aim"
+    },
+    {
+      "id": "MLG::4",
+      "feature": "MLG",
+      "ordinal": 4,
+      "name": "Silent"
+    },
+    {
+      "id": "Chams::0",
+      "feature": "Chams",
+      "ordinal": 0,
+      "name": "Speed"
+    },
+    {
+      "id": "Chams::1",
+      "feature": "Chams",
+      "ordinal": 1,
+      "name": "Color 1"
+    },
+    {
+      "id": "Chams::2",
+      "feature": "Chams",
+      "ordinal": 2,
+      "name": "Render Self"
+    },
+    {
+      "id": "Chams::3",
+      "feature": "Chams",
+      "ordinal": 3,
+      "name": "Gradient Scale"
+    },
+    {
+      "id": "Chams::4",
+      "feature": "Chams",
+      "ordinal": 4,
+      "name": "Glow Radius"
+    },
+    {
+      "id": "Chams::5",
+      "feature": "Chams",
+      "ordinal": 5,
+      "name": "Line Width"
+    },
+    {
+      "id": "Chams::6",
+      "feature": "Chams",
+      "ordinal": 6,
+      "name": "Color 2"
+    },
+    {
+      "id": "Chams::7",
+      "feature": "Chams",
+      "ordinal": 7,
+      "name": "Outline Opacity"
+    },
+    {
+      "id": "Chams::8",
+      "feature": "Chams",
+      "ordinal": 8,
+      "name": "Team Colors"
+    },
+    {
+      "id": "Chams::9",
+      "feature": "Chams",
+      "ordinal": 9,
+      "name": "Fill Opacity"
+    },
+    {
+      "id": "Chams::10",
+      "feature": "Chams",
+      "ordinal": 10,
+      "name": "Glow Intensity"
+    },
+    {
+      "id": "Spear Reach::0",
+      "feature": "Spear Reach",
+      "ordinal": 0,
+      "name": "PaperMC support"
+    },
+    {
+      "id": "Spear Reach::1",
+      "feature": "Spear Reach",
+      "ordinal": 1,
+      "name": "Hotbar Whitelist"
+    },
+    {
+      "id": "Spear Reach::2",
+      "feature": "Spear Reach",
+      "ordinal": 2,
+      "name": "Item Whitelist"
+    },
+    {
+      "id": "Hand Chams::0",
+      "feature": "Hand Chams",
+      "ordinal": 0,
+      "name": "Line Width"
+    },
+    {
+      "id": "Hand Chams::1",
+      "feature": "Hand Chams",
+      "ordinal": 1,
+      "name": "Glow Radius"
+    },
+    {
+      "id": "Hand Chams::2",
+      "feature": "Hand Chams",
+      "ordinal": 2,
+      "name": "Outline Opacity"
+    },
+    {
+      "id": "Hand Chams::3",
+      "feature": "Hand Chams",
+      "ordinal": 3,
+      "name": "Fill Opacity"
+    },
+    {
+      "id": "Hand Chams::4",
+      "feature": "Hand Chams",
+      "ordinal": 4,
+      "name": "Color 2"
+    },
+    {
+      "id": "Hand Chams::5",
+      "feature": "Hand Chams",
+      "ordinal": 5,
+      "name": "Color 1"
+    },
+    {
+      "id": "Hand Chams::6",
+      "feature": "Hand Chams",
+      "ordinal": 6,
+      "name": "Gradient Scale"
+    },
+    {
+      "id": "Hand Chams::7",
+      "feature": "Hand Chams",
+      "ordinal": 7,
+      "name": "Glow Intensity"
+    },
+    {
+      "id": "Hand Chams::8",
+      "feature": "Hand Chams",
+      "ordinal": 8,
+      "name": "Speed"
+    },
+    {
+      "id": "Key Pearl::0",
+      "feature": "Key Pearl",
+      "ordinal": 0,
+      "name": "Sync to Client"
+    },
+    {
+      "id": "Key Pearl::1",
+      "feature": "Key Pearl",
+      "ordinal": 1,
+      "name": "Throw Delay"
+    },
+    {
+      "id": "Key Pearl::2",
+      "feature": "Key Pearl",
+      "ordinal": 2,
+      "name": "Activate Key"
+    },
+    {
+      "id": "Key Pearl::3",
+      "feature": "Key Pearl",
+      "ordinal": 3,
+      "name": "Swap Back"
+    },
+    {
+      "id": "Key Pearl::4",
+      "feature": "Key Pearl",
+      "ordinal": 4,
+      "name": "Swap Delay"
+    },
+    {
+      "id": "No Slow::0",
+      "feature": "No Slow",
+      "ordinal": 0,
+      "name": "Delay Ticks"
+    },
+    {
+      "id": "No Slow::1",
+      "feature": "No Slow",
+      "ordinal": 1,
+      "name": "Mode"
+    },
+    {
+      "id": "No Slow::2",
+      "feature": "No Slow",
+      "ordinal": 2,
+      "name": "Enable Sneak"
+    },
+    {
+      "id": "Protect::0",
+      "feature": "Protect",
+      "ordinal": 0,
+      "name": "Skin"
+    },
+    {
+      "id": "Protect::1",
+      "feature": "Protect",
+      "ordinal": 1,
+      "name": "Nickname"
+    },
+    {
+      "id": "Mace Swap::0",
+      "feature": "Mace Swap",
+      "ordinal": 0,
+      "name": "Spear D-tap"
+    },
+    {
+      "id": "Mace Swap::1",
+      "feature": "Mace Swap",
+      "ordinal": 1,
+      "name": "Hotbar Whitelist"
+    },
+    {
+      "id": "Mace Swap::2",
+      "feature": "Mace Swap",
+      "ordinal": 2,
+      "name": "Stun Switch Delay"
+    },
+    {
+      "id": "Mace Swap::3",
+      "feature": "Mace Swap",
+      "ordinal": 3,
+      "name": "Return Items"
+    },
+    {
+      "id": "Mace Swap::4",
+      "feature": "Mace Swap",
+      "ordinal": 4,
+      "name": "Minimum Damage"
+    },
+    {
+      "id": "Mace Swap::5",
+      "feature": "Mace Swap",
+      "ordinal": 5,
+      "name": "Return To"
+    },
+    {
+      "id": "Mace Swap::6",
+      "feature": "Mace Swap",
+      "ordinal": 6,
+      "name": "Return Slots"
+    },
+    {
+      "id": "Mace Swap::7",
+      "feature": "Mace Swap",
+      "ordinal": 7,
+      "name": "Item Whitelist"
+    },
+    {
+      "id": "Mace Swap::8",
+      "feature": "Mace Swap",
+      "ordinal": 8,
+      "name": "Stun Slam"
+    },
+    {
+      "id": "Mace Swap::9",
+      "feature": "Mace Swap",
+      "ordinal": 9,
+      "name": "Delay"
+    },
+    {
+      "id": "Chest Stealer::0",
+      "feature": "Chest Stealer",
+      "ordinal": 0,
+      "name": "Initial Delay"
+    },
+    {
+      "id": "Chest Stealer::1",
+      "feature": "Chest Stealer",
+      "ordinal": 1,
+      "name": "Take Delay"
+    },
+    {
+      "id": "Chest Stealer::2",
+      "feature": "Chest Stealer",
+      "ordinal": 2,
+      "name": "Close Delay"
+    },
+    {
+      "id": "Chest Stealer::3",
+      "feature": "Chest Stealer",
+      "ordinal": 3,
+      "name": "Only Important"
+    },
+    {
+      "id": "Criticals::0",
+      "feature": "Criticals",
+      "ordinal": 0,
+      "name": "Mode"
+    },
+    {
+      "id": "Criticals::1",
+      "feature": "Criticals",
+      "ordinal": 1,
+      "name": "Resume"
+    },
+    {
+      "id": "Criticals::2",
+      "feature": "Criticals",
+      "ordinal": 2,
+      "name": "Resume Delay"
+    },
+    {
+      "id": "Auto Cart::0",
+      "feature": "Auto Cart",
+      "ordinal": 0,
+      "name": "Return Items"
+    },
+    {
+      "id": "Auto Cart::1",
+      "feature": "Auto Cart",
+      "ordinal": 1,
+      "name": "Return To"
+    },
+    {
+      "id": "Auto Cart::2",
+      "feature": "Auto Cart",
+      "ordinal": 2,
+      "name": "Silent Rotations"
+    },
+    {
+      "id": "Auto Cart::3",
+      "feature": "Auto Cart",
+      "ordinal": 3,
+      "name": "Fresh Arrows Only"
+    },
+    {
+      "id": "Auto Cart::4",
+      "feature": "Auto Cart",
+      "ordinal": 4,
+      "name": "Return Slots"
+    },
+    {
+      "id": "Auto Cart::5",
+      "feature": "Auto Cart",
+      "ordinal": 5,
+      "name": "Place"
+    },
+    {
+      "id": "Anti Trap::0",
+      "feature": "Anti Trap",
+      "ordinal": 0,
+      "name": "Signs"
+    },
+    {
+      "id": "Anti Trap::1",
+      "feature": "Anti Trap",
+      "ordinal": 1,
+      "name": "Hanging Signs"
+    },
+    {
+      "id": "Anti Trap::2",
+      "feature": "Anti Trap",
+      "ordinal": 2,
+      "name": "Glow Frames"
+    },
+    {
+      "id": "Anti Trap::3",
+      "feature": "Anti Trap",
+      "ordinal": 3,
+      "name": "Paintings"
+    },
+    {
+      "id": "Anti Trap::4",
+      "feature": "Anti Trap",
+      "ordinal": 4,
+      "name": "Chest Minecarts"
+    },
+    {
+      "id": "Anti Trap::5",
+      "feature": "Anti Trap",
+      "ordinal": 5,
+      "name": "Armor Stands"
+    },
+    {
+      "id": "Anti Trap::6",
+      "feature": "Anti Trap",
+      "ordinal": 6,
+      "name": "No Interact"
+    },
+    {
+      "id": "Anti Trap::7",
+      "feature": "Anti Trap",
+      "ordinal": 7,
+      "name": "Item Frames"
+    },
+    {
+      "id": "Speed::0",
+      "feature": "Speed",
+      "ordinal": 0,
+      "name": "Strafe"
+    },
+    {
+      "id": "Speed::1",
+      "feature": "Speed",
+      "ordinal": 1,
+      "name": "Boat Boost"
+    },
+    {
+      "id": "Speed::2",
+      "feature": "Speed",
+      "ordinal": 2,
+      "name": "Motion"
+    },
+    {
+      "id": "Speed::3",
+      "feature": "Speed",
+      "ordinal": 3,
+      "name": "Boost"
+    },
+    {
+      "id": "Speed::4",
+      "feature": "Speed",
+      "ordinal": 4,
+      "name": "Mode"
+    },
+    {
+      "id": "Storage ESP::0",
+      "feature": "Storage ESP",
+      "ordinal": 0,
+      "name": "Other Storage Color"
+    },
+    {
+      "id": "Storage ESP::1",
+      "feature": "Storage ESP",
+      "ordinal": 1,
+      "name": "Shulker Color"
+    },
+    {
+      "id": "Storage ESP::2",
+      "feature": "Storage ESP",
+      "ordinal": 2,
+      "name": "Barrel Color"
+    },
+    {
+      "id": "Storage ESP::3",
+      "feature": "Storage ESP",
+      "ordinal": 3,
+      "name": "Outline"
+    },
+    {
+      "id": "Storage ESP::4",
+      "feature": "Storage ESP",
+      "ordinal": 4,
+      "name": "Ender Chest Color"
+    },
+    {
+      "id": "Storage ESP::5",
+      "feature": "Storage ESP",
+      "ordinal": 5,
+      "name": "Tracers"
+    },
+    {
+      "id": "Storage ESP::6",
+      "feature": "Storage ESP",
+      "ordinal": 6,
+      "name": "Chest Color"
+    },
+    {
+      "id": "Sprint::0",
+      "feature": "Sprint",
+      "ordinal": 0,
+      "name": "Omni"
+    },
+    {
+      "id": "Aim Visualizer::0",
+      "feature": "Aim Visualizer",
+      "ordinal": 0,
+      "name": "Size"
+    },
+    {
+      "id": "Aim Visualizer::1",
+      "feature": "Aim Visualizer",
+      "ordinal": 1,
+      "name": "Server Color"
+    },
+    {
+      "id": "Aim Visualizer::2",
+      "feature": "Aim Visualizer",
+      "ordinal": 2,
+      "name": "Client Color"
+    },
+    {
+      "id": "High Jump::0",
+      "feature": "High Jump",
+      "ordinal": 0,
+      "name": "Mode"
+    },
+    {
+      "id": "High Jump::1",
+      "feature": "High Jump",
+      "ordinal": 1,
+      "name": "Ticks"
+    },
+    {
+      "id": "High Jump::2",
+      "feature": "High Jump",
+      "ordinal": 2,
+      "name": "Lift"
+    },
+    {
+      "id": "Smart Pot::0",
+      "feature": "Smart Pot",
+      "ordinal": 0,
+      "name": "Auto Buff"
+    },
+    {
+      "id": "Smart Pot::1",
+      "feature": "Smart Pot",
+      "ordinal": 1,
+      "name": "Throw Delay"
+    },
+    {
+      "id": "Smart Pot::2",
+      "feature": "Smart Pot",
+      "ordinal": 2,
+      "name": "Throw Potion"
+    },
+    {
+      "id": "Smart Pot::3",
+      "feature": "Smart Pot",
+      "ordinal": 3,
+      "name": "Swap Back Delay"
+    },
+    {
+      "id": "Smart Pot::4",
+      "feature": "Smart Pot",
+      "ordinal": 4,
+      "name": "Swap Back"
+    },
+    {
+      "id": "Smart Pot::5",
+      "feature": "Smart Pot",
+      "ordinal": 5,
+      "name": "Silent Aim"
+    },
+    {
+      "id": "Smart Pot::6",
+      "feature": "Smart Pot",
+      "ordinal": 6,
+      "name": "Angle Check"
+    },
+    {
+      "id": "Smart Pot::7",
+      "feature": "Smart Pot",
+      "ordinal": 7,
+      "name": "FOV"
+    },
+    {
+      "id": "Smart Pot::8",
+      "feature": "Smart Pot",
+      "ordinal": 8,
+      "name": "Min Health"
+    },
+    {
+      "id": "Smart Pot::9",
+      "feature": "Smart Pot",
+      "ordinal": 9,
+      "name": "Auto Aim"
+    },
+    {
+      "id": "Knockback Delay::0",
+      "feature": "Knockback Delay",
+      "ordinal": 0,
+      "name": "Ground Delay"
+    },
+    {
+      "id": "Knockback Delay::1",
+      "feature": "Knockback Delay",
+      "ordinal": 1,
+      "name": "Air Delay"
+    },
+    {
+      "id": "Knockback Delay::2",
+      "feature": "Knockback Delay",
+      "ordinal": 2,
+      "name": "Chance"
+    },
+    {
+      "id": "Xray::0",
+      "feature": "Xray",
+      "ordinal": 0,
+      "name": "Through Liquids"
+    },
+    {
+      "id": "Xray::1",
+      "feature": "Xray",
+      "ordinal": 1,
+      "name": "Exposed to Air"
+    },
+    {
+      "id": "Step::0",
+      "feature": "Step",
+      "ordinal": 0,
+      "name": "Disable on sneak"
+    },
+    {
+      "id": "Step::1",
+      "feature": "Step",
+      "ordinal": 1,
+      "name": "Height"
+    },
+    {
+      "id": "Auto Crystal::0",
+      "feature": "Auto Crystal",
+      "ordinal": 0,
+      "name": "Place Delay"
+    },
+    {
+      "id": "Auto Crystal::1",
+      "feature": "Auto Crystal",
+      "ordinal": 1,
+      "name": "Place Obsidian Delay"
+    },
+    {
+      "id": "Auto Crystal::2",
+      "feature": "Auto Crystal",
+      "ordinal": 2,
+      "name": "Switch Back"
+    },
+    {
+      "id": "Auto Crystal::3",
+      "feature": "Auto Crystal",
+      "ordinal": 3,
+      "name": "Fake Punch"
+    },
+    {
+      "id": "Auto Crystal::4",
+      "feature": "Auto Crystal",
+      "ordinal": 4,
+      "name": "Break Delay"
+    },
+    {
+      "id": "Auto Crystal::5",
+      "feature": "Auto Crystal",
+      "ordinal": 5,
+      "name": "Switch Delay"
+    },
+    {
+      "id": "Auto Crystal::6",
+      "feature": "Auto Crystal",
+      "ordinal": 6,
+      "name": "Place Obsidian"
+    },
+    {
+      "id": "Auto Crystal::7",
+      "feature": "Auto Crystal",
+      "ordinal": 7,
+      "name": "Hotbar Whitelist"
+    },
+    {
+      "id": "Auto Crystal::8",
+      "feature": "Auto Crystal",
+      "ordinal": 8,
+      "name": "Item Whitelist"
+    },
+    {
+      "id": "Auto Crystal::9",
+      "feature": "Auto Crystal",
+      "ordinal": 9,
+      "name": "Return Slots"
+    },
+    {
+      "id": "Auto Crystal::10",
+      "feature": "Auto Crystal",
+      "ordinal": 10,
+      "name": "Fail Chance"
+    },
+    {
+      "id": "Auto Crystal::11",
+      "feature": "Auto Crystal",
+      "ordinal": 11,
+      "name": "Return To"
+    },
+    {
+      "id": "Auto Crystal::12",
+      "feature": "Auto Crystal",
+      "ordinal": 12,
+      "name": "Activate Key"
+    },
+    {
+      "id": "Auto Crystal::13",
+      "feature": "Auto Crystal",
+      "ordinal": 13,
+      "name": "Return Items"
+    },
+    {
+      "id": "Auto Crystal::14",
+      "feature": "Auto Crystal",
+      "ordinal": 14,
+      "name": "Stop on kill"
+    },
+    {
+      "id": "Totem Hand::0",
+      "feature": "Totem Hand",
+      "ordinal": 0,
+      "name": "Swap back on close"
+    },
+    {
+      "id": "Totem Hand::1",
+      "feature": "Totem Hand",
+      "ordinal": 1,
+      "name": "Anchors"
+    },
+    {
+      "id": "Totem Hand::2",
+      "feature": "Totem Hand",
+      "ordinal": 2,
+      "name": "Inventory chance"
+    },
+    {
+      "id": "Totem Hand::3",
+      "feature": "Totem Hand",
+      "ordinal": 3,
+      "name": "Predictive"
+    },
+    {
+      "id": "Totem Hand::4",
+      "feature": "Totem Hand",
+      "ordinal": 4,
+      "name": "Killable"
+    },
+    {
+      "id": "Totem Hand::5",
+      "feature": "Totem Hand",
+      "ordinal": 5,
+      "name": "Min damage"
+    },
+    {
+      "id": "Totem Hand::6",
+      "feature": "Totem Hand",
+      "ordinal": 6,
+      "name": "Crystals"
+    },
+    {
+      "id": "Totem Hand::7",
+      "feature": "Totem Hand",
+      "ordinal": 7,
+      "name": "On pop"
+    },
+    {
+      "id": "Totem Hand::8",
+      "feature": "Totem Hand",
+      "ordinal": 8,
+      "name": "Swap back on safe"
+    },
+    {
+      "id": "Totem Hand::9",
+      "feature": "Totem Hand",
+      "ordinal": 9,
+      "name": "On inventory open"
+    },
+    {
+      "id": "Aim Assist::0",
+      "feature": "Aim Assist",
+      "ordinal": 0,
+      "name": "FOV Mode"
+    },
+    {
+      "id": "Aim Assist::1",
+      "feature": "Aim Assist",
+      "ordinal": 1,
+      "name": "Range"
+    },
+    {
+      "id": "Aim Assist::2",
+      "feature": "Aim Assist",
+      "ordinal": 2,
+      "name": "Pitch FOV"
+    },
+    {
+      "id": "Aim Assist::3",
+      "feature": "Aim Assist",
+      "ordinal": 3,
+      "name": "Item Whitelist"
+    },
+    {
+      "id": "Aim Assist::4",
+      "feature": "Aim Assist",
+      "ordinal": 4,
+      "name": "Random"
+    },
+    {
+      "id": "Aim Assist::5",
+      "feature": "Aim Assist",
+      "ordinal": 5,
+      "name": "Silent Rotations"
+    },
+    {
+      "id": "Aim Assist::6",
+      "feature": "Aim Assist",
+      "ordinal": 6,
+      "name": "Multipoint"
+    },
+    {
+      "id": "Aim Assist::7",
+      "feature": "Aim Assist",
+      "ordinal": 7,
+      "name": "On Click"
+    },
+    {
+      "id": "Aim Assist::8",
+      "feature": "Aim Assist",
+      "ordinal": 8,
+      "name": "Target Priority"
+    },
+    {
+      "id": "Aim Assist::9",
+      "feature": "Aim Assist",
+      "ordinal": 9,
+      "name": "Through Walls"
+    },
+    {
+      "id": "Aim Assist::10",
+      "feature": "Aim Assist",
+      "ordinal": 10,
+      "name": "Vertical Speed"
+    },
+    {
+      "id": "Aim Assist::11",
+      "feature": "Aim Assist",
+      "ordinal": 11,
+      "name": "Hotbar Whitelist"
+    },
+    {
+      "id": "Aim Assist::12",
+      "feature": "Aim Assist",
+      "ordinal": 12,
+      "name": "Horizontal Speed"
+    },
+    {
+      "id": "Aim Assist::13",
+      "feature": "Aim Assist",
+      "ordinal": 13,
+      "name": "Aim Math"
+    },
+    {
+      "id": "Aim Assist::14",
+      "feature": "Aim Assist",
+      "ordinal": 14,
+      "name": "Aim Vector"
+    },
+    {
+      "id": "Aim Assist::15",
+      "feature": "Aim Assist",
+      "ordinal": 15,
+      "name": "FOV"
+    },
+    {
+      "id": "Aim Assist::16",
+      "feature": "Aim Assist",
+      "ordinal": 16,
+      "name": "Yaw FOV"
+    },
+    {
+      "id": "Auto Trap::0",
+      "feature": "Auto Trap",
+      "ordinal": 0,
+      "name": "Silent Rotations"
+    },
+    {
+      "id": "Auto Trap::1",
+      "feature": "Auto Trap",
+      "ordinal": 1,
+      "name": "Place Delay"
+    },
+    {
+      "id": "Auto Trap::2",
+      "feature": "Auto Trap",
+      "ordinal": 2,
+      "name": "Only Stationary"
+    },
+    {
+      "id": "Auto Trap::3",
+      "feature": "Auto Trap",
+      "ordinal": 3,
+      "name": "Mode"
+    },
+    {
+      "id": "Auto Clicker::0",
+      "feature": "Auto Clicker",
+      "ordinal": 0,
+      "name": "Hotbar Whitelist"
+    },
+    {
+      "id": "Auto Clicker::1",
+      "feature": "Auto Clicker",
+      "ordinal": 1,
+      "name": "Break Blocks"
+    },
+    {
+      "id": "Auto Clicker::2",
+      "feature": "Auto Clicker",
+      "ordinal": 2,
+      "name": "Item Whitelist"
+    },
+    {
+      "id": "Auto Clicker::3",
+      "feature": "Auto Clicker",
+      "ordinal": 3,
+      "name": "Require Click"
+    },
+    {
+      "id": "Auto Clicker::4",
+      "feature": "Auto Clicker",
+      "ordinal": 4,
+      "name": "CPS"
+    },
+    {
+      "id": "Auto Clicker::5",
+      "feature": "Auto Clicker",
+      "ordinal": 5,
+      "name": "Randomization"
+    },
+    {
+      "id": "Info Bar::0",
+      "feature": "Info Bar",
+      "ordinal": 0,
+      "name": "Show Frame Time"
+    },
+    {
+      "id": "Info Bar::1",
+      "feature": "Info Bar",
+      "ordinal": 1,
+      "name": "Show FPS"
+    },
+    {
+      "id": "Info Bar::2",
+      "feature": "Info Bar",
+      "ordinal": 2,
+      "name": "Show Ping"
+    },
+    {
+      "id": "Info Bar::3",
+      "feature": "Info Bar",
+      "ordinal": 3,
+      "name": "Show Username"
+    },
+    {
+      "id": "Jump Reset::0",
+      "feature": "Jump Reset",
+      "ordinal": 0,
+      "name": "Damage Sources"
+    },
+    {
+      "id": "Jump Reset::1",
+      "feature": "Jump Reset",
+      "ordinal": 1,
+      "name": "Chance"
+    },
+    {
+      "id": "Jump Reset::2",
+      "feature": "Jump Reset",
+      "ordinal": 2,
+      "name": "Web Check"
+    },
+    {
+      "id": "Jump Reset::3",
+      "feature": "Jump Reset",
+      "ordinal": 3,
+      "name": "Liquid Check"
+    },
+    {
+      "id": "Swing Speed::0",
+      "feature": "Swing Speed",
+      "ordinal": 0,
+      "name": "Swing Speed"
+    },
+    {
+      "id": "Notifications::0",
+      "feature": "Notifications",
+      "ordinal": 0,
+      "name": "Duration"
+    },
+    {
+      "id": "XBow::0",
+      "feature": "XBow",
+      "ordinal": 0,
+      "name": "Place"
+    },
+    {
+      "id": "XBow::1",
+      "feature": "XBow",
+      "ordinal": 1,
+      "name": "Activate Key"
+    },
+    {
+      "id": "XBow::2",
+      "feature": "XBow",
+      "ordinal": 2,
+      "name": "Auto Aim"
+    },
+    {
+      "id": "XBow::3",
+      "feature": "XBow",
+      "ordinal": 3,
+      "name": "Silent Rotations"
+    },
+    {
+      "id": "Tunneler::0",
+      "feature": "Tunneler",
+      "ordinal": 0,
+      "name": "Silent"
+    },
+    {
+      "id": "Tunneler::1",
+      "feature": "Tunneler",
+      "ordinal": 1,
+      "name": "Mode"
+    },
+    {
+      "id": "Silent Aim::0",
+      "feature": "Silent Aim",
+      "ordinal": 0,
+      "name": "Render Rotations"
+    },
+    {
+      "id": "Silent Aim::1",
+      "feature": "Silent Aim",
+      "ordinal": 1,
+      "name": "Mode"
+    },
+    {
+      "id": "Trails::0",
+      "feature": "Trails",
+      "ordinal": 0,
+      "name": "Gradient"
+    },
+    {
+      "id": "Trails::1",
+      "feature": "Trails",
+      "ordinal": 1,
+      "name": "Height"
+    },
+    {
+      "id": "Trails::2",
+      "feature": "Trails",
+      "ordinal": 2,
+      "name": "Lifetime"
+    },
+    {
+      "id": "Trails::3",
+      "feature": "Trails",
+      "ordinal": 3,
+      "name": "Color"
+    },
+    {
+      "id": "Velocity::0",
+      "feature": "Velocity",
+      "ordinal": 0,
+      "name": "Amount"
+    },
+    {
+      "id": "Velocity::1",
+      "feature": "Velocity",
+      "ordinal": 1,
+      "name": "Mode"
+    },
+    {
+      "id": "Velocity::2",
+      "feature": "Velocity",
+      "ordinal": 2,
+      "name": "Sources"
+    },
+    {
+      "id": "Key Charge::0",
+      "feature": "Key Charge",
+      "ordinal": 0,
+      "name": "Switchback"
+    },
+    {
+      "id": "Key Charge::1",
+      "feature": "Key Charge",
+      "ordinal": 1,
+      "name": "Activate Key"
+    },
+    {
+      "id": "Key Charge::2",
+      "feature": "Key Charge",
+      "ordinal": 2,
+      "name": "Silent Swap"
+    },
+    {
+      "id": "Key Charge::3",
+      "feature": "Key Charge",
+      "ordinal": 3,
+      "name": "Auto Jump"
+    },
+    {
+      "id": "Key Charge::4",
+      "feature": "Key Charge",
+      "ordinal": 4,
+      "name": "Silent Aim"
+    },
+    {
+      "id": "Key Charge::5",
+      "feature": "Key Charge",
+      "ordinal": 5,
+      "name": "Auto Aim"
+    },
+    {
+      "id": "Displace::0",
+      "feature": "Displace",
+      "ordinal": 0,
+      "name": "Yaw Offset"
+    },
+    {
+      "id": "Displace::1",
+      "feature": "Displace",
+      "ordinal": 1,
+      "name": "Direction"
+    },
+    {
+      "id": "Displace::2",
+      "feature": "Displace",
+      "ordinal": 2,
+      "name": "Dynamic"
+    },
+    {
+      "id": "Displace::3",
+      "feature": "Displace",
+      "ordinal": 3,
+      "name": "Knockback Enchant"
+    },
+    {
+      "id": "Block Bruteforcer::0",
+      "feature": "Block Bruteforcer",
+      "ordinal": 0,
+      "name": "Radius"
+    },
+    {
+      "id": "Block Bruteforcer::1",
+      "feature": "Block Bruteforcer",
+      "ordinal": 1,
+      "name": "Up"
+    },
+    {
+      "id": "Block Bruteforcer::2",
+      "feature": "Block Bruteforcer",
+      "ordinal": 2,
+      "name": "Delay"
+    },
+    {
+      "id": "Block Bruteforcer::3",
+      "feature": "Block Bruteforcer",
+      "ordinal": 3,
+      "name": "Down"
+    },
+    {
+      "id": "Block Bruteforcer::4",
+      "feature": "Block Bruteforcer",
+      "ordinal": 4,
+      "name": "Blocks Per Tick"
+    },
+    {
+      "id": "Block Bruteforcer::5",
+      "feature": "Block Bruteforcer",
+      "ordinal": 5,
+      "name": "Mode"
+    },
+    {
+      "id": "Block Bruteforcer::6",
+      "feature": "Block Bruteforcer",
+      "ordinal": 6,
+      "name": "Freeze Movement"
+    },
+    {
+      "id": "Keep Sprint::0",
+      "feature": "Keep Sprint",
+      "ordinal": 0,
+      "name": "Sprint Condition"
+    },
+    {
+      "id": "Keep Sprint::1",
+      "feature": "Keep Sprint",
+      "ordinal": 1,
+      "name": "Speed Kept Velocity"
+    },
+    {
+      "id": "Keep Sprint::2",
+      "feature": "Keep Sprint",
+      "ordinal": 2,
+      "name": "Should Sprint"
+    },
+    {
+      "id": "Particles::0",
+      "feature": "Particles",
+      "ordinal": 0,
+      "name": "Color"
+    },
+    {
+      "id": "Particles::1",
+      "feature": "Particles",
+      "ordinal": 1,
+      "name": "Radius"
+    },
+    {
+      "id": "Particles::2",
+      "feature": "Particles",
+      "ordinal": 2,
+      "name": "Speed"
+    },
+    {
+      "id": "Particles::3",
+      "feature": "Particles",
+      "ordinal": 3,
+      "name": "Density"
+    },
+    {
+      "id": "Particles::4",
+      "feature": "Particles",
+      "ordinal": 4,
+      "name": "Twinkle"
+    },
+    {
+      "id": "Particles::5",
+      "feature": "Particles",
+      "ordinal": 5,
+      "name": "Size"
+    },
+    {
+      "id": "Freecam::0",
+      "feature": "Freecam",
+      "ordinal": 0,
+      "name": "Speed"
+    },
+    {
+      "id": "Pot Refill::0",
+      "feature": "Pot Refill",
+      "ordinal": 0,
+      "name": "Mode"
+    },
+    {
+      "id": "Pot Refill::1",
+      "feature": "Pot Refill",
+      "ordinal": 1,
+      "name": "Refill Buff Potions"
+    },
+    {
+      "id": "Pot Refill::2",
+      "feature": "Pot Refill",
+      "ordinal": 2,
+      "name": "Delay"
+    },
+    {
+      "id": "Auto Anchor::0",
+      "feature": "Auto Anchor",
+      "ordinal": 0,
+      "name": "Min Damage"
+    },
+    {
+      "id": "Auto Anchor::1",
+      "feature": "Auto Anchor",
+      "ordinal": 1,
+      "name": "Can Place Legit"
+    },
+    {
+      "id": "Auto Anchor::2",
+      "feature": "Auto Anchor",
+      "ordinal": 2,
+      "name": "Safe block delay"
+    },
+    {
+      "id": "Auto Anchor::3",
+      "feature": "Auto Anchor",
+      "ordinal": 3,
+      "name": "Outline Color"
+    },
+    {
+      "id": "Auto Anchor::4",
+      "feature": "Auto Anchor",
+      "ordinal": 4,
+      "name": "Safety Timeout"
+    },
+    {
+      "id": "Auto Anchor::5",
+      "feature": "Auto Anchor",
+      "ordinal": 5,
+      "name": "Mode"
+    },
+    {
+      "id": "Auto Anchor::6",
+      "feature": "Auto Anchor",
+      "ordinal": 6,
+      "name": "Glowstone Start"
+    },
+    {
+      "id": "Auto Anchor::7",
+      "feature": "Auto Anchor",
+      "ordinal": 7,
+      "name": "Charge Delay"
+    },
+    {
+      "id": "Auto Anchor::8",
+      "feature": "Auto Anchor",
+      "ordinal": 8,
+      "name": "Render Position"
+    },
+    {
+      "id": "Auto Anchor::9",
+      "feature": "Auto Anchor",
+      "ordinal": 9,
+      "name": "Safe Anchor"
+    },
+    {
+      "id": "Auto Anchor::10",
+      "feature": "Auto Anchor",
+      "ordinal": 10,
+      "name": "Explode Slot"
+    },
+    {
+      "id": "Auto Anchor::11",
+      "feature": "Auto Anchor",
+      "ordinal": 11,
+      "name": "Repeat"
+    },
+    {
+      "id": "Auto Anchor::12",
+      "feature": "Auto Anchor",
+      "ordinal": 12,
+      "name": "Style"
+    },
+    {
+      "id": "Auto Anchor::13",
+      "feature": "Auto Anchor",
+      "ordinal": 13,
+      "name": "Charges"
+    },
+    {
+      "id": "Auto Anchor::14",
+      "feature": "Auto Anchor",
+      "ordinal": 14,
+      "name": "Explode Delay"
+    },
+    {
+      "id": "Auto Anchor::15",
+      "feature": "Auto Anchor",
+      "ordinal": 15,
+      "name": "Auto Aim"
+    },
+    {
+      "id": "Auto Anchor::16",
+      "feature": "Auto Anchor",
+      "ordinal": 16,
+      "name": "Rotation Speed"
+    },
+    {
+      "id": "Auto Anchor::17",
+      "feature": "Auto Anchor",
+      "ordinal": 17,
+      "name": "Fill Color"
+    },
+    {
+      "id": "Auto Anchor::18",
+      "feature": "Auto Anchor",
+      "ordinal": 18,
+      "name": "Activate Key"
+    },
+    {
+      "id": "Auto Anchor::19",
+      "feature": "Auto Anchor",
+      "ordinal": 19,
+      "name": "Silent Aim"
+    },
+    {
+      "id": "Spear Assist::0",
+      "feature": "Spear Assist",
+      "ordinal": 0,
+      "name": "Aim Math"
+    },
+    {
+      "id": "Spear Assist::1",
+      "feature": "Spear Assist",
+      "ordinal": 1,
+      "name": "Through Walls"
+    },
+    {
+      "id": "Spear Assist::2",
+      "feature": "Spear Assist",
+      "ordinal": 2,
+      "name": "Aim Vector"
+    },
+    {
+      "id": "Spear Assist::3",
+      "feature": "Spear Assist",
+      "ordinal": 3,
+      "name": "Multipoint"
+    },
+    {
+      "id": "Spear Assist::4",
+      "feature": "Spear Assist",
+      "ordinal": 4,
+      "name": "Vertical Speed"
+    },
+    {
+      "id": "Spear Assist::5",
+      "feature": "Spear Assist",
+      "ordinal": 5,
+      "name": "Target Priority"
+    },
+    {
+      "id": "Spear Assist::6",
+      "feature": "Spear Assist",
+      "ordinal": 6,
+      "name": "Range"
+    },
+    {
+      "id": "Spear Assist::7",
+      "feature": "Spear Assist",
+      "ordinal": 7,
+      "name": "Horizontal Speed"
+    },
+    {
+      "id": "Spear Assist::8",
+      "feature": "Spear Assist",
+      "ordinal": 8,
+      "name": "FOV"
+    },
+    {
+      "id": "Spear Assist::9",
+      "feature": "Spear Assist",
+      "ordinal": 9,
+      "name": "Random"
+    },
+    {
+      "id": "Spear Assist::10",
+      "feature": "Spear Assist",
+      "ordinal": 10,
+      "name": "Silent Rotations"
+    },
+    {
+      "id": "Fast Use::0",
+      "feature": "Fast Use",
+      "ordinal": 0,
+      "name": "Delay"
+    },
+    {
+      "id": "Click GUI::0",
+      "feature": "Click GUI",
+      "ordinal": 0,
+      "name": "Scroll Speed"
+    },
+    {
+      "id": "Click GUI::1",
+      "feature": "Click GUI",
+      "ordinal": 1,
+      "name": "Stream proof"
+    },
+    {
+      "id": "Scaffold::0",
+      "feature": "Scaffold",
+      "ordinal": 0,
+      "name": "Pitch Check"
+    },
+    {
+      "id": "Scaffold::1",
+      "feature": "Scaffold",
+      "ordinal": 1,
+      "name": "Mode"
+    },
+    {
+      "id": "Scaffold::2",
+      "feature": "Scaffold",
+      "ordinal": 2,
+      "name": "List Type"
+    },
+    {
+      "id": "Sprint Reset::0",
+      "feature": "Sprint Reset",
+      "ordinal": 0,
+      "name": "Duration Between Reset"
+    },
+    {
+      "id": "Sprint Reset::1",
+      "feature": "Sprint Reset",
+      "ordinal": 1,
+      "name": "Duration"
+    },
+    {
+      "id": "Sprint Reset::2",
+      "feature": "Sprint Reset",
+      "ordinal": 2,
+      "name": "Ground Only"
+    },
+    {
+      "id": "Sprint Reset::3",
+      "feature": "Sprint Reset",
+      "ordinal": 3,
+      "name": "Reaction Time"
+    },
+    {
+      "id": "Light ESP::0",
+      "feature": "Light ESP",
+      "ordinal": 0,
+      "name": "Max Y"
+    },
+    {
+      "id": "Light ESP::1",
+      "feature": "Light ESP",
+      "ordinal": 1,
+      "name": "Min Light"
+    },
+    {
+      "id": "Light ESP::2",
+      "feature": "Light ESP",
+      "ordinal": 2,
+      "name": "Tracers"
+    },
+    {
+      "id": "Light ESP::3",
+      "feature": "Light ESP",
+      "ordinal": 3,
+      "name": "Outline"
+    },
+    {
+      "id": "Light ESP::4",
+      "feature": "Light ESP",
+      "ordinal": 4,
+      "name": "Color"
+    },
+    {
+      "id": "Sky Shaders::0",
+      "feature": "Sky Shaders",
+      "ordinal": 0,
+      "name": "Stars"
+    },
+    {
+      "id": "Sky Shaders::1",
+      "feature": "Sky Shaders",
+      "ordinal": 1,
+      "name": "Mode"
+    },
+    {
+      "id": "Sky Shaders::2",
+      "feature": "Sky Shaders",
+      "ordinal": 2,
+      "name": "Secondary color"
+    },
+    {
+      "id": "Sky Shaders::3",
+      "feature": "Sky Shaders",
+      "ordinal": 3,
+      "name": "End dimension"
+    },
+    {
+      "id": "Sky Shaders::4",
+      "feature": "Sky Shaders",
+      "ordinal": 4,
+      "name": "Brightness"
+    },
+    {
+      "id": "Sky Shaders::5",
+      "feature": "Sky Shaders",
+      "ordinal": 5,
+      "name": "Custom colors"
+    },
+    {
+      "id": "Sky Shaders::6",
+      "feature": "Sky Shaders",
+      "ordinal": 6,
+      "name": "Sun & moon"
+    },
+    {
+      "id": "Sky Shaders::7",
+      "feature": "Sky Shaders",
+      "ordinal": 7,
+      "name": "Speed"
+    },
+    {
+      "id": "Sky Shaders::8",
+      "feature": "Sky Shaders",
+      "ordinal": 8,
+      "name": "Primary color"
+    },
+    {
+      "id": "Pearl Grapple::0",
+      "feature": "Pearl Grapple",
+      "ordinal": 0,
+      "name": "Max Predict Ticks"
+    },
+    {
+      "id": "Pearl Grapple::1",
+      "feature": "Pearl Grapple",
+      "ordinal": 1,
+      "name": "Distance"
+    },
+    {
+      "id": "Pearl Grapple::2",
+      "feature": "Pearl Grapple",
+      "ordinal": 2,
+      "name": "Silent Rotations"
+    },
+    {
+      "id": "GUI Walk::0",
+      "feature": "GUI Walk",
+      "ordinal": 0,
+      "name": "Mode"
+    },
+    {
+      "id": "Search::0",
+      "feature": "Search",
+      "ordinal": 0,
+      "name": "Tracers"
+    },
+    {
+      "id": "Search::1",
+      "feature": "Search",
+      "ordinal": 1,
+      "name": "Outline"
+    },
+    {
+      "id": "Search::2",
+      "feature": "Search",
+      "ordinal": 2,
+      "name": "Opacity"
+    },
+    {
+      "id": "Spear Lunge::0",
+      "feature": "Spear Lunge",
+      "ordinal": 0,
+      "name": "Cooldown"
+    },
+    {
+      "id": "Spear Lunge::1",
+      "feature": "Spear Lunge",
+      "ordinal": 1,
+      "name": "Activate Key"
+    },
+    {
+      "id": "Spear Lunge::2",
+      "feature": "Spear Lunge",
+      "ordinal": 2,
+      "name": "Mode"
+    },
+    {
+      "id": "Spear Lunge::3",
+      "feature": "Spear Lunge",
+      "ordinal": 3,
+      "name": "Return Items"
+    },
+    {
+      "id": "Spear Lunge::4",
+      "feature": "Spear Lunge",
+      "ordinal": 4,
+      "name": "Cooldown %"
+    },
+    {
+      "id": "Spear Lunge::5",
+      "feature": "Spear Lunge",
+      "ordinal": 5,
+      "name": "Hotbar Whitelist"
+    },
+    {
+      "id": "Spear Lunge::6",
+      "feature": "Spear Lunge",
+      "ordinal": 6,
+      "name": "Item Whitelist"
+    },
+    {
+      "id": "Spear Lunge::7",
+      "feature": "Spear Lunge",
+      "ordinal": 7,
+      "name": "Silent"
+    },
+    {
+      "id": "Spear Lunge::8",
+      "feature": "Spear Lunge",
+      "ordinal": 8,
+      "name": "Return Slots"
+    },
+    {
+      "id": "Spear Lunge::9",
+      "feature": "Spear Lunge",
+      "ordinal": 9,
+      "name": "Return To"
+    },
+    {
+      "id": "Piercing::0",
+      "feature": "Piercing",
+      "ordinal": 0,
+      "name": "Sort Targets By"
+    },
+    {
+      "id": "Piercing::1",
+      "feature": "Piercing",
+      "ordinal": 1,
+      "name": "Blocks"
+    },
+    {
+      "id": "Piercing::2",
+      "feature": "Piercing",
+      "ordinal": 2,
+      "name": "Interact"
+    },
+    {
+      "id": "Item ESP::0",
+      "feature": "Item ESP",
+      "ordinal": 0,
+      "name": "Whitelist"
+    },
+    {
+      "id": "Item ESP::1",
+      "feature": "Item ESP",
+      "ordinal": 1,
+      "name": "Fill"
+    },
+    {
+      "id": "Item ESP::2",
+      "feature": "Item ESP",
+      "ordinal": 2,
+      "name": "Modes"
+    },
+    {
+      "id": "Item ESP::3",
+      "feature": "Item ESP",
+      "ordinal": 3,
+      "name": "Show Name"
+    },
+    {
+      "id": "Item ESP::4",
+      "feature": "Item ESP",
+      "ordinal": 4,
+      "name": "Tracers"
+    },
+    {
+      "id": "Item ESP::5",
+      "feature": "Item ESP",
+      "ordinal": 5,
+      "name": "Color"
+    },
+    {
+      "id": "No Render::0",
+      "feature": "No Render",
+      "ordinal": 0,
+      "name": "No Spyglass Overlay"
+    },
+    {
+      "id": "No Render::1",
+      "feature": "No Render",
+      "ordinal": 1,
+      "name": "No Nausea"
+    },
+    {
+      "id": "No Render::2",
+      "feature": "No Render",
+      "ordinal": 2,
+      "name": "No Portal Overlay"
+    },
+    {
+      "id": "No Render::3",
+      "feature": "No Render",
+      "ordinal": 3,
+      "name": "No Fire Overlay"
+    },
+    {
+      "id": "No Render::4",
+      "feature": "No Render",
+      "ordinal": 4,
+      "name": "No Floating Item"
+    },
+    {
+      "id": "No Render::5",
+      "feature": "No Render",
+      "ordinal": 5,
+      "name": "No Vignette"
+    },
+    {
+      "id": "No Render::6",
+      "feature": "No Render",
+      "ordinal": 6,
+      "name": "No Crystal Bounce"
+    }
+  ],
+  "components": [
+    "bootstrap",
+    "event-system",
+    "renderer",
+    "ui",
+    "assets",
+    "scripting",
+    "persistence",
+    "integrations",
+    "native-shader-bridge",
+    "native-media-bridge"
+  ]
+}

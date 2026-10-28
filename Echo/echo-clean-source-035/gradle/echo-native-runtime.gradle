@@ -1,0 +1,189 @@
+import groovy.json.JsonOutput
+import groovy.json.JsonSlurper
+import java.security.MessageDigest
+import java.util.zip.ZipFile
+
+// One target per artifact, matching NativeLibraries.resourcePath exactly.
+def integrationRoot = project.hasProperty('echoIntegrationRoot') ? file(echoIntegrationRoot) : rootDir
+def sourceRoot = project.hasProperty('echoNativeSourceRoot') ? file(echoNativeSourceRoot) : rootDir
+def targetsFile = new File(integrationRoot, 'gradle/native-targets.json')
+def targets = new JsonSlurper().parse(targetsFile)
+def os = System.getProperty('os.name').toLowerCase(Locale.ROOT)
+def arch = System.getProperty('os.arch').toLowerCase(Locale.ROOT)
+def hostOs = os.contains('mac') || os.contains('darwin') ? 'macos' : os.contains('windows') ? 'windows' : os.contains('linux') ? 'linux' : 'unsupported'
+def hostArch = arch in ['aarch64', 'arm64'] ? 'aarch64' : arch in ['amd64', 'x86_64'] ? 'x86_64' : 'unsupported'
+def selected = providers.gradleProperty('echoNativeTarget').getOrElse("${hostOs}-${hostArch}".toString()).toString()
+if (!targets.containsKey(selected)) { throw new GradleException("Unsupported echoNativeTarget: ${selected}; choose ${targets.keySet()}") }
+def target = targets[selected]
+def version = '3.4.3'
+def modules = ['lwjgl', 'lwjgl-glfw', 'lwjgl-openal', 'lwjgl-opengl', 'lwjgl-stb',
+               'lwjgl-vulkan', 'lwjgl-vma', 'lwjgl-sdl', 'lwjgl-shaderc',
+               'lwjgl-jemalloc', 'lwjgl-freetype', 'lwjgl-tinyfd']
+def nativeModules = modules.findAll { it != 'lwjgl-vulkan' || selected.startsWith('macos-') }
+def nativeOutput = layout.buildDirectory.dir("echo-native/${selected}")
+def runtimeOutput = layout.buildDirectory.dir("echo-runtime/${selected}")
+def pins = new File(integrationRoot, 'gradle/native-inputs.json')
+def nativeTool = new File(integrationRoot, 'tools/build/native_runtime.py')
+def launcherTool = new File(integrationRoot, 'tools/build/isolated_launcher.py')
+def wrapper = new File(sourceRoot, 'tools/with_heavy_tool.py')
+def nativeRssMiB = providers.gradleProperty('echoNativeRssMiB').getOrElse('4096').toInteger()
+if (!(nativeRssMiB in [512, 4096])) { throw new GradleException('Native RSS budget must be 512 or the authorized cold-build limit 4096 MiB') }
+def sha256 = { File f -> MessageDigest.getInstance('SHA-256').digest(f.bytes).encodeHex().toString() }
+
+configurations {
+    echoLwjglRuntime { canBeConsumed = false; canBeResolved = true; transitive = false }
+    echoLauncherMods { canBeConsumed = false; canBeResolved = true; transitive = false }
+}
+dependencies {
+    modules.each { add('echoLwjglRuntime', "org.lwjgl:${it}:${version}") }
+    nativeModules.each { add('echoLwjglRuntime', "org.lwjgl:${it}:${version}:${target.lwjgl}") }
+    add('echoLauncherMods', "net.fabricmc.fabric-api:fabric-api:${fabric_version}")
+}
+configurations.named('compileClasspath') { extendsFrom configurations.echoLwjglRuntime }
+configurations.named('runtimeClasspath') { extendsFrom configurations.echoLwjglRuntime }
+configurations.matching { it.name in ['testCompileClasspath', 'testRuntimeClasspath'] }.configureEach {
+    extendsFrom configurations.echoLwjglRuntime
+}
+// Loom imports ALL applicable Mojang native classifier entries, including the
+// obsolete macos-patch classifier. Remove those declarations at their source;
+// forcing a version alone leaves duplicate/wrong-architecture natives behind.
+configurations.matching { it.name.startsWith('minecraft') }.configureEach {
+    withDependencies { dependencies -> dependencies.removeAll { it.group == 'org.lwjgl' } }
+}
+configurations.configureEach {
+    resolutionStrategy.eachDependency { details ->
+        if (details.requested.group == 'org.lwjgl') { details.useVersion(version) }
+    }
+}
+
+def cargoTasks = ['renderer': 'buildNagaNative']
+if (target.media) { cargoTasks.media = 'buildMediaNative' }
+cargoTasks.each { crate, taskName ->
+    tasks.register(taskName, Exec) {
+        group = 'build'
+        description = "Build pinned ${crate} ordinary Rust for ${selected}; requires its target toolchain/linker"
+        inputs.file pins
+        inputs.file targetsFile
+        inputs.file nativeTool
+        inputs.file new File(integrationRoot, 'tools/build/pe_native.py')
+        inputs.file new File(integrationRoot, 'tools/build/windows_gnu_toolchain.py')
+        inputs.file new File(integrationRoot, 'tools/build/deterministic_dlltool.py')
+        inputs.file new File(integrationRoot, 'gradle/windows-gnu-toolchain.json')
+        if (crate == 'media') { inputs.file new File(sourceRoot, 'native/media/BUILD-CONTRACT.json') }
+        inputs.files(fileTree(new File(sourceRoot, "native/${crate}")) { include 'Cargo.toml', 'Cargo.lock', 'build.rs', 'src/**/*.rs' })
+        inputs.property 'target', selected
+        inputs.property 'nativeRssMiB', nativeRssMiB
+        // Always check toolchain and source receipts, including external linker changes.
+        outputs.upToDateWhen { false }
+        commandLine 'python3', wrapper, '--', 'python3', nativeTool, 'build',
+                '--root', sourceRoot, '--pins', pins, '--targets', targetsFile,
+                '--target', selected, '--crate', crate, '--output', nativeOutput.get().asFile,
+                '--rss-limit-mib', nativeRssMiB.toString()
+    }
+}
+tasks.register('stageEchoNatives', Sync) {
+    dependsOn cargoTasks.values()
+    from nativeOutput.map { it.dir('resources') }
+    into layout.buildDirectory.dir('generated/echo-native-resources')
+}
+sourceSets.main.resources.srcDir(layout.buildDirectory.dir('generated/echo-native-resources'))
+tasks.named('processResources') { dependsOn 'stageEchoNatives' }
+
+tasks.register('resolveEchoRuntime') {
+    group = 'verification'
+    description = 'Resolve and hash the exact launcher LWJGL Java/native set'
+    inputs.files configurations.echoLwjglRuntime
+    inputs.files configurations.echoLauncherMods
+    outputs.file runtimeOutput.map { it.file('lwjgl-runtime.json') }
+    doLast {
+        def artifacts = configurations.echoLwjglRuntime.resolvedConfiguration.resolvedArtifacts.collect { a ->
+            def coordinate = "${a.moduleVersion.id.group}:${a.name}:${a.moduleVersion.id.version}" + (a.classifier ? ":${a.classifier}" : '')
+            def path = "org/lwjgl/${a.name}/${version}/${a.file.name}"
+            [coordinate: coordinate, file: a.file.absolutePath, classifier: a.classifier,
+             path: path, url: "https://repo.maven.apache.org/maven2/${path}",
+             sha256: sha256(a.file), sha1: MessageDigest.getInstance('SHA-1').digest(a.file.bytes).encodeHex().toString(), size: a.file.length()]
+        }.sort { it.coordinate }
+        def expected = modules.size() + nativeModules.size()
+        if (artifacts.size() != expected) { throw new GradleException("Expected ${expected} LWJGL artifacts, found ${artifacts.size()}") }
+        def report = runtimeOutput.get().file('lwjgl-runtime.json').asFile
+        report.parentFile.mkdirs()
+        def mods = configurations.echoLauncherMods.resolvedConfiguration.resolvedArtifacts.collect { a ->
+            [coordinate: a.moduleVersion.id.toString(), file: a.file.absolutePath, sha256: sha256(a.file)]
+        }
+        report.text = JsonOutput.prettyPrint(JsonOutput.toJson([target: selected, lwjgl: version, artifacts: artifacts, mods: mods])) + '\n'
+    }
+}
+tasks.register('verifyEchoRuntimeClasspath') {
+    dependsOn 'resolveEchoRuntime'
+    group = 'verification'
+    doLast {
+        def expected = configurations.echoLwjglRuntime.files.collect { sha256(it) }.toSet()
+        def reports = [:]
+        ['compileClasspath', 'runtimeClasspath'].each { name ->
+            def artifacts = configurations.getByName(name).resolvedConfiguration.resolvedArtifacts.findAll { it.moduleVersion.id.group == 'org.lwjgl' }
+            def actual = artifacts.collect { sha256(it.file) }.toSet()
+            if (actual != expected || artifacts.size() != expected.size()) {
+                throw new GradleException("${name} contains an incoherent LWJGL Java/native set")
+            }
+            reports[name] = artifacts.collect { [coordinate: it.moduleVersion.id.toString(), file: it.file.absolutePath, sha256: sha256(it.file)] }
+        }
+        def report = runtimeOutput.get().file('gradle-classpaths.json').asFile
+        report.text = JsonOutput.prettyPrint(JsonOutput.toJson(reports)) + '\n'
+    }
+}
+tasks.register('compileEchoRuntimeAudit', JavaCompile) {
+    source new File(integrationRoot, 'tools/build/LwjglLinkageAudit.java')
+    classpath = configurations.compileClasspath
+    destinationDirectory = layout.buildDirectory.dir('echo-runtime-audit/classes')
+    options.release = providers.gradleProperty('java_release').getOrElse('25').toInteger()
+    options.fork = true
+    options.forkOptions.memoryMaximumSize = '256m'
+    options.forkOptions.jvmArgs = ['-XX:ActiveProcessorCount=2']
+}
+tasks.register('verifyEchoMinecraftRuntimeCompatibility', JavaExec) {
+    group = 'verification'
+    description = 'Rejects a coherent LWJGL upgrade that removes actual Minecraft call descriptors'
+    dependsOn 'compileEchoRuntimeAudit', 'verifyEchoRuntimeClasspath'
+    javaLauncher = javaToolchains.launcherFor { languageVersion = JavaLanguageVersion.of(providers.gradleProperty('java_release').getOrElse('25').toInteger()) }
+    classpath = files(layout.buildDirectory.dir('echo-runtime-audit/classes')) + configurations.runtimeClasspath
+    mainClass = 'LwjglLinkageAudit'
+    maxHeapSize = '256m'
+    jvmArgs '-XX:ActiveProcessorCount=2'
+    doFirst {
+        def game = configurations.compileClasspath.files.find { path ->
+            path.name.endsWith('.jar') && new ZipFile(path).withCloseable { zip ->
+                // 26.x official name; `MinecraftClient` was the Yarn name.
+                zip.getEntry('net/minecraft/client/Minecraft.class') != null
+            }
+        }
+        if (game == null) { throw new GradleException('Official-named Minecraft JAR missing for runtime linkage validation') }
+        args game.absolutePath
+    }
+}
+tasks.register('prepareEchoLauncher', Exec) {
+    group = 'distribution'
+    description = 'Build an isolated flattened launcher descriptor; never edits a user profile or launches Minecraft'
+    dependsOn 'resolveEchoRuntime', 'stageEchoNatives', 'verifyEchoMinecraftRuntimeCompatibility', 'verifyCompatibilityFabricRegistration'
+    commandLine 'python3', launcherTool, 'prepare', '--runtime', runtimeOutput.get().file('lwjgl-runtime.json').asFile,
+            '--inputs', new File(integrationRoot, 'tools/build/launcher-inputs'),
+            '--native-resources', layout.buildDirectory.dir('generated/echo-native-resources').get().asFile,
+            '--compatibility-receipt', layout.buildDirectory.file('reports/lwjgl-compat/verification.json').get().asFile,
+            '--output', runtimeOutput.get().dir('launcher').asFile
+}
+tasks.register('verifyEchoNativeArchive', Exec) {
+    group = 'verification'
+    dependsOn 'jar'
+    commandLine 'python3', nativeTool, 'verify-archive', '--targets', targetsFile,
+            '--target', selected, '--archive', tasks.named('jar').get().archiveFile.get().asFile
+}
+tasks.named('jar') { dependsOn 'verifyEchoRuntimeClasspath', 'verifyEchoMinecraftRuntimeCompatibility' }
+tasks.named('build') { dependsOn 'verifyEchoNativeArchive' }
+tasks.register('stageEchoLauncherApplication', Copy) {
+    group = 'distribution'
+    description = 'Stage the admitted clean application into the new isolated launcher instance'
+    dependsOn 'prepareEchoLauncher', 'verifyEchoNativeArchive'
+    from tasks.named('jar').flatMap { it.archiveFile }
+    into runtimeOutput.map { it.dir('launcher/instance/mods') }
+}
+// Root jar/build/run* completion gates remain authoritative. This script
+// does not add an alternate application archive or any runnable application task.

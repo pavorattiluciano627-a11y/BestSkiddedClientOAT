@@ -1,0 +1,290 @@
+import groovy.json.JsonOutput
+import java.security.MessageDigest
+import java.util.zip.ZipFile
+import org.gradle.api.artifacts.component.ModuleComponentIdentifier
+import org.gradle.api.artifacts.component.ProjectComponentIdentifier
+
+buildscript {
+    configurations.classpath.resolutionStrategy.eachDependency { details ->
+        if (details.requested.group == 'org.ow2.asm') details.useVersion('9.10.1')
+    }
+}
+
+plugins {
+    // 26.x: no obfuscation, therefore no remapping Loom and no `mappings` dependency.
+    id 'net.fabricmc.fabric-loom'
+    id 'java'
+}
+
+group = 'echo.clean'
+version = providers.gradleProperty('mod_version').get()
+description = 'Readable-source Fabric 26.2 client; release blocked until functional reconstruction is complete'
+
+base { archivesName = 'echo-clean-source' }
+
+// Single sources of truth for the Loom version and Java release, both of which are
+// also recorded as build evidence.
+def loomVersion = providers.gradleProperty('loom_version').getOrElse('1.19-SNAPSHOT')
+def javaRelease = providers.gradleProperty('java_release').getOrElse('25').toInteger()
+
+allprojects {
+    repositories {
+        mavenCentral()
+        maven {
+            name = 'Fabric'
+            url = uri('https://maven.fabricmc.net/')
+            content { includeGroupByRegex 'net\\.fabricmc.*'; includeGroup 'io.github.llamalad7' }
+        }
+        maven {
+            name = 'MinecraftLibraries'
+            url = uri('https://libraries.minecraft.net/')
+            content { includeGroup 'com.mojang' }
+        }
+    }
+    tasks.withType(AbstractArchiveTask).configureEach {
+        preserveFileTimestamps = false
+        reproducibleFileOrder = true
+        duplicatesStrategy = DuplicatesStrategy.FAIL
+    }
+}
+
+java {
+    toolchain { languageVersion = JavaLanguageVersion.of(javaRelease) }
+    withSourcesJar()
+}
+
+loom {
+    // 26.x access wideners are declared against the `official` namespace. Loom
+    // forwards the file to the loader unchanged because nothing is remapped.
+    def widener = file('src/main/resources/echo.accesswidener')
+    if (widener.isFile()) { accessWidenerPath = widener }
+    runs {
+        client { runDir = 'run/clean-isolated-client' }
+    }
+}
+
+dependencies {
+    minecraft "com.mojang:minecraft:${minecraft_version}"
+    // Minecraft 26.2 ships named classes, so Loader and Fabric API are ordinary
+    // classpath dependencies: `modImplementation` no longer exists as a variant.
+    implementation "net.fabricmc:fabric-loader:${loader_version}"
+    implementation "net.fabricmc.fabric-api:fabric-api:${fabric_version}"
+    compileOnly 'net.fabricmc:sponge-mixin:0.17.3+mixin.0.8.7'
+    // Loader 0.20.1 embeds and declares 0.5.4 in fabric-installer.json.
+    implementation 'io.github.llamalad7:mixinextras-fabric:0.5.4'
+    annotationProcessor 'io.github.llamalad7:mixinextras-fabric:0.5.4'
+    compileOnly 'org.jetbrains:annotations:26.0.2'
+
+    // These ordinary source projects package only public upstream library code
+    // plus their seven readable patches. No recovered application JAR is involved.
+    implementation project(':third-party:jsvg')
+    implementation project(':third-party:rhino')
+    include project(':third-party:jsvg')
+    include project(':third-party:rhino')
+
+    testImplementation 'com.google.code.gson:gson:2.13.2'
+    testImplementation 'org.junit.jupiter:junit-jupiter-api:5.10.0'
+    testImplementation 'org.junit.jupiter:junit-jupiter-params:5.10.0'
+    testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine:5.10.0'
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher:1.10.0'
+
+    // Public versions observed in the reference's resolved classpath. Minecraft's
+    // own libraries remain launcher-provided; these are compilation dependencies.
+    compileOnly 'com.github.oshi:oshi-core:6.9.0'
+    compileOnly 'com.google.code.gson:gson:2.13.2'
+    compileOnly 'com.google.guava:guava:33.5.0-jre'
+    compileOnly 'com.mojang:authlib:7.0.61'
+    compileOnly 'com.mojang:brigadier:1.3.10'
+    compileOnly 'com.mojang:datafixerupper:9.0.19'
+    compileOnly 'com.mojang:logging:1.6.11'
+    compileOnly 'it.unimi.dsi:fastutil:8.5.18'
+    compileOnly 'org.joml:joml:1.10.8'
+    compileOnly 'org.jspecify:jspecify:1.0.0'
+    compileOnly 'org.slf4j:slf4j-api:2.0.17'
+    compileOnly 'org.apache.logging.log4j:log4j-api:2.25.2'
+    compileOnly 'commons-io:commons-io:2.20.0'
+    compileOnly 'org.apache.commons:commons-lang3:3.19.0'
+    compileOnly 'io.netty:netty-buffer:4.2.7.Final'
+    compileOnly 'io.netty:netty-transport:4.2.7.Final'
+    compileOnly 'io.netty:netty-codec-http:4.2.7.Final'
+    // Retain the remaining public compile-time APIs from the 111-entry reference
+    // inventory as explicit versions, even when the foundation probe does not use them.
+    compileOnly 'biz.aQute.bnd:biz.aQute.bnd.annotation:7.1.0'
+    compileOnly 'com.github.spotbugs:spotbugs-annotations:4.8.6'
+    compileOnly 'org.jetbrains.kotlin:kotlin-stdlib-common:1.8.20'
+    compileOnly 'org.jetbrains.kotlin:kotlin-stdlib-jdk7:1.8.20'
+    compileOnly 'org.jetbrains.kotlin:kotlin-stdlib-jdk8:1.8.20'
+    compileOnly 'org.jetbrains.kotlin:kotlin-stdlib:1.8.20'
+    compileOnly 'org.osgi:org.osgi.annotation.bundle:2.0.0'
+    compileOnly 'org.osgi:org.osgi.annotation.versioning:1.1.2'
+    compileOnly 'org.osgi:org.osgi.resource:1.0.0'
+    compileOnly 'org.osgi:org.osgi.service.serviceloader:1.0.0'
+    ['lwjgl', 'lwjgl-glfw', 'lwjgl-openal', 'lwjgl-opengl', 'lwjgl-stb',
+     'lwjgl-vulkan', 'lwjgl-vma', 'lwjgl-sdl', 'lwjgl-shaderc',
+     'lwjgl-jemalloc', 'lwjgl-freetype', 'lwjgl-tinyfd'].each { module ->
+        compileOnly "org.lwjgl:${module}:${lwjgl_version}"
+    }
+}
+
+// Lock actual modules. Minecraft is consumed from Mojang's named jar, so there is
+// no Loom mapping derivation to exempt and no `remapped.*` configuration left.
+['compileClasspath', 'runtimeClasspath', 'annotationProcessor', 'testCompileClasspath', 'testRuntimeClasspath'].each { name ->
+    configurations.named(name) { resolutionStrategy.activateDependencyLocking() }
+}
+dependencyLocking {
+    // Official Minecraft/Yarn/API inputs are pinned directly in gradle.properties.
+    ignoredDependencies.addAll(['net.minecraft:*'])
+}
+// The patch projects publish complete dependency JARs, while their classes
+// directories contain only the seven edits. Select the JAR variant explicitly.
+configurations.named('compileClasspath') {
+    attributes.attribute(LibraryElements.LIBRARY_ELEMENTS_ATTRIBUTE,
+            objects.named(LibraryElements, LibraryElements.JAR))
+}
+
+sourceSets {
+    main {
+        java.setSrcDirs(['src/main/java'])
+        resources.setSrcDirs(['src/main/resources'])
+    }
+    foundationProbe {
+        java.setSrcDirs(['src/foundationProbe/java'])
+        compileClasspath = configurations.compileClasspath
+        runtimeClasspath = output + configurations.runtimeClasspath
+    }
+}
+
+tasks.withType(JavaCompile).configureEach {
+    options.release = javaRelease
+    options.encoding = 'UTF-8'
+    options.fork = true
+    options.forkOptions.memoryMaximumSize = '512m'
+}
+
+tasks.withType(Test).configureEach {
+    useJUnitPlatform()
+    maxHeapSize = '384m'
+    maxParallelForks = 1
+    def isolatedTemporaryRoot = layout.buildDirectory.dir('tmp/isolated-tests')
+    systemProperty 'java.io.tmpdir', isolatedTemporaryRoot.get().asFile.absolutePath
+    doFirst { isolatedTemporaryRoot.get().asFile.mkdirs() }
+}
+
+def digest = { File path ->
+    path.withInputStream { input ->
+        def hash = MessageDigest.getInstance('SHA-256')
+        byte[] buffer = new byte[65536]
+        int count
+        while ((count = input.read(buffer)) != -1) { hash.update(buffer, 0, count) }
+        hash.digest().encodeHex().toString()
+    }
+}
+
+tasks.register('verifyToolchain') {
+    group = 'verification'
+    description = 'Checks the real Java 25 compiler and writes toolchain evidence.'
+    doLast {
+        def compiler = javaToolchains.compilerFor { languageVersion = JavaLanguageVersion.of(javaRelease) }.get()
+        def metadata = compiler.metadata
+        if (metadata.languageVersion.asInt() != javaRelease) { throw new GradleException("Java ${javaRelease} compiler required") }
+        def output = layout.buildDirectory.file('reports/foundation/toolchain.json').get().asFile
+        output.parentFile.mkdirs()
+        output.text = JsonOutput.prettyPrint(JsonOutput.toJson([
+            gradle: gradle.gradleVersion, gradleJava: System.getProperty('java.version'),
+            compiler: compiler.executablePath.asFile.absolutePath,
+            compilerVersion: metadata.javaRuntimeVersion,
+            minecraft: minecraft_version, mappings: 'official (Mojang, unobfuscated 26.x)',
+            loader: loader_version, fabricApi: fabric_version, loom: loomVersion, javaRelease: javaRelease
+        ])) + '\n'
+        logger.lifecycle("Java ${metadata.languageVersion}: ${compiler.executablePath}")
+    }
+}
+
+tasks.register('resolveFoundationDependencies') {
+    group = 'verification'
+    description = 'Resolves named Minecraft/public dependencies and inventories SHA-256 without running the client.'
+    dependsOn ':third-party:jsvg:jar', ':third-party:rhino:jar', 'verifyToolchain'
+    doLast {
+        def configurationsToResolve = ['compileClasspath', 'runtimeClasspath', 'annotationProcessor',
+                                       'testCompileClasspath', 'testRuntimeClasspath']
+        def report = configurationsToResolve.collectEntries { name ->
+            def entries = configurations.getByName(name).incoming.artifacts.artifacts.collect { artifact ->
+                def identity = artifact.id.componentIdentifier
+                File path = artifact.file
+                boolean publicModule = identity instanceof ModuleComponentIdentifier
+                boolean ownDependency = identity instanceof ProjectComponentIdentifier &&
+                        identity.projectPath in [':third-party:jsvg', ':third-party:rhino']
+                // 26.x has no mapping artifact: the Minecraft jar is already named.
+                if (!publicModule && !ownDependency) {
+                    throw new GradleException("Unrecognized/opaque compilation input: ${identity.displayName}: ${path}")
+                }
+                [component: identity.displayName,
+                 publicModule: publicModule,
+                 file: path.absolutePath, sha256: path.isFile() ? digest(path) : null]
+            }.sort { it.component + it.file }
+            [(name): entries]
+        }
+        def namedGame = configurations.compileClasspath.files.find { path ->
+            if (!path.name.endsWith('.jar')) { return false }
+            // Official Mojang name on 26.x; the Yarn name `MinecraftClient` no longer exists.
+            new ZipFile(path).withCloseable { zip -> zip.getEntry('net/minecraft/client/Minecraft.class') != null }
+        }
+        if (namedGame == null) { throw new GradleException('Official-named net/minecraft/client/Minecraft.class missing from compile classpath') }
+        report.namedMinecraft = [file: namedGame.absolutePath, sha256: digest(namedGame)]
+        def output = layout.buildDirectory.file('reports/foundation/dependencies.json').get().asFile
+        output.parentFile.mkdirs()
+        output.text = JsonOutput.prettyPrint(JsonOutput.toJson(report)) + '\n'
+        logger.lifecycle("Resolved official-named classpath: ${namedGame.name}")
+    }
+}
+
+// Candidate compilation is allowed for review. Production artifacts and launch
+// tasks retain the source/fidelity completion gate.
+tasks.named('compileJava') {
+    options.compilerArgs.add('-proc:none')
+    options.forkOptions.jvmArgs = ['-XX:ActiveProcessorCount=2']
+}
+tasks.register('verifySourcePolicy', Exec) {
+    commandLine 'python3', 'tools/build/source_gate.py', 'audit', '--root', projectDir
+}
+tasks.register('verifyCleanSourceCompletion', Exec) {
+    dependsOn 'verifySourcePolicy'
+    commandLine 'python3', 'tools/build/source_gate.py', 'complete', '--root', projectDir
+}
+['jar', 'sourcesJar', 'build', 'assemble', 'check'].each {
+    tasks.named(it) { dependsOn 'verifyCleanSourceCompletion' }
+}
+tasks.matching { it.name.startsWith('run') }.configureEach { dependsOn 'verifyCleanSourceCompletion' }
+apply from: 'gradle/echo-native-runtime.gradle'
+apply from: 'gradle/echo-lwjgl-compat.gradle'
+tasks.register('candidateNamedJar', Jar) {
+    group = 'verification'
+    description = 'All ordinary sources/resources: unapproved verification candidate, not a release'
+    dependsOn 'classes', ':third-party:jsvg:verifyPatchedLibrary', ':third-party:rhino:verifyPatchedLibrary'
+    from sourceSets.main.output
+    archiveFileName = 'echo-clean-candidate-named.jar'
+    destinationDirectory = layout.buildDirectory.dir('candidate')
+    preserveFileTimestamps = false
+    reproducibleFileOrder = true
+    duplicatesStrategy = DuplicatesStrategy.FAIL
+    manifest.attributes('Echo-Artifact-Classification': 'unapproved-candidate-verification', 'Echo-Production-Approved': 'false')
+}
+tasks.register('prepareCandidate') {
+    group = 'verification'
+    dependsOn 'candidateNamedJar', 'resolveFoundationDependencies'
+    // Loom only creates this task while remapping include-jars; 26.x has none.
+    dependsOn tasks.matching { it.name == 'processIncludeJars' }
+    doLast {
+        def sha = { File f -> java.security.MessageDigest.getInstance('SHA-256').digest(f.bytes).encodeHex().toString() }
+        def jar = tasks.named('candidateNamedJar').get().archiveFile.get().asFile
+        def report = [classification: 'unapproved-candidate-verification', java_release: javaRelease, compiler: 'javac',
+            source_files: sourceSets.main.java.files.sort().collectEntries { [(project.relativePath(it)): sha(it)] },
+            named_jar: project.relativePath(jar), named_sha256: sha(jar),
+            mapping_jar: null,
+            nested_jars: [],
+            production_approved: false]
+        def output = layout.buildDirectory.file('reports/candidate/compile.json').get().asFile
+        output.parentFile.mkdirs()
+        output.text = groovy.json.JsonOutput.prettyPrint(groovy.json.JsonOutput.toJson(report)) + '\n'
+    }
+}

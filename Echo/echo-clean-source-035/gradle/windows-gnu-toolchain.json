@@ -1,0 +1,32 @@
+{
+  "rust_release": "1.97.1",
+  "target": "x86_64-pc-windows-gnu",
+  "component_url": "https://static.rust-lang.org/dist/2026-07-16/rust-std-1.97.1-x86_64-pc-windows-gnu.tar.xz",
+  "component_sha256": "513ed4875d5a3726d02c5872034f0673593ae343ea62a70939213e894c274be3",
+  "linker": "x86_64-w64-mingw32-gcc",
+  "dlltool": "x86_64-w64-mingw32-dlltool",
+  "media_runtime": {
+    "minimum_os": "Windows 10 1809",
+    "architecture": "x86_64",
+    "owner_import_dlls": [
+      "api-ms-win-core-synch-l1-2-0.dll",
+      "api-ms-win-core-winrt-error-l1-1-0.dll",
+      "api-ms-win-core-winrt-l1-1-0.dll",
+      "api-ms-win-crt-heap-l1-1-0.dll",
+      "api-ms-win-crt-private-l1-1-0.dll",
+      "api-ms-win-crt-runtime-l1-1-0.dll",
+      "api-ms-win-crt-stdio-l1-1-0.dll",
+      "api-ms-win-crt-string-l1-1-0.dll",
+      "bcryptprimitives.dll",
+      "combase.dll",
+      "kernel32.dll",
+      "ntdll.dll",
+      "ole32.dll",
+      "oleaut32.dll",
+      "rpcrt4.dll",
+      "userenv.dll",
+      "ws2_32.dll"
+    ],
+    "non_system_dlls": []
+  }
+}
