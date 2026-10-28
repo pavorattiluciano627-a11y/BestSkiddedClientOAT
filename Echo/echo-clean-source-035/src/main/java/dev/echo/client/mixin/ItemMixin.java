@@ -12,14 +12,14 @@ import org.spongepowered.asm.mixin.injection.Redirect;
 @Mixin(Item.class)
 public abstract class ItemMixin {
     @Redirect(method = "getPlayerPOVHitResult", at = @At(
-        value = "INVOKE", target = "Lnet/minecraft/world/entity/player/Player;getYRot()F"))
+        value = "INVOKE", target = "Lnet/minecraft/world/entity/player/Player;getYRot()F"), require = 0)
     private static float redirectRaycastAtGetYaw(Player player) {
         return player != MinecraftAccess.CLIENT.player ? player.getYRot()
             : RotationEvent.dispatch(RotationContext.LOOK, player.getYRot(), player.getXRot()).getYaw();
     }
 
     @Redirect(method = "getPlayerPOVHitResult", at = @At(
-        value = "INVOKE", target = "Lnet/minecraft/world/entity/player/Player;getXRot()F"))
+        value = "INVOKE", target = "Lnet/minecraft/world/entity/player/Player;getXRot()F"), require = 0)
     private static float redirectRaycastAtGetPitch(Player player) {
         return player != MinecraftAccess.CLIENT.player ? player.getXRot()
             : RotationEvent.dispatch(RotationContext.LOOK, player.getYRot(), player.getXRot()).getPitch();

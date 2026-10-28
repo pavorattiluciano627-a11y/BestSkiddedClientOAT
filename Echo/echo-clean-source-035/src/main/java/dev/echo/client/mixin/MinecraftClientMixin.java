@@ -88,7 +88,7 @@ public class MinecraftClientMixin {
     }
 
     @Inject(method = "runTick", at = @At(value = "INVOKE",
-            target = "Lnet/minecraft/client/Minecraft;runAllTasks()V", shift = At.Shift.BEFORE))
+            target = "Lnet/minecraft/client/Minecraft;runAllTasks()V", shift = At.Shift.BEFORE), require = 0)
     private void beforeRenderTasks(boolean tick, CallbackInfo callback) {
         if (Echo.eventsDisabled) {
             return;
@@ -126,7 +126,7 @@ public class MinecraftClientMixin {
     }
 
     @Redirect(method = "handleKeybinds", at = @At(value = "INVOKE",
-            target = "Lnet/minecraft/client/player/LocalPlayer;isUsingItem()Z", ordinal = 0))
+            target = "Lnet/minecraft/client/player/LocalPlayer;isUsingItem()Z", ordinal = 0), require = 0)
     private boolean queryUsingItem(LocalPlayer queriedPlayer) {
         boolean usingItem = queriedPlayer.isUsingItem();
         if (Echo.eventsDisabled) {
@@ -184,7 +184,7 @@ public class MinecraftClientMixin {
     }
 
     @Inject(method = "tick", at = @At(value = "INVOKE",
-            target = "Lnet/minecraft/client/Minecraft;handleKeybinds()V", shift = At.Shift.BEFORE))
+            target = "Lnet/minecraft/client/Minecraft;handleKeybinds()V", shift = At.Shift.BEFORE), require = 0)
     private void beforeInputEvents(CallbackInfo callback) {
         if (Echo.eventsDisabled) {
             return;
@@ -201,37 +201,37 @@ public class MinecraftClientMixin {
     }
 
     @Inject(method = "handleKeybinds", at = @At(value = "INVOKE",
-            target = "Lnet/minecraft/client/KeyMapping;consumeClick()Z", ordinal = 2))
+            target = "Lnet/minecraft/client/KeyMapping;consumeClick()Z", ordinal = 2), require = 0)
     private void beforeHotbarKey(CallbackInfo callback) {
         KeybindingEvents.onHotbarSlot();
     }
 
     @Inject(method = "handleKeybinds", at = @At(value = "INVOKE",
-            target = "Lnet/minecraft/client/KeyMapping;consumeClick()Z", ordinal = 7))
+            target = "Lnet/minecraft/client/KeyMapping;consumeClick()Z", ordinal = 7), require = 0)
     private void beforeSwapHandsKey(CallbackInfo callback) {
         KeybindingEvents.onSwapHands();
     }
 
     @Inject(method = "handleKeybinds", at = @At(value = "INVOKE",
-            target = "Lnet/minecraft/client/KeyMapping;consumeClick()Z", ordinal = 8))
+            target = "Lnet/minecraft/client/KeyMapping;consumeClick()Z", ordinal = 8), require = 0)
     private void beforeDropKey(CallbackInfo callback) {
         KeybindingEvents.onDrop();
     }
 
     @Inject(method = "handleKeybinds", at = @At(value = "INVOKE",
-            target = "Lnet/minecraft/client/KeyMapping;consumeClick()Z", ordinal = 14))
+            target = "Lnet/minecraft/client/KeyMapping;consumeClick()Z", ordinal = 14), require = 0)
     private void beforeAttackKey(CallbackInfo callback) {
         KeybindingEvents.onAttack();
     }
 
     @Inject(method = "handleKeybinds", at = @At(value = "INVOKE",
-            target = "Lnet/minecraft/client/KeyMapping;consumeClick()Z", ordinal = 15))
+            target = "Lnet/minecraft/client/KeyMapping;consumeClick()Z", ordinal = 15), require = 0)
     private void beforeUseKey(CallbackInfo callback) {
         KeybindingEvents.onUse();
     }
 
     @Inject(method = "handleKeybinds", at = @At(value = "INVOKE",
-            target = "Lnet/minecraft/client/KeyMapping;consumeClick()Z", ordinal = 16))
+            target = "Lnet/minecraft/client/KeyMapping;consumeClick()Z", ordinal = 16), require = 0)
     private void beforePickBlockKey(CallbackInfo callback) {
         KeybindingEvents.onPickBlock();
     }
@@ -245,7 +245,7 @@ public class MinecraftClientMixin {
     }
 
     @Redirect(method = "handleKeybinds", at = @At(value = "INVOKE",
-            target = "Lnet/minecraft/client/multiplayer/ClientPacketListener;sendPacket(Lnet/minecraft/network/protocol/Packet;)V"))
+            target = "Lnet/minecraft/client/multiplayer/ClientPacketListener;sendPacket(Lnet/minecraft/network/protocol/Packet;)V"), require = 0)
     private void sendInputPacket(ClientPacketListener network, Packet<?> packet) {
         if (Echo.eventsDisabled) {
             network.send(packet);

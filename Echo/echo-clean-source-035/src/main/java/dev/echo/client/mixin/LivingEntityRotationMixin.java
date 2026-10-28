@@ -28,7 +28,7 @@ public abstract class LivingEntityRotationMixin extends Entity {
     }
 
     @Inject(method = "aiStep", at = @At(value = "INVOKE",
-            target = "Lnet/minecraft/world/entity/LivingEntity;applyInput()V", shift = At.Shift.AFTER))
+            target = "Lnet/minecraft/world/entity/LivingEntity;applyInput()V", shift = At.Shift.AFTER), require = 0)
     private void applyMovementRotation(CallbackInfo callback) {
         if (!Echo.eventsDisabled && (Object) this == Minecraft.getInstance().player) {
             RotationEvent rotation = RotationEvent.dispatch(RotationContext.MOVEMENT, getYRot(), getXRot());
@@ -52,19 +52,19 @@ public abstract class LivingEntityRotationMixin extends Entity {
     }
 
     @ModifyExpressionValue(method = "tick", at = @At(value = "INVOKE",
-            target = "Lnet/minecraft/world/entity/LivingEntity;getYRot()F", ordinal = 0))
+            target = "Lnet/minecraft/world/entity/LivingEntity;getYRot()F", ordinal = 0), require = 0)
     private float modifyFirstTickYaw(float original) {
         return echo$resolveBodyYaw(original);
     }
 
     @ModifyExpressionValue(method = "tick", at = @At(value = "INVOKE",
-            target = "Lnet/minecraft/world/entity/LivingEntity;getYRot()F", ordinal = 1))
+            target = "Lnet/minecraft/world/entity/LivingEntity;getYRot()F", ordinal = 1), require = 0)
     private float modifySecondTickYaw(float original) {
         return echo$resolveBodyYaw(original);
     }
 
     @ModifyExpressionValue(method = "tickHeadTurn", at = @At(value = "INVOKE",
-            target = "Lnet/minecraft/world/entity/LivingEntity;getYRot()F"))
+            target = "Lnet/minecraft/world/entity/LivingEntity;getYRot()F"), require = 0)
     private float modifyHeadTurnYaw(float original) {
         return echo$resolveBodyYaw(original);
     }

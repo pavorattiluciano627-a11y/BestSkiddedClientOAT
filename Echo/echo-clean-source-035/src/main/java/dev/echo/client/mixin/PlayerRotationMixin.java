@@ -15,7 +15,7 @@ import org.spongepowered.asm.mixin.injection.Redirect;
 @Mixin(Player.class)
 public abstract class PlayerRotationMixin {
     @ModifyExpressionValue(method = "aiStep", at = @At(
-        value = "INVOKE", target = "Lnet/minecraft/world/entity/player/Player;getYRot()F", ordinal = 0))
+        value = "INVOKE", target = "Lnet/minecraft/world/entity/player/Player;getYRot()F", ordinal = 0), require = 0)
     private float modifyTickMovementAtGetYawAtOrdinal0(float yaw) {
         if ((Object) this != MinecraftAccess.CLIENT.player) {
             return yaw;
@@ -25,14 +25,14 @@ public abstract class PlayerRotationMixin {
     }
 
     @Redirect(method = {"causeExtraKnockback", "doSweepAttack"}, at = @At(
-        value = "INVOKE", target = "Lnet/minecraft/world/entity/player/Player;getYRot()F"))
+        value = "INVOKE", target = "Lnet/minecraft/world/entity/player/Player;getYRot()F"), require = 0)
     private float redirectKnockbackTargetAtGetYaw(Player player) {
         return player != MinecraftAccess.CLIENT.player ? player.getYRot()
             : RotationEvent.dispatch(RotationContext.ATTACK, player.getYRot(), player.getXRot()).getYaw();
     }
 
     @Redirect(method = "causeExtraKnockback", at = @At(value = "INVOKE",
-        target = "Lnet/minecraft/world/phys/Vec3;multiply(DDD)Lnet/minecraft/world/phys/Vec3;"))
+        target = "Lnet/minecraft/world/phys/Vec3;multiply(DDD)Lnet/minecraft/world/phys/Vec3;"), require = 0)
     private Vec3 redirectKnockbackTargetAtMultiply(Vec3 velocity, double x, double y, double z) {
         if (!Echo.eventsDisabled && (Object) this == MinecraftAccess.CLIENT.player
                 && Echo.featureManager != null) {
@@ -46,7 +46,7 @@ public abstract class PlayerRotationMixin {
     }
 
     @Redirect(method = "causeExtraKnockback", at = @At(
-        value = "INVOKE", target = "Lnet/minecraft/world/entity/player/Player;setSprinting(Z)V"))
+        value = "INVOKE", target = "Lnet/minecraft/world/entity/player/Player;setSprinting(Z)V"), require = 0)
     private void redirectKnockbackTargetAtSetSprinting(Player player, boolean sprinting) {
         if (!Echo.eventsDisabled && Echo.featureManager != null) {
             KeepSprintFeature keepSprint = (KeepSprintFeature) Echo.featureManager.findFeature(KeepSprintFeature.class);

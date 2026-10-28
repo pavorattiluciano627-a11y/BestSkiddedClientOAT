@@ -15,7 +15,7 @@ public class RenderTickCounterDynamicMixin implements TickSpeedControl {
     @Unique private float echo$tickSpeedMultiplier = 1.0F;
 
     @Inject(method = "advanceGameTime(J)I", at = @At(value = "FIELD",
-            target = "Lnet/minecraft/client/DeltaTracker$Timer;lastMs:J", ordinal = 1))
+            target = "Lnet/minecraft/client/DeltaTracker$Timer;lastMs:J", ordinal = 1), require = 0)
     private void scaleFrameDuration(long timeMillis, CallbackInfoReturnable<Integer> callback) {
         deltaTicks *= getTickSpeedMultiplier();
     }

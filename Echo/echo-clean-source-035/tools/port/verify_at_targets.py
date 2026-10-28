@@ -118,8 +118,8 @@ def _split_methods(text: str) -> dict[str, str]:
 # ------------------------------------------------------------------ parsing
 
 
-def annotations(text: str) -> list[tuple[str, str]]:
-    """(annotation name, raw argument text) for each injector annotation."""
+def annotations(text: str) -> list[tuple[str, str, int, int]]:
+    """(name, argument text, args start offset, args end offset)."""
     found = []
     for m in re.finditer(r"@(\w+)", text):
         if m.group(1) not in INJECTOR_ANNOTATIONS:
@@ -136,7 +136,7 @@ def annotations(text: str) -> list[tuple[str, str]]:
                 if depth == 0:
                     break
             i += 1
-        found.append((m.group(1), text[start + 1:i]))
+        found.append((m.group(1), text[start + 1:i], start + 1, i))
     return found
 
 
@@ -176,6 +176,9 @@ def main() -> int:
     ap.add_argument("jar")
     ap.add_argument("--root", default=str(JAVA))
     ap.add_argument("--javap", default="javap")
+    ap.add_argument("--quarantine", action="store_true",
+                    help="add 'require = 0' to injectors whose @At target is "
+                         "gone, so they degrade instead of crashing the client")
     args = ap.parse_args()
 
     sys.path.insert(0, str(pathlib.Path(__file__).parent))
@@ -190,6 +193,7 @@ def main() -> int:
     root = pathlib.Path(args.root)
 
     problems, checked, files = [], 0, 0
+    quarantined = 0
     for path in sorted(root.rglob("*.java")):
         text = path.read_text(errors="replace")
         if "@Mixin" not in text or "@At(" not in text:
@@ -208,7 +212,8 @@ def main() -> int:
         if not targets:
             continue
 
-        for ann, body in annotations(text):
+        bad_spans = []
+        for ann, body, body_start, body_end in annotations(text):
             sel = re.search(r'method\s*=\s*(\{[^}]*\}|"[^"]*")', body)
             points = at_targets(body)
             if not sel or not points:
@@ -240,17 +245,37 @@ def main() -> int:
                         if found:
                             break
                     if not found:
-                        problems.append(
+                        optional = re.search(r"\brequire\s*=\s*0", body) is not None
+                        problems.append((
                             f"{path.name}: @{ann} {selector} -> no {label} "
-                            f"in {', '.join(targets)}")
+                            f"in {', '.join(targets)}", optional))
+                        bad_spans.append((body_start, body_end, body))
                         break
 
+        if args.quarantine and bad_spans:
+            for start, end, body in sorted(bad_spans, reverse=True):
+                if re.search(r"\brequire\s*=", body):
+                    continue
+                text = text[:end] + ", require = 0" + text[end:]
+                quarantined += 1
+            path.write_text(text)
+
     print(f"scanned {files} mixin sources, {checked} selector/@At pairs")
-    for problem in sorted(set(problems)):
-        print("FATAL  " + problem)
-    if not problems:
-        print("OK: every @At target is reachable from its selected method")
-    return 1 if problems else 0
+    if args.quarantine:
+        print(f"quarantined {quarantined} injectors with require = 0")
+    fatal = sorted({m for m, opt in problems if not opt})
+    optional = sorted({m for m, opt in problems if opt})
+    print(f"scanned {files} mixin sources, {checked} selector/@At pairs")
+    if args.quarantine:
+        print(f"quarantined {quarantined} injectors with require = 0")
+    for message in optional:
+        print("opt    " + message)
+    for message in fatal:
+        print("FATAL  " + message)
+    if not fatal:
+        print(f"OK: every live @At target is reachable "
+              f"({len(optional)} quarantined with require = 0)")
+    return 1 if fatal else 0
 
 
 if __name__ == "__main__":

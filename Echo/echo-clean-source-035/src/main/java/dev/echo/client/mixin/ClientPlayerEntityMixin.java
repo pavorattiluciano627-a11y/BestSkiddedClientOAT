@@ -59,7 +59,7 @@ public abstract class ClientPlayerEntityMixin extends AbstractClientPlayer {
     }
 
     @ModifyExpressionValue(method = "sendPosition", at = @At(value = "INVOKE",
-            target = "Lnet/minecraft/client/player/LocalPlayer;getX()D"))
+            target = "Lnet/minecraft/client/player/LocalPlayer;getX()D"), require = 0)
     private double usePacketX(double original) {
         if (Echo.eventsDisabled) {
             return original;
@@ -68,7 +68,7 @@ public abstract class ClientPlayerEntityMixin extends AbstractClientPlayer {
     }
 
     @ModifyExpressionValue(method = "sendPosition", at = @At(value = "INVOKE",
-            target = "Lnet/minecraft/client/player/LocalPlayer;getY()D"))
+            target = "Lnet/minecraft/client/player/LocalPlayer;getY()D"), require = 0)
     private double usePacketY(double original) {
         if (Echo.eventsDisabled) {
             return original;
@@ -77,7 +77,7 @@ public abstract class ClientPlayerEntityMixin extends AbstractClientPlayer {
     }
 
     @ModifyExpressionValue(method = "sendPosition", at = @At(value = "INVOKE",
-            target = "Lnet/minecraft/client/player/LocalPlayer;getZ()D"))
+            target = "Lnet/minecraft/client/player/LocalPlayer;getZ()D"), require = 0)
     private double usePacketZ(double original) {
         if (Echo.eventsDisabled) {
             return original;
@@ -86,7 +86,7 @@ public abstract class ClientPlayerEntityMixin extends AbstractClientPlayer {
     }
 
     @ModifyExpressionValue(method = "sendPosition", at = @At(value = "INVOKE",
-            target = "Lnet/minecraft/client/player/LocalPlayer;getYRot()F"))
+            target = "Lnet/minecraft/client/player/LocalPlayer;getYRot()F"), require = 0)
     private float usePacketYaw(float original) {
         if (Echo.eventsDisabled) {
             return original;
@@ -95,7 +95,7 @@ public abstract class ClientPlayerEntityMixin extends AbstractClientPlayer {
     }
 
     @ModifyExpressionValue(method = "sendPosition", at = @At(value = "INVOKE",
-            target = "Lnet/minecraft/client/player/LocalPlayer;getXRot()F"))
+            target = "Lnet/minecraft/client/player/LocalPlayer;getXRot()F"), require = 0)
     private float usePacketPitch(float original) {
         if (Echo.eventsDisabled) {
             return original;
@@ -105,7 +105,7 @@ public abstract class ClientPlayerEntityMixin extends AbstractClientPlayer {
     }
 
     @ModifyExpressionValue(method = "sendPosition", at = @At(value = "INVOKE",
-            target = "Lnet/minecraft/client/player/LocalPlayer;onGround()Z"))
+            target = "Lnet/minecraft/client/player/LocalPlayer;onGround()Z"), require = 0)
     private boolean usePacketOnGround(boolean original) {
         if (Echo.eventsDisabled) {
             return original;
@@ -114,7 +114,7 @@ public abstract class ClientPlayerEntityMixin extends AbstractClientPlayer {
     }
 
     @ModifyExpressionValue(method = "sendPosition", at = @At(value = "INVOKE",
-            target = "Lnet/minecraft/client/player/LocalPlayer;position()Lnet/minecraft/world/phys/Vec3;"))
+            target = "Lnet/minecraft/client/player/LocalPlayer;position()Lnet/minecraft/world/phys/Vec3;"), require = 0)
     private Vec3 usePacketPosition(Vec3 original) {
         if (Echo.eventsDisabled) {
             return original;
@@ -149,7 +149,7 @@ public abstract class ClientPlayerEntityMixin extends AbstractClientPlayer {
     }
 
     @ModifyExpressionValue(method = "aiStep", at = @At(value = "INVOKE",
-            target = "Lnet/minecraft/client/player/LocalPlayer;isSlowDueToUsingItem()Z"))
+            target = "Lnet/minecraft/client/player/LocalPlayer;isSlowDueToUsingItem()Z"), require = 0)
     private boolean modifySprintBlocking(boolean original) {
         if (Echo.eventsDisabled) {
             return original;
@@ -160,7 +160,7 @@ public abstract class ClientPlayerEntityMixin extends AbstractClientPlayer {
     }
 
     @ModifyExpressionValue(method = "modifyInput", at = @At(value = "INVOKE",
-            target = "Lnet/minecraft/client/player/LocalPlayer;itemUseSpeedMultiplier()F"))
+            target = "Lnet/minecraft/client/player/LocalPlayer;itemUseSpeedMultiplier()F"), require = 0)
     private float modifyActiveItemSpeed(float original) {
         if (Echo.eventsDisabled) {
             return original;
@@ -171,7 +171,7 @@ public abstract class ClientPlayerEntityMixin extends AbstractClientPlayer {
     }
 
     @ModifyExpressionValue(method = "modifyInput", at = @At(value = "INVOKE",
-            target = "Lnet/minecraft/client/player/LocalPlayer;isMovingSlowly()Z"))
+            target = "Lnet/minecraft/client/player/LocalPlayer;isMovingSlowly()Z"), require = 0)
     private boolean modifySneakingSlowdown(boolean original) {
         if (Echo.eventsDisabled) {
             return original;
@@ -182,7 +182,7 @@ public abstract class ClientPlayerEntityMixin extends AbstractClientPlayer {
     }
 
     @Redirect(method = "aiStep", at = @At(value = "INVOKE",
-            target = "Lnet/minecraft/client/player/LocalPlayer;isPassenger()Z", ordinal = 1))
+            target = "Lnet/minecraft/client/player/LocalPlayer;isPassenger()Z", ordinal = 1), require = 0)
     private boolean modifyMovementVehicleCheck(LocalPlayer player) {
         if (Echo.eventsDisabled) {
             return player.isPassenger();
@@ -196,7 +196,7 @@ public abstract class ClientPlayerEntityMixin extends AbstractClientPlayer {
     }
 
     @Redirect(method = "modifyInput", at = @At(value = "INVOKE",
-            target = "Lnet/minecraft/client/player/LocalPlayer;isPassenger()Z"))
+            target = "Lnet/minecraft/client/player/LocalPlayer;isPassenger()Z"), require = 0)
     private boolean modifySpeedVehicleCheck(LocalPlayer player) {
         if (Echo.eventsDisabled) {
             return player.isPassenger();

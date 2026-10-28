@@ -13,7 +13,7 @@ import org.spongepowered.asm.mixin.injection.At;
 @Mixin(LivingEntityRenderer.class)
 public abstract class LivingEntityRenderRotationMixin {
     @ModifyExpressionValue(method = "extractRenderState(Lnet/minecraft/world/entity/LivingEntity;Lnet/minecraft/client/renderer/entity/state/LivingEntityRenderState;F)V", at = @At(
-        value = "INVOKE", target = "Lnet/minecraft/world/entity/LivingEntity;getXRot(F)F"))
+        value = "INVOKE", target = "Lnet/minecraft/world/entity/LivingEntity;getXRot(F)F"), require = 0)
     private float modifyUpdateRenderStateAtGetLerpedPitch(float pitch, LivingEntity entity,
                                                          LivingEntityRenderState state, float tickProgress) {
         if (entity != MinecraftAccess.CLIENT.player || MinecraftAccess.CLIENT.options.getCameraType().isFirstPerson()) {

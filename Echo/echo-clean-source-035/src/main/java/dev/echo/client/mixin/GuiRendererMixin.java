@@ -66,7 +66,7 @@ public abstract class GuiRendererMixin implements GuiRenderControl {
     }
 
     @Inject(method = "render()V", at = @At(value = "INVOKE",
-            target = "Lnet/minecraft/client/gui/render/GuiRenderer;prepare()V"))
+            target = "Lnet/minecraft/client/gui/render/GuiRenderer;prepare()V"), require = 0)
     private void prepareHudPass(CallbackInfo callback) {
         echo$pendingHud = false;
         echo$drawHudBeforeBlur = false;
@@ -89,7 +89,7 @@ public abstract class GuiRendererMixin implements GuiRenderControl {
     }
 
     @WrapOperation(method = "draw", at = @At(value = "INVOKE",
-            target = "Lnet/minecraft/client/renderer/GameRenderer;processBlurEffect()V"))
+            target = "Lnet/minecraft/client/renderer/GameRenderer;processBlurEffect()V"), require = 0)
     private void renderHudAtBlur(GameRenderer renderer, Operation<Void> original) {
         if (echo$drawHudBeforeBlur) {
             echo$drawHudBeforeBlur = false;
@@ -110,7 +110,7 @@ public abstract class GuiRendererMixin implements GuiRenderControl {
     }
 
     @WrapOperation(method = "draw", at = @At(value = "INVOKE",
-            target = "Lnet/minecraft/client/gui/render/GuiRenderer;executeDrawRange(Ljava/util/function/Supplier;Lcom/mojang/blaze3d/pipeline/RenderTarget;Lcom/mojang/blaze3d/buffers/GpuBufferSlice;Lcom/mojang/blaze3d/buffers/GpuBufferSlice;Lcom/mojang/blaze3d/buffers/GpuBuffer;Lcom/mojang/blaze3d/vertex/VertexFormat$IndexType;II)V", ordinal = 1))
+            target = "Lnet/minecraft/client/gui/render/GuiRenderer;executeDrawRange(Ljava/util/function/Supplier;Lcom/mojang/blaze3d/pipeline/RenderTarget;Lcom/mojang/blaze3d/buffers/GpuBufferSlice;Lcom/mojang/blaze3d/buffers/GpuBufferSlice;Lcom/mojang/blaze3d/buffers/GpuBuffer;Lcom/mojang/blaze3d/vertex/VertexFormat$IndexType;II)V", ordinal = 1), require = 0)
     private void mirrorGuiDraw(GuiRenderer renderer, Supplier<String> label, RenderTarget target,
             GpuBufferSlice dynamicTransforms, GpuBufferSlice fog, GpuBuffer indices,
             IndexType indexType, int start, int end, Operation<Void> original) {
@@ -122,7 +122,7 @@ public abstract class GuiRendererMixin implements GuiRenderControl {
     }
 
     @Inject(method = "render()V", at = @At(value = "INVOKE",
-            target = "Lnet/minecraft/client/gui/render/GuiRenderer;draw(Lcom/mojang/blaze3d/buffers/GpuBufferSlice;)V", shift = At.Shift.AFTER))
+            target = "Lnet/minecraft/client/gui/render/GuiRenderer;draw(Lcom/mojang/blaze3d/buffers/GpuBufferSlice;)V", shift = At.Shift.AFTER), require = 0)
     private void finishPendingHud(CallbackInfo callback) {
         if (echo$pendingHud) {
             echo$pendingHud = false;

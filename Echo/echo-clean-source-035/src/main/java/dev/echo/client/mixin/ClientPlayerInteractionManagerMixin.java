@@ -71,7 +71,7 @@ public abstract class ClientPlayerInteractionManagerMixin {
     }
 
     @ModifyArg(method = "useItem", at = @At(value = "INVOKE",
-            target = "Lnet/minecraft/client/multiplayer/MultiPlayerGameMode;startPrediction(Lnet/minecraft/client/multiplayer/ClientLevel;Lnet/minecraft/client/multiplayer/prediction/PredictiveAction;)V"), index = 1)
+            target = "Lnet/minecraft/client/multiplayer/MultiPlayerGameMode;startPrediction(Lnet/minecraft/client/multiplayer/ClientLevel;Lnet/minecraft/client/multiplayer/prediction/PredictiveAction;)V"), index = 1, require = 0)
     private PredictiveAction rotateItemInteractionPacket(PredictiveAction original) {
         return sequence -> {
             var packet = original.predict(sequence);

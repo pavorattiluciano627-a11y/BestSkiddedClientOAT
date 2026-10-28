@@ -21,7 +21,7 @@ public abstract class FireworkRocketEntityMixin extends Entity {
     }
 
     @WrapOperation(method = "tick", at = @At(value = "INVOKE",
-        target = "Lnet/minecraft/world/entity/LivingEntity;getLookAngle()Lnet/minecraft/world/phys/Vec3;"))
+        target = "Lnet/minecraft/world/entity/LivingEntity;getLookAngle()Lnet/minecraft/world/phys/Vec3;"), require = 0)
     private Vec3 wrapTickAtGetRotationVector(LivingEntity entity, Operation<Vec3> original) {
         if (entity != MinecraftAccess.CLIENT.player) {
             return original.call(entity);

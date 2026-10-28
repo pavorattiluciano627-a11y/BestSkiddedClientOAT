@@ -34,13 +34,13 @@ public abstract class GameRendererMixin implements GameRenderControl {
     @Shadow protected abstract void bobHurt(PoseStack matrices, float tickProgress);
 
     @Inject(method = "renderLevel(Lnet/minecraft/client/DeltaTracker;)V",
-            at = @At(value = "INVOKE", target = "Lnet/minecraft/util/profiling/ProfilerFiller;popPush(Ljava/lang/String;)V", ordinal = 0))
+            at = @At(value = "INVOKE", target = "Lnet/minecraft/util/profiling/ProfilerFiller;popPush(Ljava/lang/String;)V", ordinal = 0), require = 0)
     private void captureProjection(DeltaTracker ticks, CallbackInfo callback, @Local(ordinal = 0) Matrix4f projection) {
         FullscreenEffects.captureProjection(projection);
     }
 
     @Inject(method = "renderLevel(Lnet/minecraft/client/DeltaTracker;)V",
-            at = @At(value = "INVOKE", target = "Lnet/minecraft/util/profiling/ProfilerFiller;popPush(Ljava/lang/String;)V", ordinal = 2))
+            at = @At(value = "INVOKE", target = "Lnet/minecraft/util/profiling/ProfilerFiller;popPush(Ljava/lang/String;)V", ordinal = 2), require = 0)
     private void renderWorldOverlays(DeltaTracker ticks, CallbackInfo callback,
             @Local(ordinal = 0) float tickProgress, @Local(ordinal = 0) Matrix4f projection,
             @Local(ordinal = 1) Matrix4f view, @Local PoseStack matrices) {
@@ -62,19 +62,19 @@ public abstract class GameRendererMixin implements GameRenderControl {
     }
 
     @Inject(method = "render(Lnet/minecraft/client/DeltaTracker;Z)V",
-            at = @At(value = "INVOKE", target = "Lnet/minecraft/client/renderer/LevelRenderer;doEntityOutline()V"))
+            at = @At(value = "INVOKE", target = "Lnet/minecraft/client/renderer/LevelRenderer;doEntityOutline()V"), require = 0)
     private void prepareEntityOutlines(CallbackInfo callback) {
         ((WorldFramebufferControl) Minecraft.getInstance().levelRenderer).updateOutlineFramebufferCancellation();
     }
 
     @Inject(method = "render(Lnet/minecraft/client/DeltaTracker;Z)V",
-            at = @At(value = "INVOKE", target = "Lnet/minecraft/client/gui/render/GuiRenderer;render(Lcom/mojang/blaze3d/buffers/GpuBufferSlice;)V"))
+            at = @At(value = "INVOKE", target = "Lnet/minecraft/client/gui/render/GuiRenderer;render(Lcom/mojang/blaze3d/buffers/GpuBufferSlice;)V"), require = 0)
     private void beginMainGuiPass(CallbackInfo callback) {
         ((GuiRenderControl) guiRenderer).setMainGuiPass(true);
     }
 
     @Inject(method = "render(Lnet/minecraft/client/DeltaTracker;Z)V",
-            at = @At(value = "INVOKE", target = "Lnet/minecraft/client/gui/render/GuiRenderer;render(Lcom/mojang/blaze3d/buffers/GpuBufferSlice;)V", shift = At.Shift.AFTER))
+            at = @At(value = "INVOKE", target = "Lnet/minecraft/client/gui/render/GuiRenderer;render(Lcom/mojang/blaze3d/buffers/GpuBufferSlice;)V", shift = At.Shift.AFTER), require = 0)
     private void endMainGuiPass(CallbackInfo callback) {
         ((GuiRenderControl) guiRenderer).setMainGuiPass(false);
     }
