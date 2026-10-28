@@ -1,0 +1,13 @@
+{
+  "schema": 1,
+  "status": "incomplete",
+  "features": [],
+  "settings": [],
+  "components": [],
+  "native_artifacts": [],
+  "unresolved": [
+    "Global source/caller/cache/initialization proof remains incomplete.",
+    "Settings and actual UI/gameplay parity are not established by title readiness.",
+    "Release/native/platform acceptance remains independently gated."
+  ]
+}

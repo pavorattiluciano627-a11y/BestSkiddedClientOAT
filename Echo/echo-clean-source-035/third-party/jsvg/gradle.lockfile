@@ -1,0 +1,6 @@
+# This is a Gradle generated file for dependency locking.
+# Manual edits can break the build and are not advised.
+# This file is expected to be part of source control.
+com.github.weisj:jsvg:2.1.0=compileClasspath,upstreamBinary,upstreamSources
+org.jetbrains:annotations:26.0.2=compileClasspath
+empty=annotationProcessor,runtimeClasspath,testAnnotationProcessor,testCompileClasspath,testRuntimeClasspath

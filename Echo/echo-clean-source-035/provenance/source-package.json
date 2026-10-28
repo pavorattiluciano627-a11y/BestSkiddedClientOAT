@@ -1,0 +1,17 @@
+{
+  "classification": "editable-unapproved-source-candidate",
+  "application_sources": 977,
+  "application_source_bytes_changed": 0,
+  "genuine_native_source_bytes_changed": 0,
+  "application_binaries_or_assembly_included": false,
+  "public_build_bootstrap": "Pinned Gradle wrapper JAR only",
+  "build_path_normalizations": [
+    "local project paths",
+    "Rust version selector with exact release/commit checks",
+    "portable media source contract",
+    "no owner toolchain absolute paths",
+    "valid source-owned main entrypoint validation"
+  ],
+  "release_gate_status": "incomplete",
+  "reconstruction_checkout_required": false
+}

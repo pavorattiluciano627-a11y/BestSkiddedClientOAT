@@ -1,0 +1,63 @@
+{
+  "rust_toolchain": "1.97.1",
+  "rust_release": "1.97.1",
+  "rust_commit": "8bab26f4f68e0e26f0bb7960be334d5b520ea452",
+  "build_profile": {
+    "name": "owner-release",
+    "CARGO_PROFILE_RELEASE_LTO": "true",
+    "CARGO_PROFILE_RELEASE_OPT_LEVEL": "3",
+    "CARGO_PROFILE_RELEASE_CODEGEN_UNITS": "1",
+    "CARGO_PROFILE_RELEASE_DEBUG": "0",
+    "CARGO_PROFILE_RELEASE_PANIC": "abort"
+  },
+  "crates": {
+    "renderer": {
+      "directory": "native/renderer",
+      "library": "naga_jni",
+      "files": {
+        "Cargo.lock": "b5250a319a24954266772e1491ea9a28c9178f554de0148fa17477afa7c992dd",
+        "Cargo.toml": "169a7b557d73e65af255b2b85f754485dd9a83871cdb7c912bf52b30ef4a002c",
+        "build.rs": "e83ecc4dc6e12841a8fcb63b3381f4e9aed1aadb67a1c7fb623887de7759b8c0",
+        "src/glsl.rs": "4526daf9285d49f7bfc8c5f29a628144ec4d2dad6d6759d63eac923ee2d83a63",
+        "src/lib.rs": "de0a7c326b7464fe02209d58951a52d6103f0f4e69af304ba0b2e8df18acf14d"
+      },
+      "licenses": {
+        "licenses/jni-0.21.1-LICENSE-APACHE": "a60eea817514531668d7e00765731449fe14d059d3249e0bc93b36de45f759f2",
+        "licenses/jni-0.21.1-LICENSE-MIT": "fea1d5bf3dd71605ce5d7d2ff695c1837e914c77195e523a86b5391716477960",
+        "licenses/naga-LICENSE.APACHE": "a6cba85bc92e0cff7a450b1d873c0eaa2e9fc96bf472df0247a26bec77bf3ff9",
+        "licenses/naga-LICENSE.MIT": "dc0d97139e8205818c703741c7be7cb3b96888bd5917b8d6fc6133731e403c21"
+      }
+    },
+    "media": {
+      "directory": "native/media",
+      "library": "media_session",
+      "files": {
+        "Cargo.lock": "f733cf21f6c798c45e076577d1d446502595cea86802fb4a3d291f639491827d",
+        "Cargo.toml": "d3ff6c10c84edf4b3bc8d61f54f22b60d94a8ae9b22473cb88cfe1360ed6197d",
+        "src/abi.rs": "17ad57b7e960042f4435094f735a95e0d64fbeffe74f77d551cd69d7566667b3",
+        "src/lib.rs": "2bba2ebc8c74f9e8ad10aca9c7eb0a3bd8618235ada9b8d01f4fb85d677e0475",
+        "src/state/tests.rs": "8ab278319281f7e87e5ffed7bf578902d03bfd36a54438df250f60b7f6576618",
+        "src/state.rs": "816faf238573f119b4f8e7ecdec24df5f8b417aa9ff241e4415c747d33afdbe2",
+        "src/windows_adapter.rs": "9f2314dd63175aa16ffc726e7dd2d06851dbf48edb94bfea30dc5c9ad190a2d1"
+      },
+      "licenses": {
+        "licenses/jni-0.21.1-LICENSE-APACHE": "a60eea817514531668d7e00765731449fe14d059d3249e0bc93b36de45f759f2",
+        "licenses/jni-0.21.1-LICENSE-MIT": "fea1d5bf3dd71605ce5d7d2ff695c1837e914c77195e523a86b5391716477960",
+        "licenses/windows-0.62.2-license-apache-2.0": "c16f8dcf1a368b83be78d826ea23de4079fe1b4469a0ab9ee20563f37ff3d44b",
+        "licenses/windows-0.62.2-license-mit": "c2cfccb812fe482101a8f04597dfc5a9991a6b2748266c47ac91b6a5aae15383"
+      },
+      "owner_contract": {
+        "path": "native/media/BUILD-CONTRACT.json",
+        "sha256": "dc65ceb64169dd10fc11e9aeafcd42f43a5f70d3adf2e3d57543d0efc42521c8"
+      },
+      "jni_exports": [
+        "Java_dev_echo_client_media_MediaSession_artist",
+        "Java_dev_echo_client_media_MediaSession_title",
+        "Java_dev_echo_client_media_MediaSession_cover",
+        "Java_dev_echo_client_media_MediaSession_durationMillis",
+        "Java_dev_echo_client_media_MediaSession_positionMillis",
+        "Java_dev_echo_client_media_MediaSession_revision"
+      ]
+    }
+  }
+}

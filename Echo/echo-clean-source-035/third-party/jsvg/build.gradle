@@ -1,0 +1,7 @@
+ext.upstreamCoordinate = 'com.github.weisj:jsvg:2.1.0'
+ext.upstreamSha256 = 'a538142d27c57c55066da02a535cc8eee3afd0d37b3daff8eba6344bd0ffc1b6'
+ext.upstreamSourceSha256 = '6616050e4b185d5a7313f8ea9f4c5446a1d26ac880e1c35cccf44c9176bbd866'
+ext.upstreamPackage = 'com/github/weisj/jsvg/'
+ext.expectedPatchedSources = 3
+version = '2.1.0-echo-local-url.1'
+apply from: rootProject.file('gradle/patched-library.gradle')

@@ -1,0 +1,12 @@
+{
+  "jsvg": {
+    "source_archive_sha256": "dd9e6961967395537768de42777f8f720af6b73d5d2afa2081e3c682a163d5c3",
+    "java_source_files": 414,
+    "scope": "Complete public dependency source snapshot including the retained readable local URL guard patches; build compiles the seven patch inputs and packages pinned public upstream classes."
+  },
+  "rhino": {
+    "source_archive_sha256": "bf31ca312c747cd3f3604a368a72ccf82e48d78be3cb36ac4e0173c3f6d86ed7",
+    "java_source_files": 338,
+    "scope": "Complete public dependency source snapshot including the retained readable local URL guard patches; build compiles the seven patch inputs and packages pinned public upstream classes."
+  }
+}

@@ -1,0 +1,19 @@
+[package]
+name = "recovered-media-session"
+version = "0.1.0"
+edition = "2021"
+publish = false
+description = "Reconstructed six-export Windows x86-64 SMTC media JNI adapter"
+
+[lib]
+name = "media_session"
+crate-type = ["cdylib", "rlib"]
+
+[target.'cfg(all(target_os = "windows", target_arch = "x86_64"))'.dependencies]
+jni = "=0.21.1"
+windows = { version = "=0.62.2", features = ["Foundation", "Media_Control", "Storage_Streams", "Win32_System_Com"] }
+
+[profile.release]
+panic = "abort"
+lto = true
+codegen-units = 1

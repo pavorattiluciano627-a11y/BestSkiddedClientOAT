@@ -1,0 +1,90 @@
+{
+  "java_owner": "dev/echo/client/media/MediaSession",
+  "loader_absolute_resource": "/native/windows-x86_64/media_session.dll",
+  "jar_resource_path": "native/windows-x86_64/media_session.dll",
+  "source_module": "native/media",
+  "cargo_manifest": "native/media/Cargo.toml",
+  "cargo_lock": "native/media/Cargo.lock",
+  "target_triple": "x86_64-pc-windows-gnu",
+  "source_hashes": {
+    "Cargo.toml": "d3ff6c10c84edf4b3bc8d61f54f22b60d94a8ae9b22473cb88cfe1360ed6197d",
+    "Cargo.lock": "f733cf21f6c798c45e076577d1d446502595cea86802fb4a3d291f639491827d",
+    "src/abi.rs": "17ad57b7e960042f4435094f735a95e0d64fbeffe74f77d551cd69d7566667b3",
+    "src/lib.rs": "2bba2ebc8c74f9e8ad10aca9c7eb0a3bd8618235ada9b8d01f4fb85d677e0475",
+    "src/state/tests.rs": "8ab278319281f7e87e5ffed7bf578902d03bfd36a54438df250f60b7f6576618",
+    "src/state.rs": "816faf238573f119b4f8e7ecdec24df5f8b417aa9ff241e4415c747d33afdbe2",
+    "src/windows_adapter.rs": "9f2314dd63175aa16ffc726e7dd2d06851dbf48edb94bfea30dc5c9ad190a2d1"
+  },
+  "native_signatures": [
+    {
+      "name": "artist",
+      "java_return": "String",
+      "jni_return": "jstring",
+      "implicit_arguments": [
+        "JNIEnv*",
+        "jclass"
+      ],
+      "explicit_arguments": [],
+      "symbol": "Java_dev_echo_client_media_MediaSession_artist"
+    },
+    {
+      "name": "title",
+      "java_return": "String",
+      "jni_return": "jstring",
+      "implicit_arguments": [
+        "JNIEnv*",
+        "jclass"
+      ],
+      "explicit_arguments": [],
+      "symbol": "Java_dev_echo_client_media_MediaSession_title"
+    },
+    {
+      "name": "cover",
+      "java_return": "byte[]",
+      "jni_return": "jbyteArray",
+      "implicit_arguments": [
+        "JNIEnv*",
+        "jclass"
+      ],
+      "explicit_arguments": [],
+      "symbol": "Java_dev_echo_client_media_MediaSession_cover"
+    },
+    {
+      "name": "durationMillis",
+      "java_return": "long",
+      "jni_return": "jlong",
+      "implicit_arguments": [
+        "JNIEnv*",
+        "jclass"
+      ],
+      "explicit_arguments": [],
+      "symbol": "Java_dev_echo_client_media_MediaSession_durationMillis"
+    },
+    {
+      "name": "positionMillis",
+      "java_return": "long",
+      "jni_return": "jlong",
+      "implicit_arguments": [
+        "JNIEnv*",
+        "jclass"
+      ],
+      "explicit_arguments": [],
+      "symbol": "Java_dev_echo_client_media_MediaSession_positionMillis"
+    },
+    {
+      "name": "revision",
+      "java_return": "long",
+      "jni_return": "jlong",
+      "implicit_arguments": [
+        "JNIEnv*",
+        "jclass"
+      ],
+      "explicit_arguments": [],
+      "symbol": "Java_dev_echo_client_media_MediaSession_revision"
+    }
+  ],
+  "non_windows_behavior": "Java remains unavailable outside Windows amd64/x86_64; no host dylib or metadata substitute is packaged",
+  "status": "portable-source-contract-rebuild-required",
+  "historical_linked_artifact_sha256": "89cdd089a7e76ca3c68f77cf2f6fe10b175a26ed346460cfecf339f49f19a731",
+  "runtime_Windows_SMTC_verified": false
+}

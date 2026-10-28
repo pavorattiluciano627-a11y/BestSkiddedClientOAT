@@ -1,0 +1,338 @@
+--- a/com/github/weisj/jsvg/parser/SVGLoader.java
++++ b/com/github/weisj/jsvg/parser/SVGLoader.java
+@@ -51,6 +51,7 @@
+     public @Nullable SVGDocument load(@NotNull URL xmlBase, @NotNull LoaderContext loaderContext) {
+         try {
+             URI uri = xmlBase.toURI();
++            echo$offlineLocalUrl(xmlBase);
+             return load(xmlBase.openStream(), uri, loaderContext);
+         } catch (URISyntaxException | IOException e) {
+             LOGGER.log(Level.WARNING, String.format("Could not read %s", xmlBase), e);
+@@ -93,4 +94,31 @@
+         }
+         return null;
+     }
++
++    /** Recovered Echo offline URL check; the embedded method has ACC_SYNTHETIC. */
++    private static void echo$offlineLocalUrl(URL url) throws IOException {
++        for (int depth = 0; depth < 8; depth++) {
++            String protocol = url.getProtocol();
++            if ("file".equalsIgnoreCase(protocol)) {
++                String host = url.getHost();
++                String path;
++                try {
++                    path = url.toURI().getPath();
++                } catch (URISyntaxException cause) {
++                    throw new IOException("Invalid local resource URL", cause);
++                }
++                if ((host != null && !host.isEmpty() && !host.equalsIgnoreCase("localhost"))
++                        || path == null || path.replace('\\', '/').startsWith("//")) {
++                    break;
++                }
++                return;
++            }
++            if (!"jar".equalsIgnoreCase(protocol)) break;
++            String archive = url.getFile();
++            int separator = archive.indexOf("!/");
++            if (separator < 0) break;
++            url = new URL(archive.substring(0, separator));
++        }
++        throw new IOException("Remote resources are unavailable in Echo offline mode");
++    }
+ }
+--- a/com/github/weisj/jsvg/parser/impl/ExternalDocumentLoader.java
++++ b/com/github/weisj/jsvg/parser/impl/ExternalDocumentLoader.java
+@@ -22,7 +22,9 @@
+ package com.github.weisj.jsvg.parser.impl;
+ 
+ import java.io.InputStream;
++import java.io.IOException;
+ import java.net.URI;
++import java.net.URISyntaxException;
+ import java.net.URL;
+ import java.util.*;
+ 
+@@ -69,6 +71,7 @@
+                 cache.put(documentUri, cachedDocument);
+             }
+ 
++            echo$offlineLocalUrl(documentUrl);
+             try (InputStream is = StreamUtil.createDocumentInputStream(documentUrl.openStream())) {
+                 SVGDocumentBuilder builder = new StaxSVGLoader().parse(
+                         is, documentUri, document.loaderContext());
+@@ -89,6 +92,33 @@
+         }
+     }
+ 
++    /** Recovered Echo offline URL check; the embedded method has ACC_SYNTHETIC. */
++    private static void echo$offlineLocalUrl(URL url) throws IOException {
++        for (int depth = 0; depth < 8; depth++) {
++            String protocol = url.getProtocol();
++            if ("file".equalsIgnoreCase(protocol)) {
++                String host = url.getHost();
++                String path;
++                try {
++                    path = url.toURI().getPath();
++                } catch (URISyntaxException cause) {
++                    throw new IOException("Invalid local resource URL", cause);
++                }
++                if ((host != null && !host.isEmpty() && !host.equalsIgnoreCase("localhost"))
++                        || path == null || path.replace('\\', '/').startsWith("//")) {
++                    break;
++                }
++                return;
++            }
++            if (!"jar".equalsIgnoreCase(protocol)) break;
++            String archive = url.getFile();
++            int separator = archive.indexOf("!/");
++            if (separator < 0) break;
++            url = new URL(archive.substring(0, separator));
++        }
++        throw new IOException("Remote resources are unavailable in Echo offline mode");
++    }
++
+     private static final class CachedDocument {
+         private @Nullable ParsedDocument document;
+     }
+--- a/com/github/weisj/jsvg/util/ResourceUtil.java
++++ b/com/github/weisj/jsvg/util/ResourceUtil.java
+@@ -26,6 +26,8 @@
+ import java.io.IOException;
+ import java.io.InputStream;
+ import java.net.URI;
++import java.net.URISyntaxException;
++import java.net.URL;
+ import java.nio.charset.StandardCharsets;
+ import java.util.*;
+ import java.util.stream.Collectors;
+@@ -94,7 +96,36 @@
+                 return readPossiblyCorruptedFile(in);
+             }
+         }
+-        return ImageIO.read(uri.toURL());
++        URL url = uri.toURL();
++        echo$offlineLocalUrl(url);
++        return ImageIO.read(url);
++    }
++
++    /** Recovered Echo offline URL check; the embedded method has ACC_SYNTHETIC. */
++    private static void echo$offlineLocalUrl(URL url) throws IOException {
++        for (int depth = 0; depth < 8; depth++) {
++            String protocol = url.getProtocol();
++            if ("file".equalsIgnoreCase(protocol)) {
++                String host = url.getHost();
++                String path;
++                try {
++                    path = url.toURI().getPath();
++                } catch (URISyntaxException cause) {
++                    throw new IOException("Invalid local resource URL", cause);
++                }
++                if ((host != null && !host.isEmpty() && !host.equalsIgnoreCase("localhost"))
++                        || path == null || path.replace('\\', '/').startsWith("//")) {
++                    break;
++                }
++                return;
++            }
++            if (!"jar".equalsIgnoreCase(protocol)) break;
++            String archive = url.getFile();
++            int separator = archive.indexOf("!/");
++            if (separator < 0) break;
++            url = new URL(archive.substring(0, separator));
++        }
++        throw new IOException("Remote resources are unavailable in Echo offline mode");
+     }
+ 
+     private static boolean isSupportedMimeType(@NotNull String mimeType) {
+--- a/org/mozilla/javascript/commonjs/module/provider/UrlModuleSourceProvider.java
++++ b/org/mozilla/javascript/commonjs/module/provider/UrlModuleSourceProvider.java
+@@ -206,6 +206,7 @@
+      * @throws IOException if an I/O error occurs.
+      */
+     protected URLConnection openUrlConnection(URL url) throws IOException {
++        echo$offlineLocalUrl(url);
+         return url.openConnection();
+     }
+ 
+@@ -213,6 +214,33 @@
+     protected boolean entityNeedsRevalidation(Object validator) {
+         return !(validator instanceof URLValidator)
+                 || ((URLValidator) validator).entityNeedsRevalidation();
++    }
++
++    /** Recovered Echo offline URL check; the embedded method has ACC_SYNTHETIC. */
++    private static void echo$offlineLocalUrl(URL url) throws IOException {
++        for (int depth = 0; depth < 8; depth++) {
++            String protocol = url.getProtocol();
++            if ("file".equalsIgnoreCase(protocol)) {
++                String host = url.getHost();
++                String path;
++                try {
++                    path = url.toURI().getPath();
++                } catch (URISyntaxException cause) {
++                    throw new IOException("Invalid local resource URL", cause);
++                }
++                if ((host != null && !host.isEmpty() && !host.equalsIgnoreCase("localhost"))
++                        || path == null || path.replace('\\', '/').startsWith("//")) {
++                    break;
++                }
++                return;
++            }
++            if (!"jar".equalsIgnoreCase(protocol)) break;
++            String archive = url.getFile();
++            int separator = archive.indexOf("!/");
++            if (separator < 0) break;
++            url = new URL(archive.substring(0, separator));
++        }
++        throw new IOException("Remote resources are unavailable in Echo offline mode");
+     }
+ 
+     private static class URLValidator implements Serializable {
+--- a/org/mozilla/javascript/tools/SourceReader.java
++++ b/org/mozilla/javascript/tools/SourceReader.java
+@@ -9,6 +9,7 @@
+ import java.io.IOException;
+ import java.io.InputStream;
+ import java.net.MalformedURLException;
++import java.net.URISyntaxException;
+ import java.net.URL;
+ import java.net.URLConnection;
+ import org.mozilla.javascript.Kit;
+@@ -48,6 +49,7 @@
+                 capacityHint = (int) file.length();
+                 is = new FileInputStream(file);
+             } else {
++                echo$offlineLocalUrl(url);
+                 URLConnection uc = url.openConnection();
+                 is = uc.getInputStream();
+                 if (convertToString) {
+@@ -126,4 +128,31 @@
+         }
+         return result;
+     }
++
++    /** Recovered Echo offline URL check; the embedded method has ACC_SYNTHETIC. */
++    private static void echo$offlineLocalUrl(URL url) throws IOException {
++        for (int depth = 0; depth < 8; depth++) {
++            String protocol = url.getProtocol();
++            if ("file".equalsIgnoreCase(protocol)) {
++                String host = url.getHost();
++                String path;
++                try {
++                    path = url.toURI().getPath();
++                } catch (URISyntaxException cause) {
++                    throw new IOException("Invalid local resource URL", cause);
++                }
++                if ((host != null && !host.isEmpty() && !host.equalsIgnoreCase("localhost"))
++                        || path == null || path.replace('\\', '/').startsWith("//")) {
++                    break;
++                }
++                return;
++            }
++            if (!"jar".equalsIgnoreCase(protocol)) break;
++            String archive = url.getFile();
++            int separator = archive.indexOf("!/");
++            if (separator < 0) break;
++            url = new URL(archive.substring(0, separator));
++        }
++        throw new IOException("Remote resources are unavailable in Echo offline mode");
++    }
+ }
+--- a/org/mozilla/javascript/tools/debugger/Dim.java
++++ b/org/mozilla/javascript/tools/debugger/Dim.java
+@@ -11,6 +11,7 @@
+ import java.io.InputStream;
+ import java.io.InputStreamReader;
+ import java.net.URL;
++import java.net.URISyntaxException;
+ import java.util.Collections;
+ import java.util.HashMap;
+ import java.util.Map;
+@@ -254,7 +255,9 @@
+                     }
+                 }
+ 
+-                is = (new URL(sourceUrl)).openStream();
++                URL url = new URL(sourceUrl);
++                echo$offlineLocalUrl(url);
++                is = url.openStream();
+             }
+ 
+             try {
+@@ -761,6 +764,33 @@
+         return resultString;
+     }
+ 
++    /** Recovered Echo offline URL check; the embedded method has ACC_SYNTHETIC. */
++    private static void echo$offlineLocalUrl(URL url) throws IOException {
++        for (int depth = 0; depth < 8; depth++) {
++            String protocol = url.getProtocol();
++            if ("file".equalsIgnoreCase(protocol)) {
++                String host = url.getHost();
++                String path;
++                try {
++                    path = url.toURI().getPath();
++                } catch (URISyntaxException cause) {
++                    throw new IOException("Invalid local resource URL", cause);
++                }
++                if ((host != null && !host.isEmpty() && !host.equalsIgnoreCase("localhost"))
++                        || path == null || path.replace('\\', '/').startsWith("//")) {
++                    break;
++                }
++                return;
++            }
++            if (!"jar".equalsIgnoreCase(protocol)) break;
++            String archive = url.getFile();
++            int separator = archive.indexOf("!/");
++            if (separator < 0) break;
++            url = new URL(archive.substring(0, separator));
++        }
++        throw new IOException("Remote resources are unavailable in Echo offline mode");
++    }
++
+     /** Proxy class to implement debug interfaces without bloat of class files. */
+     private static class DimIProxy implements ContextAction, ContextFactory.Listener, Debugger {
+ 
+--- a/org/mozilla/javascript/tools/shell/Global.java
++++ b/org/mozilla/javascript/tools/shell/Global.java
+@@ -1006,6 +1006,7 @@
+         try {
+             if (!urlIsFile) {
+                 URL urlObj = new URL(filePath);
++                echo$offlineLocalUrl(urlObj);
+                 URLConnection uc = urlObj.openConnection();
+                 is = uc.getInputStream();
+                 chunkLength = uc.getContentLength();
+@@ -1119,6 +1120,33 @@
+         return new String(buffer, 0, offset);
+     }
+ 
++    /** Recovered Echo offline URL check; the embedded method has ACC_SYNTHETIC. */
++    private static void echo$offlineLocalUrl(URL url) throws IOException {
++        for (int depth = 0; depth < 8; depth++) {
++            String protocol = url.getProtocol();
++            if ("file".equalsIgnoreCase(protocol)) {
++                String host = url.getHost();
++                String path;
++                try {
++                    path = url.toURI().getPath();
++                } catch (URISyntaxException cause) {
++                    throw new IOException("Invalid local resource URL", cause);
++                }
++                if ((host != null && !host.isEmpty() && !host.equalsIgnoreCase("localhost"))
++                        || path == null || path.replace('\\', '/').startsWith("//")) {
++                    break;
++                }
++                return;
++            }
++            if (!"jar".equalsIgnoreCase(protocol)) break;
++            String archive = url.getFile();
++            int separator = archive.indexOf("!/");
++            if (separator < 0) break;
++            url = new URL(archive.substring(0, separator));
++        }
++        throw new IOException("Remote resources are unavailable in Echo offline mode");
++    }
++
+     static RuntimeException reportRuntimeError(String msgId) {
+         String message = ToolErrorReporter.getMessage(msgId);
+         return Context.reportRuntimeError(message);

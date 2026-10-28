@@ -1,0 +1,14 @@
+{
+  "rust_toolchain": "1.97.1",
+  "rust_release": "1.97.1",
+  "rust_commit": "8bab26f4f68e0e26f0bb7960be334d5b520ea452",
+  "files": {
+    "native/lwjgl-compat/Cargo.lock": "9c2822d7c8090d36eda111f69853d86abaaf191ecabe0f0bd37a432859ae22b7",
+    "native/lwjgl-compat/Cargo.toml": "c3ad165d6c9259a92cbf8e653cccb7f2f42c3d48e6c64b21fff12068313c33a1",
+    "native/lwjgl-compat/build.rs": "0cf1daeb3b64c35aa217d879ab5abc799bf40ed67c9dd93ae158284726f11a85",
+    "native/lwjgl-compat/src/lib.rs": "bd2d9866bf0b49347b9b8f2037128f39f4fcb571c8cccec93e6f4d9c5ea1c36f",
+    "third-party/stb-legacy/LICENSE": "bebfe904b14301657e4e5d655c811d51fd31b97c455b9cc2d8600d6bac6cff63",
+    "third-party/stb-legacy/PROVENANCE.md": "64c01cf2e1f29a728f6022d1b739a898369c44a7c3305c47b819a99d8f80c6d1",
+    "third-party/stb-legacy/stb_image_resize.h": "6a0e75adbabb48df9031c2e39ccd97437bb226fe31e7d4a01c7bf70a18d32ec6"
+  }
+}

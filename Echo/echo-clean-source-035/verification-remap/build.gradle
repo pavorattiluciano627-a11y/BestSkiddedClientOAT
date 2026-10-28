@@ -1,0 +1,54 @@
+import groovy.json.JsonOutput
+import groovy.json.JsonSlurper
+import java.security.MessageDigest
+buildscript {
+    configurations.classpath.resolutionStrategy.eachDependency { details ->
+        if (details.requested.group == 'org.ow2.asm') details.useVersion('9.10.1')
+    }
+}
+plugins {
+    id 'net.fabricmc.fabric-loom-remap'
+    id 'java'
+}
+group = 'echo.verification'
+version = 'unapproved-candidate'
+def repository = projectDir.parentFile
+def proof = new JsonSlurper().parse(new File(repository, 'build/reports/candidate/remap-classpath.json'))
+def namedInput = new File(repository, 'build/candidate/echo-clean-candidate-named.jar')
+def sha = { File f -> MessageDigest.getInstance('SHA-256').digest(f.bytes).encodeHex().toString() }
+repositories { mavenCentral(); maven { url = uri('https://libraries.minecraft.net/') } }
+dependencies {
+    minecraft 'com.mojang:minecraft:1.21.11'
+    mappings 'net.fabricmc:yarn:1.21.11+build.6:v2'
+    modImplementation 'net.fabricmc:fabric-loader:0.19.3'
+}
+loom { accessWidenerPath = new File(repository, 'src/main/resources/echo.accesswidener') }
+tasks.register('verifyReleaseReadiness', Exec) {
+    commandLine 'python3', new File(repository, 'tools/build/source_gate.py'), 'complete', '--root', repository
+}
+['jar', 'remapJar', 'build', 'assemble'].each { tasks.named(it) { dependsOn 'verifyReleaseReadiness' } }
+tasks.matching { it.name.startsWith('run') }.configureEach { dependsOn 'verifyReleaseReadiness' }
+tasks.register('candidateJar', net.fabricmc.loom.task.RemapJarTask) {
+    group = 'verification'
+    description = 'Normal Loom remap of all source-compiled candidate classes; no release approval'
+    inputFile = namedInput
+    classpath.setFrom(files(proof.resolution_classpath.collect { it.file }))
+    nestedJars.from(fileTree(new File(repository, 'build/processIncludeJars')) { include '*.jar' })
+    addNestedDependencies = true
+    archiveFileName = 'echo-clean-candidate-intermediary.jar'
+    destinationDirectory = new File(repository, 'build/candidate')
+    doFirst {
+        if (sha(namedInput) != proof.named_sha256) throw new GradleException('Named candidate changed after hierarchy check')
+        proof.resolution_classpath.each {
+            if (sha(new File(it.file)) != it.sha256) throw new GradleException('Remapper input changed: ' + it.file)
+        }
+        if (nestedJars.files.size() != 2) throw new GradleException('Both source-built dependency JARs are required')
+    }
+    doLast {
+        def output = new File(repository, 'build/reports/candidate/remap.json')
+        output.parentFile.mkdirs()
+        output.text = JsonOutput.prettyPrint(JsonOutput.toJson([remapper: 'fabric-loom', namespace: 'intermediary',
+            jar: 'build/candidate/echo-clean-candidate-intermediary.jar', sha256: sha(archiveFile.get().asFile),
+            application_class_grafts: false, classification: 'unapproved-candidate-verification'])) + '\n'
+    }
+}

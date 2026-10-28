@@ -1,0 +1,75 @@
+{
+  "status": "passed-specific-035-runtime-UI-world-flow",
+  "run": "clean-xocxorj6",
+  "candidate_jar_sha256": "d670dcd8408d5427e037c5dfa0fea0dcc04452a333d50bf362a52984c497ad09",
+  "candidate_sidecar_sha256": "3999930a3aae231644a11a57807afa666ded3d582470a6baf0dbbb494de35f2f",
+  "source_set_sha256": "49622d94f324d1f35924f06386f61c86923fbf52110f3f8b7948585bb5f24c85",
+  "verification_receipt_sha256": "ea3eadaa088b3738491952d0322302b6a74f2123663df22851aa02aad4a5dfa1",
+  "rebuilt035_candidate_runtime_tested": true,
+  "specific_UI_world_flow_passed": true,
+  "bootstrap": {
+    "state": "INITIALIZED",
+    "failure": null,
+    "allocations": 98,
+    "unique_feature_classes": 98,
+    "skips": 0,
+    "registrations": 97,
+    "categories": 6
+  },
+  "UI_flow": {
+    "real_generated_world_joins": 1,
+    "category_feature_selections": [
+      "COMBAT / AimAssist",
+      "MOVEMENT / DiveBomb"
+    ],
+    "close_milliseconds": 204.458292,
+    "duration_scale": 1.0,
+    "world_frame_after_close": true,
+    "world_frame_sha256": "af3cafca79b61610300746ecd59d2b06cf810e6342b131cefbc2ee40bd8a572d",
+    "feature_enabled_flags_unchanged": 98
+  },
+  "settings": {
+    "phases": [
+      "before-world",
+      "before-dashboard",
+      "after-dashboard"
+    ],
+    "nonnull_exact_type_metadata_objects": 477,
+    "declaring_fields": 498,
+    "declared_slots": 548,
+    "actual_list_entries": 579,
+    "read_errors": 0,
+    "raw_comparison": {
+      "match": 1682,
+      "different_or_unresolved": 23,
+      "symbolic": 20,
+      "different_or_unreadable": 1
+    },
+    "raw_31_unattributed_entries_label_retained": true,
+    "separate_source_attribution": {
+      "InventoryActionScheduler": 7,
+      "AnchorController": 15,
+      "ScaffoldController": 9
+    },
+    "direct_runtime_provider_field_identity_proved": false,
+    "comparison_limits": "16 symbolic-reference aggregates;7 original postInitialize vectors;1 AutoCrystal size-one selection with unread Identifier.20 separate symbolic rows remain. No full raw-default parity claim."
+  },
+  "test_configuration": {
+    "hidden_native_window": true,
+    "real_GL_framebuffer": true,
+    "pauseOnLostFocus": false,
+    "focus_stealing": false,
+    "close_flag_override": false,
+    "native_close_requests": 0,
+    "public_flag_setter_calls": 0,
+    "artifact_bytes_changed": false
+  },
+  "exit_code": 0,
+  "elapsed_seconds": 21.369703042000765,
+  "failed_visible_attempts_preserved": true,
+  "prior_unexplained_close_origin_proved": false,
+  "global_fidelity_or_release_approved": false,
+  "release_gate_incomplete": true,
+  "encoded_JSON_and_unbound_ScriptManager_directory_limits_retained": true,
+  "scope": "Only this exact artifact/sidecar pair and the stated hidden-window UI/world test; different rebuilt bytes need their own verification."
+}

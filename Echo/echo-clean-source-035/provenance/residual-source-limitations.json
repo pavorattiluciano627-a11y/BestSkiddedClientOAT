@@ -1,0 +1,32 @@
+{
+  "status": "concrete-unresolved-original-source-domains",
+  "encoded_text": {
+    "original_family": ["FeatureModel", "DataManager", "AccessRegistry"],
+    "input_origin": "Dynamic AccessRegistry JSON byte arrays and index-derived seeds",
+    "admitted_actual_payloads_closed": 0,
+    "admitted_named_business_consumer_mapping": false,
+    "unused_domain_proved": false,
+    "recorded_multiplier": 1103515245,
+    "multiplier_scope": "Recorded next-q85 key/initialization domain only; other retained domains differ",
+    "runtime_decoder_or_indexed_table_added": false,
+    "Chars_or_guessed_plaintext_substitution_added": false
+  },
+  "script_manager_constructor": {
+    "original_owner": "ConnectionMapper",
+    "first_stage_string_slots_accounted": 6,
+    "all_plaintext_slots_closed": false,
+    "constructor_slot_selection_proved": false,
+    "constructor_long_char_argument_tuple_bound": false,
+    "decoded_directory_value_bound": false,
+    "Echo_scripts_directory_equivalence_proved": false,
+    "original_effect_order": [
+      "Allocate File, decode its own constructor string, invoke File(decodedString)",
+      "File.toPath and assign directory",
+      "Allocate and assign HashMap",
+      "Store engine argument"
+    ]
+  },
+  "source_or_compiled_artifact_changed_for_this_report": false,
+  "title_UI_success_implies_closure": false,
+  "global_key_cache_initialization_or_release_approval": false
+}

@@ -1,0 +1,9 @@
+pluginManagement {
+    repositories {
+        maven { url = uri('https://maven.fabricmc.net/') }
+        gradlePluginPortal()
+        mavenCentral()
+    }
+    plugins { id 'net.fabricmc.fabric-loom-remap' version '1.16.3' }
+}
+rootProject.name = 'echo-full-candidate-remap-verification'

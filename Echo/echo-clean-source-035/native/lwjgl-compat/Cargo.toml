@@ -1,0 +1,19 @@
+[package]
+name = "echo-stb-legacy"
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.88"
+publish = false
+description = "Minecraft STB1 resize compatibility through pinned official stb_image_resize v0.97"
+
+[lib]
+name = "echo_stb_legacy"
+crate-type = ["cdylib"]
+
+[build-dependencies]
+cc = "=1.2.46"
+
+[profile.release]
+panic = "abort"
+lto = true
+codegen-units = 1

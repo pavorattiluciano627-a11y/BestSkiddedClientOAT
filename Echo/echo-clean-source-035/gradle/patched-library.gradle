@@ -1,0 +1,83 @@
+import java.security.MessageDigest
+import java.util.zip.ZipFile
+
+apply plugin: 'java-library'
+group = 'echo.clean.thirdparty'
+
+java {
+    toolchain { languageVersion = JavaLanguageVersion.of(21) }
+    withSourcesJar()
+}
+
+configurations {
+    upstreamBinary { canBeResolved = true; canBeConsumed = false; transitive = false }
+    upstreamSources { canBeResolved = true; canBeConsumed = false; transitive = false }
+    compileOnly.extendsFrom upstreamBinary
+}
+dependencies {
+    upstreamBinary upstreamCoordinate
+    upstreamSources "${upstreamCoordinate}:sources"
+    compileOnly 'org.jetbrains:annotations:26.0.2'
+}
+dependencyLocking { lockAllConfigurations() }
+
+tasks.withType(JavaCompile).configureEach {
+    options.release = 8
+    options.encoding = 'UTF-8'
+    options.compilerArgs.add('-proc:none')
+    options.fork = true
+    options.forkOptions.memoryMaximumSize = '384m'
+    // Ordinary javac output is the product. ACC_SYNTHETIC restoration and
+    // reference-compiler bytecode identity are intentionally not build stages.
+}
+
+tasks.register('verifyUpstream') {
+    group = 'verification'
+    doLast {
+        [[configurations.upstreamBinary.singleFile, upstreamSha256],
+         [configurations.upstreamSources.singleFile, upstreamSourceSha256]].each { pair ->
+            def actual = MessageDigest.getInstance('SHA-256').digest(pair[0].bytes).encodeHex().toString()
+            if (actual != pair[1]) { throw new GradleException("Unrecognized public upstream artifact: ${pair[0].name}") }
+        }
+        if (sourceSets.main.java.files.size() != expectedPatchedSources) {
+            throw new GradleException("Expected ${expectedPatchedSources} readable patches for ${upstreamCoordinate}")
+        }
+    }
+}
+
+tasks.named('compileJava') { dependsOn 'verifyUpstream' }
+
+// Published upstream code is permitted third-party input. Replace entire classes
+// (including companions produced by javac) only inside these public libraries.
+// This is dependency packaging; no first-party method/body grafting is performed.
+tasks.named('jar', Jar) {
+    dependsOn 'verifyUpstream'
+    from({ zipTree(configurations.upstreamBinary.singleFile) }) {
+        exclude 'META-INF/MANIFEST.MF', 'META-INF/*.SF', 'META-INF/*.RSA', 'META-INF/*.DSA', 'module-info.class'
+        exclude { item -> sourceSets.main.output.classesDirs.files.any { new File(it, item.path).isFile() } }
+    }
+    manifest.attributes('Implementation-Title': "${upstreamCoordinate} with readable local URL guards",
+            'Implementation-Version': project.version,
+            'Echo-Patch-Source': 'seven ordinary Java sources; no classfile rewriting')
+}
+
+// Make all upstream source editable in the published source archive, replacing
+// only the three/four patched source entries with our retained readable copies.
+tasks.named('sourcesJar', Jar) {
+    dependsOn 'verifyUpstream'
+    from({ zipTree(configurations.upstreamSources.singleFile) }) {
+        exclude 'META-INF/MANIFEST.MF'
+        exclude { item -> new File(projectDir, 'src/main/java/' + item.path).isFile() }
+    }
+}
+
+tasks.register('verifyPatchedLibrary', Exec) {
+    group = 'verification'
+    dependsOn 'jar', 'sourcesJar'
+    commandLine 'python3', rootProject.file('tools/build/verify_library.py').absolutePath,
+            '--project', projectDir.absolutePath, '--package', upstreamPackage,
+            '--expected', expectedPatchedSources.toString(),
+            '--jar', tasks.named('jar').get().archiveFile.get().asFile.absolutePath,
+            '--sources-jar', tasks.named('sourcesJar').get().archiveFile.get().asFile.absolutePath
+}
+tasks.named('check') { dependsOn 'verifyPatchedLibrary' }

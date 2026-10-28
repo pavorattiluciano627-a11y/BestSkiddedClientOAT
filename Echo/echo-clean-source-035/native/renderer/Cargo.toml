@@ -1,0 +1,22 @@
+[package]
+name = "recovered-naga-jni"
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.88"
+publish = false
+description = "Source reconstruction of the nine exported dev.dov.naga JNI methods"
+
+[lib]
+name = "naga_jni"
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+jni = "=0.21.1"
+naga = { version = "=27.0.3", features = ["wgsl-in", "glsl-out", "spv-out", "serialize", "deserialize"] }
+serde = { version = "=1.0.228", features = ["derive"] }
+serde_json = "=1.0.149"
+
+[profile.release]
+panic = "abort"
+lto = true
+codegen-units = 1
