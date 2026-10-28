@@ -5,8 +5,11 @@ import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
 import com.mojang.blaze3d.pipeline.RenderTarget;
 import dev.echo.client.bridge.WorldFramebufferControl;
 import dev.echo.client.events.render.OutlineFramebufferEvent;
+import dev.echo.client.render.MinecraftRenderState;
 import dev.echo.render.HandChamsRenderer;
 import java.util.Set;
+import net.minecraft.client.Camera;
+import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.LevelRenderer;
 import net.minecraft.client.renderer.PostChain;
 import net.minecraft.client.renderer.ShaderManager;
@@ -22,7 +25,6 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 @Mixin(LevelRenderer.class)
 public abstract class WorldRendererFramebufferMixin implements WorldFramebufferControl {
     @Shadow private RenderTarget entityOutlineTarget;
-    @Shadow protected abstract boolean shouldShowEntityOutlines();
     @Unique private boolean echo$skipNextOutlineDraw;
 
     @WrapOperation(method = "render(Lcom/mojang/blaze3d/resource/GraphicsResourceAllocator;Lnet/minecraft/client/DeltaTracker;ZLnet/minecraft/client/renderer/state/level/CameraRenderState;Lorg/joml/Matrix4fc;Lcom/mojang/blaze3d/buffers/GpuBufferSlice;Lorg/joml/Vector4f;Z)V", at = @At(value = "INVOKE",
@@ -51,8 +53,15 @@ public abstract class WorldRendererFramebufferMixin implements WorldFramebufferC
 
     @Override
     public void updateOutlineFramebufferCancellation() {
+        // 26.2 moved shouldShowEntityOutlines onto the private LevelExtractor; it
+        // is exactly "not panoramic and a player is present", so inline it rather
+        // than shadow a member that is no longer reachable from LevelRenderer.
+        Minecraft client = Minecraft.getInstance();
+        Camera camera = MinecraftRenderState.getCamera(client);
+        boolean showOutlines = camera != null && !camera.isPanoramicMode()
+                && client.player != null;
         OutlineFramebufferEvent.Prepare event = new OutlineFramebufferEvent.Prepare(
-                entityOutlineTarget, shouldShowEntityOutlines());
+                entityOutlineTarget, showOutlines);
         event.post();
         echo$skipNextOutlineDraw = event.cancelled;
     }

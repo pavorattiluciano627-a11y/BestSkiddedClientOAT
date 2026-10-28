@@ -43,6 +43,10 @@ INJECTORS = ("Inject", "Redirect", "ModifyVariable", "ModifyArgs",
              "WrapOperation", "WrapWithCondition")
 
 
+def _fields(idx, owner):
+    return [(f["n"], f["d"]) for _, e in idx.chain(owner) for f in e["f"]]
+
+
 class Index:
     def __init__(self, path):
         import gzip
@@ -88,7 +92,21 @@ def type_to_desc(java_type: str, imports: dict[str, str]):
         return "L" + imports[t] + ";"
     if simple in imports:
         return "L" + imports[simple] + ";"
+    if "." in t:
+        head, rest = t.split(".", 1)
+        if head in imports:                         # FluidRenderer.Output
+            return "L" + imports[head] + "$" + "$".join(rest.split(".")) + ";"
+        return "L" + t.replace(".", "/") + ";"      # fully qualified in the source
     return None
+
+
+def strip_annotations(text: str) -> str:
+    """Remove leading parameter annotations: @Local(ordinal = 0) Foo -> Foo."""
+    prev = None
+    while prev != text:
+        prev = text
+        text = re.sub(r"^\s*@[\w.]+\s*(?:\([^()]*\))?\s*", "", text)
+    return text.strip()
 
 
 def split_params(text: str) -> list[str]:
@@ -96,11 +114,12 @@ def split_params(text: str) -> list[str]:
     text = text.strip()
     if not text:
         return []
+    text = strip_annotations(text) if text.strip().startswith("@") else text
     out, depth, cur = [], 0, ""
     for ch in text:
-        if ch == "<":
+        if ch in "<(":
             depth += 1
-        elif ch == ">":
+        elif ch in ">)":
             depth -= 1
         if ch == "," and depth == 0:
             out.append(cur)
@@ -110,7 +129,7 @@ def split_params(text: str) -> list[str]:
     out.append(cur)
     types = []
     for piece in out:
-        piece = piece.strip()
+        piece = strip_annotations(piece.strip())
         if not piece:
             continue
         types.append(piece.rsplit(" ", 1)[0] if " " in piece else piece)
@@ -149,6 +168,8 @@ def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("index")
     ap.add_argument("--root", default=str(SRC))
+    ap.add_argument("--verbose", action="store_true",
+                    help="list the members skipped because a type could not be resolved")
     args = ap.parse_args()
 
     sys.path.insert(0, str(pathlib.Path(__file__).parent))
@@ -201,6 +222,9 @@ def main() -> int:
             resolved = [type_to_desc(p, imports) for p in params]
             if any(r is None for r in resolved):
                 skipped += 1
+                if args.verbose:
+                    print(f"  skip @{ann} {handler}: "
+                          f"{[p for p, r in zip(params, resolved) if r is None]}")
                 continue
             checked += 1
 
@@ -269,7 +293,65 @@ def main() -> int:
                             problems.append(f"{path.name}: @Redirect {handler} param {got} != {want}")
                             break
 
-    print(f"checked {checked} handler signatures ({skipped} skipped: unresolved types)")
+    # ---- @Shadow declarations: a member that moved is fatal at apply time ----
+    shadow_checked = 0
+    for path in sorted(root.rglob("*.java")):
+        text = path.read_text(errors="replace")
+        if "@Shadow" not in text:
+            continue
+        pkg = re.search(r"^package\s+([\w.]+);", text, re.M)
+        pkg = pkg.group(1) if pkg else ""
+        imports = {}
+        for imp in re.findall(r"^import\s+(?:static\s+)?([\w.]+);", text, re.M):
+            imports[imp.split(".")[-1]] = imp.replace(".", "/")
+
+        targets = []
+        for m in re.finditer(r"@Mixin\(\s*(?:value\s*=\s*)?\{?([^)}]+)\}?\s*\)", text):
+            for part in m.group(1).split(","):
+                cm = re.match(r"\s*([\w.$]+)\.class", part)
+                if cm:
+                    targets.append(vm.resolve_class(cm.group(1), text, pkg))
+        targets = [t for t in targets if t in idx.classes]
+        if not targets:
+            continue
+
+        for m in re.finditer(
+                r"@Shadow\b[^;{}()]*?([\w$.<>\[\]]+)\s+([\w$]+)\s*(?:\(([^)]*)\))?\s*;",
+                text):
+            ret, name, params_text = m.group(1), m.group(2), m.group(3)
+            if ret in ("private", "protected", "public", "final", "static"):
+                continue
+            if params_text is None:                      # field
+                desc = type_to_desc(ret, imports)
+                if desc is None:
+                    skipped += 1
+                    if args.verbose:
+                        print(f"  skip @Shadow field {name}: {ret}")
+                    continue
+                shadow_checked += 1
+                if not any(n == name and d == desc
+                           for target in targets
+                           for n, d in _fields(idx, target)):
+                    problems.append(f"{path.name}: @Shadow field '{name}' {desc} not on "
+                                    f"{', '.join(targets)}")
+            else:                                        # method
+                ptypes = [type_to_desc(x, imports) for x in split_params(params_text)]
+                rtype = type_to_desc(ret, imports)
+                if rtype is None or any(p is None for p in ptypes):
+                    skipped += 1
+                    if args.verbose:
+                        print(f"  skip @Shadow method {name}: {params_text} -> {ret}")
+                    continue
+                desc = "(" + "".join(ptypes) + ")" + rtype
+                shadow_checked += 1
+                if not any(n == name and d == desc
+                           for target in targets
+                           for n, d in idx.methods(target)):
+                    problems.append(f"{path.name}: @Shadow method '{name}{desc}' not on "
+                                    f"{', '.join(targets)}")
+
+    print(f"checked {checked} handler signatures and {shadow_checked} @Shadow members "
+          f"({skipped} skipped: unresolved types)")
     for problem in sorted(set(problems)):
         print("FATAL  " + problem)
     if not problems:

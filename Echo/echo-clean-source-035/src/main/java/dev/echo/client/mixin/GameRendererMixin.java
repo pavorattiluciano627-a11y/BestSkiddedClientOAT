@@ -16,6 +16,7 @@ import net.minecraft.client.DeltaTracker;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.render.GuiRenderer;
 import net.minecraft.client.renderer.GameRenderer;
+import net.minecraft.client.renderer.state.level.CameraRenderState;
 import net.minecraft.client.renderer.fog.FogRenderer;
 import org.joml.Matrix4f;
 import org.spongepowered.asm.mixin.Final;
@@ -30,8 +31,10 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 public abstract class GameRendererMixin implements GameRenderControl {
     @Shadow @Final private FogRenderer fogRenderer;
     @Shadow @Final private GuiRenderer guiRenderer;
-    @Shadow protected abstract void bobView(PoseStack matrices, float tickProgress);
-    @Shadow protected abstract void bobHurt(PoseStack matrices, float tickProgress);
+    // 26.2 sources view-bob from the extracted camera render state, not from a
+    // tick delta: bobView/bobHurt(CameraRenderState, PoseStack).
+    @Shadow protected abstract void bobView(CameraRenderState camera, PoseStack matrices);
+    @Shadow protected abstract void bobHurt(CameraRenderState camera, PoseStack matrices);
 
     @Inject(method = "renderLevel(Lnet/minecraft/client/DeltaTracker;)V",
             at = @At(value = "INVOKE", target = "Lnet/minecraft/util/profiling/ProfilerFiller;popPush(Ljava/lang/String;)V", ordinal = 0), require = 0)
@@ -93,9 +96,14 @@ public abstract class GameRendererMixin implements GameRenderControl {
 
     @Unique
     private void echo$applyViewEffects(PoseStack matrices, float tickProgress) {
-        bobHurt(matrices, tickProgress);
+        CameraRenderState camera = ((GameRenderer) (Object) this)
+                .gameRenderState().levelRenderState.cameraRenderState;
+        if (camera == null) {
+            return;
+        }
+        bobHurt(camera, matrices);
         if (Minecraft.getInstance().options.bobView().get()) {
-            bobView(matrices, tickProgress);
+            bobView(camera, matrices);
         }
     }
 }

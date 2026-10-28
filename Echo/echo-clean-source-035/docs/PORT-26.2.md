@@ -246,7 +246,8 @@ Three tools now stand between the source tree and that crash:
 | --- | --- | --- |
 | `tools/port/verify_mixins.py` | every `@Mixin` target, `@Inject/@Redirect/@Modify*` selector, `@Shadow` field/method and `@Accessor/@Invoker` resolves against 26.2 | 0.3 s |
 | `tools/port/verify_at_targets.py` | every `@At` `INVOKE`/`FIELD`/`NEW` actually occurs **inside** the selected method (disassembles the client jar with `javap`) | ~5 s |
-| `tools/port/prune_index.py` | regenerates the 67 KiB committed index from the full 26.2 index | — |
+| `tools/port/verify_handler_signatures.py` | 154 injector handler signatures + 31 `@Shadow` members: param types, return type, `CallbackInfoReturnable<T>` vs the target's real return, `@Redirect` receiver | 0.4 s |
+| `tools/port/prune_index.py` | regenerates the committed index from the full 26.2 index | — |
 
 `verify_mixins.py` runs in CI **before** Gradle, so a stale selector fails the build in under a
 second instead of shipping. It reads `tools/port/mc262-mixin-index.json.gz`, which holds only the
@@ -272,3 +273,17 @@ tracked by re-running `verify_at_targets.py`, which prints the exact missing mem
 
 `echo.mixins.json` also sets `injectors.defaultRequire: 0`. That is the last line of defence: a
 mixin that cannot bind must never take the whole client down mid-transform.
+
+### Round three: `@Shadow` and handler signatures
+
+Two more launch-time killers surfaced, neither visible to the selector check:
+
+- `@Shadow protected abstract void bobView(PoseStack, float)` — 26.2 changed it to
+  `bobView(CameraRenderState, PoseStack)`. A shadow that is not located aborts the
+  transform. Shadow checks are now type-aware (name *and* descriptor, not just name).
+- `@Redirect` on a native call whose signature changed shape
+  (`nstbir_resize_uint8(JIIIJIIII)I` → `nstbir_resize_uint8_linear(JIIIJIIII)J`).
+
+`shouldShowEntityOutlines()` moved onto the (private) `LevelExtractor`; the mixin now
+inlines its body — `!camera.isPanoramicMode() && player != null` — instead of shadowing
+a member that is no longer reachable from `LevelRenderer`.
