@@ -191,6 +191,23 @@ def main():
         if not targets:
             continue
 
+        # A class mixin may only target a class, and an interface mixin only an
+        # interface -- Mixin aborts the whole config at prepare time otherwise:
+        #   InvalidMixinException: @Mixin target type mismatch: X is an interface
+        kind = re.search(r"\b(class|interface|enum)\s+" + re.escape(path.stem) + r"\b", text)
+        kind = kind.group(1) if kind else "class"
+        for target in targets:
+            entry = idx.get(target)
+            if entry is None:
+                continue
+            is_interface = bool(entry.get("a", 0) & 0x0200)
+            if is_interface and kind != "interface":
+                problems.append((path.name, target,
+                                 f"@Mixin target is an interface but the mixin is a {kind} "
+                                 f"(declare it as 'public interface')", False))
+            # The reverse is legal: @Accessor/@Invoker mixins are interfaces
+            # whose abstract methods are merged into a concrete class.
+
         existing = [t for t in targets if idx.get(t)]
         if not existing:
             external = [t for t in targets
