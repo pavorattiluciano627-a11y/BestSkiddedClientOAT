@@ -230,6 +230,16 @@ def main():
                                 + (f" (same-name 26.2 members: {', '.join(candidates[:3])})" if candidates else ""),
                                 require_zero,
                             ))
+            # @Shadow fields: a name that no longer exists is fatal at apply time
+            for m in re.finditer(r"@Shadow\b[^;{}]*?\b([\w$]+)\s*(?:\([^)]*\)\s*[\w$.<>\[\]]*\s*\{|;)", text):
+                name = m.group(1)
+                if name in ("private", "protected", "public", "final"):
+                    continue
+                checked += 1
+                if not idx.has_field(target, name) and not idx.has_method(target, name):
+                    problems.append((path.name, target,
+                                     f"@Shadow '{name}' missing on 26.2 target", False))
+
             # @Accessor / @Invoker
             for m in re.finditer(r"@(Accessor|Invoker)\(\s*(?:value\s*=\s*)?\"([^\"]+)\"", text):
                 kind, sel = m.group(1), m.group(2)

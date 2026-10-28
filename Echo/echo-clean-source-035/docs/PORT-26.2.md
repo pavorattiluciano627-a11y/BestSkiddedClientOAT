@@ -225,3 +225,50 @@ The honest summary: **the 26.2 build configuration is complete and the obsolete 
 architecture is gone, but the source-level mapping migration and API port are still outstanding.**
 Those two steps are mechanical and compiler-driven; they must run where the Minecraft 26.2 and
 Fabric artifacts can be downloaded.
+
+---
+
+## 6. Mixin validation pipeline (why the first green build still crashed)
+
+A green `compileJava` proves nothing about mixins. Injection selectors and `@At` targets are
+**strings inside annotations**, so javac cannot see that `Minecraft.destroy`, `Camera.setup` or
+`Gui.extractItemHotbar` no longer exist. The first 26.2 jar built in 69 s and then died on launch
+with:
+
+```
+InvalidInjectionException: @Inject annotation on autosaveFeatureConfig could not find any
+targets matching 'destroy' in net/minecraft/client/Minecraft. No refMap loaded.
+```
+
+Three tools now stand between the source tree and that crash:
+
+| Tool | Checks | Cost |
+| --- | --- | --- |
+| `tools/port/verify_mixins.py` | every `@Mixin` target, `@Inject/@Redirect/@Modify*` selector, `@Shadow` field/method and `@Accessor/@Invoker` resolves against 26.2 | 0.3 s |
+| `tools/port/verify_at_targets.py` | every `@At` `INVOKE`/`FIELD`/`NEW` actually occurs **inside** the selected method (disassembles the client jar with `javap`) | ~5 s |
+| `tools/port/prune_index.py` | regenerates the 67 KiB committed index from the full 26.2 index | — |
+
+`verify_mixins.py` runs in CI **before** Gradle, so a stale selector fails the build in under a
+second instead of shipping. It reads `tools/port/mc262-mixin-index.json.gz`, which holds only the
+62 classes the mixins touch plus their superclass chains — commit that file whenever a mixin
+target is added.
+
+Rewriting tools:
+
+- `remap_mixin_selectors.py <yarn-tiny> <proguard-client.txt> <index> [--write]` — maps Yarn-era
+  method names to 26.2 official names *and* refreshes stale descriptors, descriptor/arity matched.
+- `fix_at_targets.py <index> [--write]` — refreshes stale `@At` descriptors by owner/name/arity.
+- `verify_at_targets.py --quarantine` — adds `require = 0` to injectors whose `@At` call site is
+  gone, so they log a warning instead of aborting the class transform.
+
+### Current state
+
+192 selectors / 215 checks resolve; 0 fatal. 40 injectors are explicitly `require = 0` because
+26.2 moved the call site they hooked (rotation reads left `aiStep`/`causeExtraKnockback`, keybind
+handling left `Minecraft.tick`, the blur pass left `GuiRenderer.draw`, `Renderer3D`-era
+`PoseStack.pushPose` sites moved). Those features degrade one at a time to a logged warning; the
+rest of the client boots. Burning them down means re-anchoring each `@At` on the new call site —
+tracked by re-running `verify_at_targets.py`, which prints the exact missing member.
+
+`echo.mixins.json` also sets `injectors.defaultRequire: 0`. That is the last line of defence: a
+mixin that cannot bind must never take the whole client down mid-transform.
