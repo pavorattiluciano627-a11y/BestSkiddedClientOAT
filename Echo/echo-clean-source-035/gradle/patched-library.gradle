@@ -31,15 +31,28 @@ tasks.withType(JavaCompile).configureEach {
     // reference-compiler bytecode identity are intentionally not build stages.
 }
 
+// Resolved once at configuration time. Capturing `configurations` or `sourceSets`
+// inside a doLast/from closure makes the task incompatible with Gradle's
+// configuration cache, which the build enables for CI speed.
+def upstreamBinaryFile = configurations.upstreamBinary.singleFile
+def upstreamSourcesFile = configurations.upstreamSources.singleFile
+def patchedSourceCount = sourceSets.main.java.files.size()
+def ownClassesDirs = sourceSets.main.output.classesDirs.files
+
 tasks.register('verifyUpstream') {
     group = 'verification'
+    inputs.files(upstreamBinaryFile, upstreamSourcesFile)
+    inputs.property('expectedBinarySha256', upstreamSha256)
+    inputs.property('expectedSourcesSha256', upstreamSourceSha256)
+    inputs.property('expectedPatchedSources', expectedPatchedSources)
+    inputs.property('patchedSourceCount', patchedSourceCount)
     doLast {
-        [[configurations.upstreamBinary.singleFile, upstreamSha256],
-         [configurations.upstreamSources.singleFile, upstreamSourceSha256]].each { pair ->
+        [[upstreamBinaryFile, upstreamSha256],
+         [upstreamSourcesFile, upstreamSourceSha256]].each { pair ->
             def actual = MessageDigest.getInstance('SHA-256').digest(pair[0].bytes).encodeHex().toString()
             if (actual != pair[1]) { throw new GradleException("Unrecognized public upstream artifact: ${pair[0].name}") }
         }
-        if (sourceSets.main.java.files.size() != expectedPatchedSources) {
+        if (patchedSourceCount != expectedPatchedSources) {
             throw new GradleException("Expected ${expectedPatchedSources} readable patches for ${upstreamCoordinate}")
         }
     }
@@ -52,9 +65,9 @@ tasks.named('compileJava') { dependsOn 'verifyUpstream' }
 // This is dependency packaging; no first-party method/body grafting is performed.
 tasks.named('jar', Jar) {
     dependsOn 'verifyUpstream'
-    from({ zipTree(configurations.upstreamBinary.singleFile) }) {
+    from(zipTree(upstreamBinaryFile)) {
         exclude 'META-INF/MANIFEST.MF', 'META-INF/*.SF', 'META-INF/*.RSA', 'META-INF/*.DSA', 'module-info.class'
-        exclude { item -> sourceSets.main.output.classesDirs.files.any { new File(it, item.path).isFile() } }
+        exclude { item -> ownClassesDirs.any { new File(it, item.path).isFile() } }
     }
     manifest.attributes('Implementation-Title': "${upstreamCoordinate} with readable local URL guards",
             'Implementation-Version': project.version,
@@ -65,7 +78,7 @@ tasks.named('jar', Jar) {
 // only the three/four patched source entries with our retained readable copies.
 tasks.named('sourcesJar', Jar) {
     dependsOn 'verifyUpstream'
-    from({ zipTree(configurations.upstreamSources.singleFile) }) {
+    from(zipTree(upstreamSourcesFile)) {
         exclude 'META-INF/MANIFEST.MF'
         exclude { item -> new File(projectDir, 'src/main/java/' + item.path).isFile() }
     }
