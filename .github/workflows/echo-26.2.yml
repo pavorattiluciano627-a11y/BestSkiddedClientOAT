@@ -12,8 +12,7 @@ on:
       - '.github/workflows/echo-26.2.yml'
   workflow_dispatch:
 
-# Two simultaneous runs share the same cache keys and saturate the network,
-# which is what made the first runs slow. Keep one run per ref.
+# Simultaneous runs fight over the same cache keys and saturate the network.
 concurrency:
   group: echo-26.2-${{ github.ref }}
   cancel-in-progress: true
@@ -26,51 +25,51 @@ jobs:
   build:
     name: Compile & package (JDK 25)
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: 30
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
         with:
-          # Nothing in the build reads git history.
           fetch-depth: 1
 
-      # Minecraft 26.x requires Java 25; verifyToolchain fails by design on older.
+      # Minecraft 26.x requires Java 25.
       - name: Set up JDK 25
         uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: '25'
 
-      # Caches ~/.gradle: resolved artifacts, the Gradle distribution, and
-      # caches/fabric-loom (the processed Minecraft jar). A warm hit removes the
+      # Caches ~/.gradle: artifacts, the Gradle distribution and
+      # caches/fabric-loom (processed Minecraft). A warm hit removes the
       # multi-minute Loom setup that dominated the cold runs.
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v4
         with:
           cache-read-only: false
 
-      - name: Report toolchain
-        run: java -version && ./gradlew --version
-
-      # Dependency-verification metadata still describes the 1.21.11 graph, so the
-      # first 26.2 resolution rejects the new artifacts. Disabled for this build.
+      # One Gradle invocation for the whole build: fastJar depends on
+      # compileJava, so a second JVM startup would be pure overhead.
       #
-      # compileJava is the real correctness gate and has no native/gate deps.
-      - name: Compile
+      # compileJava is the real correctness gate; fastJar packages classes and
+      # resources without the cargo/native staging or the source gates that the
+      # fully-gated `jar`/`build` targets keep.
+      #
+      # Dependency verification is off because its metadata still describes the
+      # 1.21.11 graph and would reject the 26.2 artifacts.
+      - name: Compile & package
         run: |
           set -o pipefail
           for attempt in 1 2 3; do
-            echo "::group::compileJava attempt $attempt"
-            if ./gradlew --console=plain --dependency-verification=off compileJava 2>&1 | tee compile.log; then
+            echo "::group::fastJar attempt $attempt"
+            if ./gradlew --console=plain --dependency-verification=off fastJar 2>&1 | tee compile.log; then
               echo "::endgroup::"
               exit 0
             fi
             echo "::endgroup::"
-            # Only re-try transient network failures; a real compiler error will
-            # never fix itself.
+            # Retry transient network failures only; a compiler error is final.
             if ! grep -qE 'Read timed out|Could not download|Connection reset|Could not GET|EOFException' compile.log; then
-              echo "::error::compilation failed (not a network error) - not retrying"
+              echo "::error::build failed (not a network error) - not retrying"
               exit 1
             fi
             echo "network failure, retrying..."
@@ -78,17 +77,11 @@ jobs:
           done
           exit 1
 
-      # Fast packaging: classes + resources, no cargo/native staging and no
-      # source gates (those stay on the fully gated `jar`/`build` targets).
-      - name: Package
-        run: ./gradlew --console=plain --dependency-verification=off fastJar
-
       - name: Collect artifacts
         if: always()
         run: |
           mkdir -p /tmp/artifacts
           find build/fastlibs -maxdepth 1 -name '*.jar' -exec cp {} /tmp/artifacts/ \; 2>/dev/null || true
-          cp build/reports/foundation/toolchain.json /tmp/artifacts/ 2>/dev/null || true
           ls -la /tmp/artifacts
 
       - name: Upload jar
@@ -99,10 +92,10 @@ jobs:
           path: /tmp/artifacts/
           if-no-files-found: warn
 
-      - name: Upload compile log
+      - name: Upload build log
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: echo-26.2-compile-log
+          name: echo-26.2-build-log
           path: Echo/echo-clean-source-035/compile.log
           if-no-files-found: warn
