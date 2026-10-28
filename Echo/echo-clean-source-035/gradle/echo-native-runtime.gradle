@@ -135,7 +135,7 @@ tasks.register('compileEchoRuntimeAudit', JavaCompile) {
     source new File(integrationRoot, 'tools/build/LwjglLinkageAudit.java')
     classpath = configurations.compileClasspath
     destinationDirectory = layout.buildDirectory.dir('echo-runtime-audit/classes')
-    options.release = 25
+    options.release = providers.gradleProperty('java_release').getOrElse('25').toInteger()
     options.fork = true
     options.forkOptions.memoryMaximumSize = '256m'
     options.forkOptions.jvmArgs = ['-XX:ActiveProcessorCount=2']
@@ -144,7 +144,7 @@ tasks.register('verifyEchoMinecraftRuntimeCompatibility', JavaExec) {
     group = 'verification'
     description = 'Rejects a coherent LWJGL upgrade that removes actual Minecraft call descriptors'
     dependsOn 'compileEchoRuntimeAudit', 'verifyEchoRuntimeClasspath'
-    javaLauncher = javaToolchains.launcherFor { languageVersion = JavaLanguageVersion.of(25) }
+    javaLauncher = javaToolchains.launcherFor { languageVersion = JavaLanguageVersion.of(providers.gradleProperty('java_release').getOrElse('25').toInteger()) }
     classpath = files(layout.buildDirectory.dir('echo-runtime-audit/classes')) + configurations.runtimeClasspath
     mainClass = 'LwjglLinkageAudit'
     maxHeapSize = '256m'

@@ -5,7 +5,7 @@ apply plugin: 'java-library'
 group = 'echo.clean.thirdparty'
 
 java {
-    toolchain { languageVersion = JavaLanguageVersion.of(25) }
+    toolchain { languageVersion = JavaLanguageVersion.of(providers.gradleProperty('java_release').getOrElse('25').toInteger()) }
     withSourcesJar()
 }
 

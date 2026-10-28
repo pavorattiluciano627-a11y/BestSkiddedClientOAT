@@ -8,6 +8,26 @@ verified, what is still outstanding, and in which order the remaining work must 
 
 ---
 
+## 0. Prerequisites on the machine that finishes the port
+
+Java 25 is mandatory (26.x raised the minimum from 21). Verify with `java -version` reporting
+`25.x` **before** running Gradle, otherwise `verifyToolchain` fails by design.
+
+| Platform | Command |
+| --- | --- |
+| Windows | `winget install --id EclipseAdoptium.Temurin.25.JDK` |
+| macOS | `brew install --cask temurin@25` |
+| Debian/Ubuntu | `sudo apt install openjdk-25-jdk` (or unpack any JDK 25 tarball and set `JAVA_HOME`) |
+
+Also required: **Python 3**, Rust **1.97.1** (`rustup toolchain install 1.97.1`), and — for the
+native/Cargo stages — Xcode command-line tools on macOS or a GNU toolchain on Windows.
+For editing Java 25 sources, IntelliJ IDEA **2025.3** or newer (per Fabric's porting guide).
+
+Network access to `piston-meta.mojang.com`, `maven.fabricmc.net`, `libraries.minecraft.net` and
+Maven Central is required for the steps in §4; this porting environment had none of them.
+
+---
+
 ## 1. Why a 26.2 port is structurally different
 
 Minecraft 26.x is the first unobfuscated release line, and Yarn was retired after 1.21.11.

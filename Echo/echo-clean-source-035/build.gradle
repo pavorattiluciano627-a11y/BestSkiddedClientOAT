@@ -22,8 +22,10 @@ description = 'Readable-source Fabric 26.2 client; release blocked until functio
 
 base { archivesName = 'echo-clean-source' }
 
-// Single source of truth for the Loom version, also recorded as build evidence.
+// Single sources of truth for the Loom version and Java release, both of which are
+// also recorded as build evidence.
 def loomVersion = providers.gradleProperty('loom_version').getOrElse('1.19-SNAPSHOT')
+def javaRelease = providers.gradleProperty('java_release').getOrElse('25').toInteger()
 
 allprojects {
     repositories {
@@ -47,7 +49,7 @@ allprojects {
 }
 
 java {
-    toolchain { languageVersion = JavaLanguageVersion.of(25) }
+    toolchain { languageVersion = JavaLanguageVersion.of(javaRelease) }
     withSourcesJar()
 }
 
@@ -153,7 +155,7 @@ sourceSets {
 }
 
 tasks.withType(JavaCompile).configureEach {
-    options.release = 25
+    options.release = javaRelease
     options.encoding = 'UTF-8'
     options.fork = true
     options.forkOptions.memoryMaximumSize = '512m'
@@ -182,9 +184,9 @@ tasks.register('verifyToolchain') {
     group = 'verification'
     description = 'Checks the real Java 25 compiler and writes toolchain evidence.'
     doLast {
-        def compiler = javaToolchains.compilerFor { languageVersion = JavaLanguageVersion.of(25) }.get()
+        def compiler = javaToolchains.compilerFor { languageVersion = JavaLanguageVersion.of(javaRelease) }.get()
         def metadata = compiler.metadata
-        if (metadata.languageVersion.asInt() != 25) { throw new GradleException('Java 25 compiler required') }
+        if (metadata.languageVersion.asInt() != javaRelease) { throw new GradleException("Java ${javaRelease} compiler required") }
         def output = layout.buildDirectory.file('reports/foundation/toolchain.json').get().asFile
         output.parentFile.mkdirs()
         output.text = JsonOutput.prettyPrint(JsonOutput.toJson([
@@ -192,7 +194,7 @@ tasks.register('verifyToolchain') {
             compiler: compiler.executablePath.asFile.absolutePath,
             compilerVersion: metadata.javaRuntimeVersion,
             minecraft: minecraft_version, mappings: 'official (Mojang, unobfuscated 26.x)',
-            loader: loader_version, fabricApi: fabric_version, loom: loomVersion
+            loader: loader_version, fabricApi: fabric_version, loom: loomVersion, javaRelease: javaRelease
         ])) + '\n'
         logger.lifecycle("Java ${metadata.languageVersion}: ${compiler.executablePath}")
     }
@@ -275,7 +277,7 @@ tasks.register('prepareCandidate') {
     doLast {
         def sha = { File f -> java.security.MessageDigest.getInstance('SHA-256').digest(f.bytes).encodeHex().toString() }
         def jar = tasks.named('candidateNamedJar').get().archiveFile.get().asFile
-        def report = [classification: 'unapproved-candidate-verification', java_release: 25, compiler: 'javac',
+        def report = [classification: 'unapproved-candidate-verification', java_release: javaRelease, compiler: 'javac',
             source_files: sourceSets.main.java.files.sort().collectEntries { [(project.relativePath(it)): sha(it)] },
             named_jar: project.relativePath(jar), named_sha256: sha(jar),
             mapping_jar: null,
