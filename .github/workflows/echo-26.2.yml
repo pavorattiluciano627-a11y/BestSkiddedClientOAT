@@ -17,6 +17,10 @@ concurrency:
   group: echo-26.2-${{ github.ref }}
   cancel-in-progress: true
 
+  # Releasing the built jar needs write access to the repository contents.
+permissions:
+  contents: write
+
 defaults:
   run:
     working-directory: Echo/echo-clean-source-035
@@ -105,3 +109,45 @@ jobs:
           name: echo-26.2-build-log
           path: Echo/echo-clean-source-035/compile.log
           if-no-files-found: warn
+
+      # Every green build is also published as a GitHub Release, so the jar can
+      # be downloaded without digging through workflow artifacts (those expire,
+      # releases do not). The tag is per-run, so builds never collide.
+      - name: Publish release
+        if: success()
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: build-${{ github.run_number }}
+          name: Echo 26.2 build ${{ github.run_number }}
+          make_latest: true
+          fail_on_unmatched_files: true
+          body: |
+            Automated 26.2 build of Echo client.
+
+            | | |
+            | --- | --- |
+            | Commit | [`${{ github.sha }}`](${{ github.server_url }}/${{ github.repository }}/commit/${{ github.sha }}) |
+            | Branch | `${{ github.ref_name }}` |
+            | Workflow run | [#${{ github.run_number }}](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}) |
+            | Jar | `echo-26.2-fast-*.jar` |
+
+            Mixin selectors, `@Shadow` targets and reachable `@At` call sites were
+            validated against Minecraft 26.2 before packaging. Hooks that 26.2
+            moved are quarantined with `require = 0` — see `docs/PORT-26.2.md`.
+          files: /tmp/artifacts/*.jar
+
+      # Keep the release list short: the API returns newest first, so anything
+      # past the first 15 automated builds is pruned (artifact + its tag).
+      - name: Prune old release builds
+        if: success()
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh api --paginate "repos/${{ github.repository }}/releases?per_page=100" \
+            --jq '.[] | select(.tag_name | startswith("build-")) | "\(.id) \(.tag_name)"' \
+          | tail -n +16 | while read -r id tag; do
+              echo "pruning $tag"
+              gh api -X DELETE "repos/${{ github.repository }}/releases/$id" || true
+              gh api -X DELETE "repos/${{ github.repository }}/git/refs/tags/$tag" || true
+            done
