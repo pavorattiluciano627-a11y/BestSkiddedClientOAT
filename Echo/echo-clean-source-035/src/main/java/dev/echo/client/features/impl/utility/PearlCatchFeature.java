@@ -32,21 +32,22 @@ import dev.echo.client.utils.trajectory.LaunchCandidate;
 import dev.echo.client.utils.trajectory.LaunchTrajectoryMath;
 import dev.echo.client.utils.trajectory.LaunchTrajectorySearch;
 import dev.echo.client.utils.trajectory.ProjectileState;
-import net.minecraft.entity.EntityType;
-import net.minecraft.item.ItemStack;
-import net.minecraft.item.Items;
-import net.minecraft.network.packet.Packet;
-import net.minecraft.network.packet.c2s.play.ClientTickEndC2SPacket;
-import net.minecraft.network.packet.c2s.play.PlayerMoveC2SPacket;
-import net.minecraft.network.packet.c2s.play.TeleportConfirmC2SPacket;
-import net.minecraft.network.packet.s2c.play.BundleS2CPacket;
-import net.minecraft.network.packet.s2c.play.EntitiesDestroyS2CPacket;
-import net.minecraft.network.packet.s2c.play.EntitySpawnS2CPacket;
-import net.minecraft.network.packet.s2c.play.PlayerPositionLookS2CPacket;
-import net.minecraft.util.hit.BlockHitResult;
-import net.minecraft.util.hit.HitResult;
-import net.minecraft.util.math.Direction;
-import net.minecraft.util.math.Vec3d;
+import net.minecraft.core.Direction;
+import net.minecraft.network.protocol.Packet;
+import net.minecraft.network.protocol.game.ClientboundAddEntityPacket;
+import net.minecraft.network.protocol.game.ClientboundBundlePacket;
+import net.minecraft.network.protocol.game.ClientboundPlayerPositionPacket;
+import net.minecraft.network.protocol.game.ClientboundRemoveEntitiesPacket;
+import net.minecraft.network.protocol.game.ServerboundAcceptTeleportationPacket;
+import net.minecraft.network.protocol.game.ServerboundClientTickEndPacket;
+import net.minecraft.network.protocol.game.ServerboundMovePlayerPacket;
+import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.EntityTypes;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
+import net.minecraft.world.phys.BlockHitResult;
+import net.minecraft.world.phys.HitResult;
+import net.minecraft.world.phys.Vec3;
 
 /** Normal and instant pearl/wind-charge sequences. Conditional source candidate; see receipt.json. */
 public class PearlCatchFeature extends Feature {
@@ -88,26 +89,26 @@ public class PearlCatchFeature extends Feature {
     private ProjectileState trajectory;
     private LaunchCandidate pendingPlan;
     private LaunchCandidate activePlan;
-    private Vec3d planningOrigin;
-    private Vec3d planningVelocity;
+    private Vec3 planningOrigin;
+    private Vec3 planningVelocity;
     private int planningElapsedTicks;
     private int plannedPlayerTick;
     private volatile boolean awaitingPearlSpawn;
-    private volatile Vec3d pearlSpawnPosition;
-    private volatile Vec3d pearlSpawnVelocity;
+    private volatile Vec3 pearlSpawnPosition;
+    private volatile Vec3 pearlSpawnVelocity;
     private volatile int pearlSpawnPlayerAge;
     private volatile int pearlEntityId;
     private volatile boolean pearlDestroyed;
     private volatile boolean awaitingWindChargeSpawn;
-    private volatile Vec3d windChargeSpawnPosition;
-    private volatile Vec3d windChargeSpawnVelocity;
+    private volatile Vec3 windChargeSpawnPosition;
+    private volatile Vec3 windChargeSpawnVelocity;
     private volatile boolean positionCorrectionReceived;
     private LaunchCandidate thrownPlan;
     private int windChargeThrowTick;
     private int retryCount;
     private boolean retryPending;
-    private Vec3d capturedOrigin;
-    private Vec3d capturedVelocity;
+    private Vec3 capturedOrigin;
+    private Vec3 capturedVelocity;
     private boolean capturedOnGround;
     private boolean movementPacketSent;
     private int originalSlot;
@@ -144,7 +145,7 @@ public class PearlCatchFeature extends Feature {
         windChargeThrowTick = -1;
         retryCount = 0;
         retryPending = false;
-        capturedVelocity = Vec3d.ZERO;
+        capturedVelocity = Vec3.ZERO;
         capturedOnGround = true;
         movementPacketSent = false;
         originalSlot = -1;
@@ -159,7 +160,7 @@ public class PearlCatchFeature extends Feature {
 
     @Subscribe
     public void onTick(ClientTickEvent event) {
-        if (isOutsideWorld() || client.currentScreen != null) return;
+        if (isOutsideWorld() || client.gui.screen() != null) return;
         handleKeyPresses();
         if (instantPhase != PearlCatchInstantPhase.IDLE) {
             advanceInstantSequence();
@@ -176,31 +177,31 @@ public class PearlCatchFeature extends Feature {
     @Subscribe
     public void onPacketSent(PacketSendEvent event) {
         if (client.player == null) return;
-        if (event.getPacket() instanceof PlayerMoveC2SPacket movement) {
-            if (movement.changesPosition()) {
-                Vec3d position = new Vec3d(movement.getX(0.0), movement.getY(0.0), movement.getZ(0.0));
-                capturedVelocity = capturedOrigin == null ? Vec3d.ZERO : position.subtract(capturedOrigin);
+        if (event.getPacket() instanceof ServerboundMovePlayerPacket movement) {
+            if (movement.hasPosition()) {
+                Vec3 position = new Vec3(movement.getX(0.0), movement.getY(0.0), movement.getZ(0.0));
+                capturedVelocity = capturedOrigin == null ? Vec3.ZERO : position.subtract(capturedOrigin);
                 capturedOrigin = position;
             } else {
-                capturedVelocity = Vec3d.ZERO;
+                capturedVelocity = Vec3.ZERO;
             }
             capturedOnGround = movement.isOnGround();
             movementPacketSent = true;
             return;
         }
-        if (event.getPacket() instanceof ClientTickEndC2SPacket) {
-            if (!movementPacketSent) capturedVelocity = Vec3d.ZERO;
+        if (event.getPacket() instanceof ServerboundClientTickEndPacket) {
+            if (!movementPacketSent) capturedVelocity = Vec3.ZERO;
             movementPacketSent = false;
-            if (needsCatchPlan() && client.player.age >= scheduledCatchTick) {
+            if (needsCatchPlan() && client.player.tickCount >= scheduledCatchTick) {
                 prepareCatchPlan();
                 return;
             }
             if (needsCatchPlan() && usesVisibleAim()) activePlan = planForTick(scheduledCatchTick);
             return;
         }
-        if (event.getPacket() instanceof TeleportConfirmC2SPacket) {
+        if (event.getPacket() instanceof ServerboundAcceptTeleportationPacket) {
             capturedOrigin = null;
-            capturedVelocity = Vec3d.ZERO;
+            capturedVelocity = Vec3.ZERO;
         }
     }
 
@@ -211,15 +212,15 @@ public class PearlCatchFeature extends Feature {
     }
 
     private void observeIncoming(Packet<?> packet) {
-        if (packet instanceof BundleS2CPacket bundle) {
-            for (Packet<?> inner : bundle.getPackets()) observeIncoming(inner);
+        if (packet instanceof ClientboundBundlePacket bundle) {
+            for (Packet<?> inner : bundle.subPackets()) observeIncoming(inner);
             return;
         }
-        if (packet instanceof PlayerPositionLookS2CPacket) {
+        if (packet instanceof ClientboundPlayerPositionPacket) {
             positionCorrectionReceived = true;
             return;
         }
-        if (packet instanceof EntitiesDestroyS2CPacket destroyed) {
+        if (packet instanceof ClientboundRemoveEntitiesPacket destroyed) {
             if (pearlEntityId != -1 && destroyed.getEntityIds().contains(pearlEntityId)) pearlDestroyed = true;
             return;
         }
@@ -227,18 +228,18 @@ public class PearlCatchFeature extends Feature {
     }
 
     private void observeSpawn(Packet<?> packet) {
-        if (!(packet instanceof EntitySpawnS2CPacket spawn)) return;
-        if (client.player == null || spawn.getEntityData() != client.player.getId()) return;
-        Vec3d position = new Vec3d(spawn.getX(), spawn.getY(), spawn.getZ());
-        if (awaitingPearlSpawn && spawn.getEntityType() == EntityType.ENDER_PEARL) {
+        if (!(packet instanceof ClientboundAddEntityPacket spawn)) return;
+        if (client.player == null || spawn.getData() != client.player.getId()) return;
+        Vec3 position = new Vec3(spawn.getX(), spawn.getY(), spawn.getZ());
+        if (awaitingPearlSpawn && spawn.getType() == EntityTypes.ENDER_PEARL) {
             pearlSpawnPosition = position;
-            pearlSpawnVelocity = spawn.getVelocity();
-            pearlSpawnPlayerAge = client.player.age;
-            pearlEntityId = spawn.getEntityId();
+            pearlSpawnVelocity = spawn.getMovement();
+            pearlSpawnPlayerAge = client.player.tickCount;
+            pearlEntityId = spawn.getId();
             awaitingPearlSpawn = false;
-        } else if (awaitingWindChargeSpawn && spawn.getEntityType() == EntityType.WIND_CHARGE) {
+        } else if (awaitingWindChargeSpawn && spawn.getType() == EntityTypes.WIND_CHARGE) {
             windChargeSpawnPosition = position;
-            windChargeSpawnVelocity = spawn.getVelocity();
+            windChargeSpawnVelocity = spawn.getMovement();
             awaitingWindChargeSpawn = false;
         }
     }
@@ -246,10 +247,10 @@ public class PearlCatchFeature extends Feature {
     @Subscribe
     public void afterMouseMovement(MouseMovementEvent.Post event) {
         if (isOutsideWorld() || !usesVisibleAim() || !needsCatchPlan() || activePlan == null) return;
-        Vec3d target = client.player.getEyePos().add(
-                LaunchTrajectoryMath.direction(activePlan.yaw(), activePlan.pitch()).multiply(AIM_DISTANCE));
+        Vec3 target = client.player.getEyePosition().add(
+                LaunchTrajectoryMath.direction(activePlan.yaw(), activePlan.pitch()).scale(AIM_DISTANCE));
         boolean immediate = !retryPending && scheduledCatchTick - pearlThrowTick <= 1
-                && scheduledCatchTick - client.player.age <= 1;
+                && scheduledCatchTick - client.player.tickCount <= 1;
         RotationSettings settings = immediate
                 ? RotationSettings.uniform(RotationVisibility.VISIBLE, AimTransition.EASED, IMMEDIATE_AIM_SPEED)
                 : RotationSettings.uniform(RotationVisibility.VISIBLE, AimTransition.NATURAL, aimSpeed());
@@ -257,8 +258,8 @@ public class PearlCatchFeature extends Feature {
     }
 
     private float aimSpeed() {
-        return PearlCatchCalculations.aimSpeed(activePlan.yaw(), activePlan.pitch(), client.player.getYaw(),
-                client.player.getPitch(), scheduledCatchTick, client.player.age);
+        return PearlCatchCalculations.aimSpeed(activePlan.yaw(), activePlan.pitch(), client.player.getYRot(),
+                client.player.getXRot(), scheduledCatchTick, client.player.tickCount);
     }
 
     private boolean needsCatchPlan() {
@@ -275,7 +276,7 @@ public class PearlCatchFeature extends Feature {
         resetNormalSequence(false);
         resetInstantSequence();
         capturedOrigin = null;
-        capturedVelocity = Vec3d.ZERO;
+        capturedVelocity = Vec3.ZERO;
         super.onDisable();
     }
 
@@ -311,8 +312,8 @@ public class PearlCatchFeature extends Feature {
             resetNormalSequence(false);
             return;
         }
-        Vec3d origin = sequenceOrigin();
-        Vec3d velocity = sequenceVelocity();
+        Vec3 origin = sequenceOrigin();
+        Vec3 velocity = sequenceVelocity();
         Rotation rotation = rotations().effectiveRotation();
         pearlSpawnPosition = null;
         pearlSpawnVelocity = null;
@@ -323,36 +324,36 @@ public class PearlCatchFeature extends Feature {
         retryCount = 0;
         awaitingPearlSpawn = true;
         ((MinecraftClientAccessor) client).invokeDoItemUse();
-        if (!client.player.getItemCooldownManager().isCoolingDown(new ItemStack(Items.ENDER_PEARL))) {
+        if (!client.player.getCooldowns().isOnCooldown(new ItemStack(Items.ENDER_PEARL))) {
             resetNormalSequence(true);
             return;
         }
-        Vec3d launchPosition = new Vec3d(origin.x, origin.y + client.player.getStandingEyeHeight()
+        Vec3 launchPosition = new Vec3(origin.x, origin.y + client.player.getEyeHeight()
                 - LAUNCH_HEIGHT_OFFSET, origin.z);
         trajectory = new ProjectileState(launchPosition,
-                LaunchTrajectoryMath.direction(rotation.yaw(), rotation.pitch()).multiply(1.5).add(velocity), false);
+                LaunchTrajectoryMath.direction(rotation.yaw(), rotation.pitch()).scale(1.5).add(velocity), false);
         pearlFlightTicks = LaunchTrajectorySearch.flightTicks(trajectory);
-        pearlThrowTick = client.player.age;
+        pearlThrowTick = client.player.tickCount;
         scheduledCatchTick = pearlThrowTick + catchDelayTicks;
         normalStage = PearlCatchStage.WAIT;
     }
 
     private void prepareCatchPlan() {
         reconcilePearlSpawn();
-        Vec3d origin = sequenceOrigin();
-        planningOrigin = new Vec3d(origin.x, origin.y + client.player.getStandingEyeHeight(), origin.z);
+        Vec3 origin = sequenceOrigin();
+        planningOrigin = new Vec3(origin.x, origin.y + client.player.getEyeHeight(), origin.z);
         planningVelocity = sequenceVelocity();
-        planningElapsedTicks = client.player.age - pearlThrowTick;
+        planningElapsedTicks = client.player.tickCount - pearlThrowTick;
         pendingPlan = autoAim.getValue() ? LaunchTrajectorySearch.findCatch(trajectory, planningOrigin,
                 planningVelocity, planningElapsedTicks, pearlFlightTicks, lowTrajectory) : null;
-        plannedPlayerTick = client.player.age;
+        plannedPlayerTick = client.player.tickCount;
         if (pendingPlan != null) activePlan = pendingPlan;
     }
 
     private LaunchCandidate planForTick(int tick) {
         reconcilePearlSpawn();
-        Vec3d origin = sequenceOrigin();
-        Vec3d eye = new Vec3d(origin.x, origin.y + client.player.getStandingEyeHeight(), origin.z);
+        Vec3 origin = sequenceOrigin();
+        Vec3 eye = new Vec3(origin.x, origin.y + client.player.getEyeHeight(), origin.z);
         LaunchCandidate plan = LaunchTrajectorySearch.findCatch(trajectory, eye, sequenceVelocity(),
                 tick - pearlThrowTick, pearlFlightTicks, lowTrajectory);
         return plan != null ? plan : activePlan;
@@ -366,8 +367,8 @@ public class PearlCatchFeature extends Feature {
                     && (!lastChance || plan.hitFraction() < LAST_CHANCE_HIT_FRACTION)) return null;
             return plan;
         }
-        float yaw = client.player.getYaw();
-        float pitch = client.player.getPitch();
+        float yaw = client.player.getYRot();
+        float pitch = client.player.getXRot();
         double hitFraction = LaunchTrajectorySearch.hitFraction(trajectory, planningOrigin, planningVelocity,
                 planningElapsedTicks, yaw, pitch, pearlFlightTicks - 1);
         if (hitFraction < Math.max(REQUIRED_HIT_FRACTION, plan.hitFraction() - VISIBLE_AIM_TOLERANCE)
@@ -391,20 +392,20 @@ public class PearlCatchFeature extends Feature {
             resetNormalSequence(true);
             return;
         }
-        if (client.player.age < scheduledCatchTick || plannedPlayerTick != client.player.age) return;
-        int lateTicks = client.player.age - scheduledCatchTick;
+        if (client.player.tickCount < scheduledCatchTick || plannedPlayerTick != client.player.tickCount) return;
+        int lateTicks = client.player.tickCount - scheduledCatchTick;
         if (!autoAim.getValue()) {
             throwWindCharge(slot, null);
             return;
         }
         LaunchCandidate plan = usablePlan(lateTicks >= AIM_WAIT_TICKS);
         if (plan != null) throwWindCharge(slot, plan);
-        else if (lateTicks >= AIM_WAIT_TICKS || client.player.age - pearlThrowTick >= pearlFlightTicks)
+        else if (lateTicks >= AIM_WAIT_TICKS || client.player.tickCount - pearlThrowTick >= pearlFlightTicks)
             resetNormalSequence(true);
     }
 
     private void handleConfirm() {
-        int tick = client.player.age;
+        int tick = client.player.tickCount;
         if (positionCorrectionReceived || pearlDestroyed || tick - pearlThrowTick >= pearlFlightTicks) {
             resetNormalSequence(switchBack.getValue());
             return;
@@ -412,8 +413,8 @@ public class PearlCatchFeature extends Feature {
         if (switchBack.getValue() && !retryPending && tick > windChargeThrowTick
                 && DeferredActionQueue.contains(this)) DeferredActionQueue.finish(this, true);
         boolean missed = false;
-        Vec3d position = windChargeSpawnPosition;
-        Vec3d velocity = windChargeSpawnVelocity;
+        Vec3 position = windChargeSpawnPosition;
+        Vec3 velocity = windChargeSpawnVelocity;
         if (position != null && velocity != null) {
             int delay = windChargeThrowTick - pearlThrowTick;
             missed = LaunchTrajectorySearch.interceptTick(trajectory, position, velocity, delay, pearlFlightTicks - 1) < 0;
@@ -427,7 +428,7 @@ public class PearlCatchFeature extends Feature {
             return;
         }
         if (plannedPlayerTick != tick) return;
-        if (client.player.getItemCooldownManager().isCoolingDown(new ItemStack(Items.WIND_CHARGE))) return;
+        if (client.player.getCooldowns().isOnCooldown(new ItemStack(Items.WIND_CHARGE))) return;
         int slot = InventoryItems.findStackInHotbar(stack -> stack.getItem() == Items.WIND_CHARGE);
         LaunchCandidate plan = usablePlan(true);
         if (slot == -1 || plan == null) {
@@ -439,8 +440,8 @@ public class PearlCatchFeature extends Feature {
     }
 
     private void reconcilePearlSpawn() {
-        Vec3d position = pearlSpawnPosition;
-        Vec3d velocity = pearlSpawnVelocity;
+        Vec3 position = pearlSpawnPosition;
+        Vec3 velocity = pearlSpawnVelocity;
         if (trajectory.exactVelocity() || position == null || velocity == null) return;
         if (position.distanceTo(trajectory.position()) > SPAWN_MATCH_DISTANCE) return;
         trajectory = new ProjectileState(trajectory.position(), velocity, true);
@@ -461,7 +462,7 @@ public class PearlCatchFeature extends Feature {
         if (plan != null) {
             thrownPlan = plan;
             retryPending = false;
-            windChargeThrowTick = client.player.age;
+            windChargeThrowTick = client.player.tickCount;
             scheduledCatchTick = windChargeThrowTick + RETRY_DELAY_TICKS;
             normalStage = PearlCatchStage.CONFIRM;
         } else if (switchBack.getValue()) {
@@ -471,12 +472,12 @@ public class PearlCatchFeature extends Feature {
     }
 
     private void useIgnoringCrosshair() {
-        HitResult previousHit = client.crosshairTarget;
-        Vec3d eye = client.player.getEyePos();
-        client.crosshairTarget = BlockHitResult.createMissed(eye, Direction.UP, client.player.getBlockPos());
+        HitResult previousHit = client.hitResult;
+        Vec3 eye = client.player.getEyePosition();
+        client.hitResult = BlockHitResult.miss(eye, Direction.UP, client.player.blockPosition());
         ((MinecraftClientAccessor) client).invokeDoItemUse();
         // The artifact restores only on normal return, not in a finally block.
-        client.crosshairTarget = previousHit;
+        client.hitResult = previousHit;
     }
 
     private void handleSwitchBack() {
@@ -491,11 +492,11 @@ public class PearlCatchFeature extends Feature {
         return client.player.getInventory().getSelectedSlot() == slot;
     }
 
-    private Vec3d sequenceOrigin() {
-        return capturedOrigin != null ? capturedOrigin : client.player.getEntityPos();
+    private Vec3 sequenceOrigin() {
+        return capturedOrigin != null ? capturedOrigin : client.player.position();
     }
 
-    private Vec3d sequenceVelocity() {
+    private Vec3 sequenceVelocity() {
         return PearlCatchCalculations.restoredVelocity(capturedVelocity, capturedOnGround);
     }
 
@@ -522,12 +523,12 @@ public class PearlCatchFeature extends Feature {
     private void startInstantSequence() {
         if (normalStage != PearlCatchStage.IDLE || instantPhase != PearlCatchInstantPhase.IDLE) return;
         if (isThrowCoolingDown()) return;
-        if (client.interactionManager == null || client.player.isSpectator()) return;
+        if (client.gameMode == null || client.player.isSpectator()) return;
         int selected = client.player.getInventory().getSelectedSlot();
-        int pearl = client.player.getMainHandStack().isOf(Items.ENDER_PEARL) ? selected
+        int pearl = client.player.getMainHandItem().is(Items.ENDER_PEARL) ? selected
                 : InventoryItems.findStackInHotbar(stack -> stack.getItem() == Items.ENDER_PEARL);
         if (pearl == -1) return;
-        boolean swap = !client.player.getOffHandStack().isOf(Items.WIND_CHARGE);
+        boolean swap = !client.player.getOffhandItem().is(Items.WIND_CHARGE);
         int windCharge = swap ? InventoryItems.findStackInHotbar(stack -> stack.getItem() == Items.WIND_CHARGE) : -1;
         if (swap && windCharge == -1) return;
         OwnerSet.add(this);
@@ -538,12 +539,12 @@ public class PearlCatchFeature extends Feature {
         if (swap) enterInstantPhase(PearlCatchInstantPhase.SELECT_WIND_CHARGE);
         else if (pearl != selected) enterInstantPhase(PearlCatchInstantPhase.SELECT_PEARL);
         else enterInstantPhase(PearlCatchInstantPhase.THROW);
-        instantPhaseTick = client.player.age;
+        instantPhaseTick = client.player.tickCount;
         advanceInstantSequence();
     }
 
     private void advanceInstantSequence() {
-        if (client.player.age < instantPhaseTick) return;
+        if (client.player.tickCount < instantPhaseTick) return;
         switch (instantPhase) {
             case SELECT_WIND_CHARGE -> {
                 InventoryItems.selectHotbarSlot(windChargeSlot);
@@ -576,20 +577,20 @@ public class PearlCatchFeature extends Feature {
     }
 
     private void throwInstant() {
-        if (!client.player.getMainHandStack().isOf(Items.ENDER_PEARL)
-                || !client.player.getOffHandStack().isOf(Items.WIND_CHARGE) || isThrowCoolingDown()) {
+        if (!client.player.getMainHandItem().is(Items.ENDER_PEARL)
+                || !client.player.getOffhandItem().is(Items.WIND_CHARGE) || isThrowCoolingDown()) {
             beginInstantRestoration();
             return;
         }
-        Vec3d origin = sequenceOrigin();
-        Vec3d velocity = sequenceVelocity();
+        Vec3 origin = sequenceOrigin();
+        Vec3 velocity = sequenceVelocity();
         Rotation rotation = rotations().effectiveRotation();
-        Vec3d launchPosition = new Vec3d(origin.x,
-                origin.y + client.player.getStandingEyeHeight() - LAUNCH_HEIGHT_OFFSET, origin.z);
+        Vec3 launchPosition = new Vec3(origin.x,
+                origin.y + client.player.getEyeHeight() - LAUNCH_HEIGHT_OFFSET, origin.z);
         ProjectileState launched = new ProjectileState(launchPosition,
-                LaunchTrajectoryMath.direction(rotation.yaw(), rotation.pitch()).multiply(1.5).add(velocity), false);
+                LaunchTrajectoryMath.direction(rotation.yaw(), rotation.pitch()).scale(1.5).add(velocity), false);
         int flightTicks = LaunchTrajectorySearch.flightTicks(launched);
-        Vec3d eye = new Vec3d(origin.x, origin.y + client.player.getStandingEyeHeight(), origin.z);
+        Vec3 eye = new Vec3(origin.x, origin.y + client.player.getEyeHeight(), origin.z);
         double hitFraction = LaunchTrajectorySearch.hitFraction(launched, eye, velocity, 0,
                 rotation.yaw(), rotation.pitch(), flightTicks - 1);
         if (!autoAim.getValue() || hitFraction >= REQUIRED_HIT_FRACTION) {
@@ -604,23 +605,23 @@ public class PearlCatchFeature extends Feature {
         pearlSpawnPlayerAge = -1;
         awaitingPearlSpawn = true;
         ((MinecraftClientAccessor) client).invokeDoItemUse();
-        if (!client.player.getItemCooldownManager().isCoolingDown(new ItemStack(Items.ENDER_PEARL))) {
+        if (!client.player.getCooldowns().isOnCooldown(new ItemStack(Items.ENDER_PEARL))) {
             beginInstantRestoration();
             return;
         }
         trajectory = launched;
         pearlFlightTicks = flightTicks;
         lowTrajectory = true;
-        pearlThrowTick = client.player.age;
+        pearlThrowTick = client.player.tickCount;
         scheduledCatchTick = pearlThrowTick + 1;
         enterInstantPhase(PearlCatchInstantPhase.THROW_FOLLOW_UP);
     }
 
     private void throwInstantFollowUp() {
-        int tick = client.player.age;
+        int tick = client.player.tickCount;
         if (plannedPlayerTick != tick) return;
         LaunchCandidate plan = usablePlan(tick - scheduledCatchTick >= AIM_WAIT_TICKS);
-        if (plan != null && client.player.getOffHandStack().isOf(Items.WIND_CHARGE)) {
+        if (plan != null && client.player.getOffhandItem().is(Items.WIND_CHARGE)) {
             useWithPlan(plan);
             usePendingOffhand();
             finishInstantFollowUp();
@@ -649,14 +650,14 @@ public class PearlCatchFeature extends Feature {
 
     private void enterInstantPhase(PearlCatchInstantPhase phase) {
         instantPhase = phase;
-        instantPhaseTick = client.player.age + 1;
+        instantPhaseTick = client.player.tickCount + 1;
     }
 
     private void swapHands() { ThrowInventoryOperations.swapHands(client); }
 
     private boolean isThrowCoolingDown() {
-        return client.player.getItemCooldownManager().isCoolingDown(new ItemStack(Items.ENDER_PEARL))
-                || client.player.getItemCooldownManager().isCoolingDown(new ItemStack(Items.WIND_CHARGE));
+        return client.player.getCooldowns().isOnCooldown(new ItemStack(Items.ENDER_PEARL))
+                || client.player.getCooldowns().isOnCooldown(new ItemStack(Items.WIND_CHARGE));
     }
 
     private void resetInstantSequence() {

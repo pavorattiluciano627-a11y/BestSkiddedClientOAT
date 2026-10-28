@@ -15,7 +15,7 @@ import dev.echo.render.sampler.Sampler;
 import dev.echo.render.sampler.SamplerInfo;
 import dev.echo.render.texture.TextureView;
 import dev.echo.render.vertex.VertexFormat;
-import net.minecraft.util.math.Vec3d;
+import net.minecraft.world.phys.Vec3;
 
 /** Additive, camera-facing particle instances; conditional source/cache domains are in the receipt. */
 public class ParticleBatch implements RenderBatch {
@@ -51,7 +51,7 @@ public class ParticleBatch implements RenderBatch {
     }
 
     public void add(double x, double y, double z, float size, int color,
-                    ParticleUv uv, float rotation, Vec3d camera) {
+                    ParticleUv uv, float rotation, Vec3 camera) {
         if (count >= capacity) {
             grow();
         }

@@ -124,17 +124,17 @@ public class AutoClickerFeature extends Feature {
             return;
         }
         if (now < nextClickMillis) return;
-        client.attackCooldown = 0;
-        KeyBindingAccessor attack = (KeyBindingAccessor) client.options.attackKey;
+        client.missTime = 0;
+        KeyBindingAccessor attack = (KeyBindingAccessor) client.options.keyAttack;
         attack.setTimesPressed(attack.getTimesPressed() + 1);
         nextClickMillis = Math.max(nextClickMillis, now - 40L) + computeClickIntervalMillis();
     }
 
     private boolean shouldSuppressClick() {
         return isOutsideWorld() || MinecraftRenderState.getScreen() != null
-                || client.player.isUsingItem() || client.interactionManager == null
-                || (!breakBlocks.getValue() && client.interactionManager.isBreakingBlock())
-                || (requireClick.getValue() && !client.options.attackKey.isPressed())
+                || client.player.isUsingItem() || client.gameMode == null
+                || (!breakBlocks.getValue() && client.gameMode.isDestroying())
+                || (requireClick.getValue() && !client.options.keyAttack.isDown())
                 || !itemWhitelist.acceptsHeldItem() || !hotbarWhitelist.permitsCurrentSlot();
     }
 

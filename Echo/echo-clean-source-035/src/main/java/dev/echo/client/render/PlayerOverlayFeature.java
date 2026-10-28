@@ -1,16 +1,17 @@
 package dev.echo.client.render;
 
+import com.mojang.blaze3d.vertex.PoseStack;
+import com.mojang.math.Axis;
 import dev.echo.client.features.impl.render.ChinaHatFeature;
 import dev.echo.client.features.impl.render.FreecamFeature;
 import dev.echo.render.MatrixStackTransforms;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.render.command.OrderedRenderCommandQueue;
-import net.minecraft.client.render.entity.feature.FeatureRenderer;
-import net.minecraft.client.render.entity.feature.FeatureRendererContext;
-import net.minecraft.client.render.entity.model.PlayerEntityModel;
-import net.minecraft.client.render.entity.state.PlayerEntityRenderState;
-import net.minecraft.client.util.math.MatrixStack;
-import net.minecraft.util.math.RotationAxis;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.model.player.PlayerModel;
+import net.minecraft.client.renderer.SubmitNodeCollector;
+import net.minecraft.client.renderer.entity.RenderLayerParent;
+import net.minecraft.client.renderer.entity.layers.RenderLayer;
+import net.minecraft.client.renderer.entity.state.AvatarRenderState;
+import net.minecraft.client.renderer.entity.state.EntityRenderState;
 import org.joml.Matrix4f;
 
 /**
@@ -18,18 +19,18 @@ import org.joml.Matrix4f;
  * Original key/caller/cache conditions remain in the source receipt. The compiler
  * supplies the original erased-state render bridge through this typed override.
  */
-public class PlayerOverlayFeature extends FeatureRenderer<PlayerEntityRenderState, PlayerEntityModel> {
+public class PlayerOverlayFeature extends RenderLayer<AvatarRenderState, PlayerModel> {
     private static final float MAX_MODEL_SCALE_SQUARED = 16.0f;
     private static final float HEAD_ROTATION_DEGREES = 180.0f;
     private static final float HEAD_OFFSET = 0.42f;
 
-    public PlayerOverlayFeature(FeatureRendererContext<PlayerEntityRenderState, PlayerEntityModel> context) {
+    public PlayerOverlayFeature(RenderLayerParent<AvatarRenderState, PlayerModel> context) {
         super(context);
     }
 
     @Override
-    public void render(MatrixStack matrices, OrderedRenderCommandQueue commands, int light,
-                       PlayerEntityRenderState state, float limbAngle, float limbDistance) {
+    public void submit(PoseStack matrices, SubmitNodeCollector commands, int light,
+                       AvatarRenderState state, float limbAngle, float limbDistance) {
         boolean bypass = FreecamFeature.isPerspectiveRefreshBypassed();
         ChinaHatFeature feature = ChinaHatFeature.instance;
         if (!bypass && feature == null) {
@@ -38,12 +39,12 @@ public class PlayerOverlayFeature extends FeatureRenderer<PlayerEntityRenderStat
         if (!feature.isEnabled()) {
             return;
         }
-        MinecraftClient client = MinecraftClient.getInstance();
+        Minecraft client = Minecraft.getInstance();
         if (client.player == null || state.id != client.player.getId()) {
             return;
         }
 
-        Matrix4f matrix = matrices.peek().getPositionMatrix();
+        Matrix4f matrix = matrices.last().pose();
         float scaleSquared = matrix.m00() * matrix.m00()
                 + matrix.m01() * matrix.m01() + matrix.m02() * matrix.m02();
         if (!bypass) {
@@ -51,17 +52,17 @@ public class PlayerOverlayFeature extends FeatureRenderer<PlayerEntityRenderStat
             if (scaleSquared > MAX_MODEL_SCALE_SQUARED) {
                 return;
             }
-            matrices.push();
+            matrices.pushPose();
         }
 
-        PlayerEntityModel model = getContextModel();
-        model.getRootPart().applyTransform(matrices);
-        model.head.applyTransform(matrices);
-        MatrixStackTransforms.rotate(matrices, RotationAxis.POSITIVE_Z.rotationDegrees(HEAD_ROTATION_DEGREES));
+        PlayerModel model = getParentModel();
+        model.root().translateAndRotate(matrices);
+        model.head.translateAndRotate(matrices);
+        MatrixStackTransforms.rotate(matrices, Axis.ZP.rotationDegrees(HEAD_ROTATION_DEGREES));
         matrices.translate(0.0f, HEAD_OFFSET, 0.0f);
-        feature.render(matrices.peek().getPositionMatrix());
+        feature.render(matrices.last().pose());
         // The original alternate-control path skips push/scale but retains this pop.
         // Original failures before this point do not execute a synthetic finally-pop.
-        matrices.pop();
+        matrices.popPose();
     }
 }

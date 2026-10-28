@@ -15,10 +15,10 @@ import dev.echo.client.setting.BooleanSetting;
 import dev.echo.client.setting.FloatRangeSetting;
 import dev.echo.client.utils.items.InventoryItems;
 import dev.echo.client.utils.targeting.TargetSelection;
-import net.minecraft.enchantment.Enchantments;
-import net.minecraft.entity.LivingEntity;
-import net.minecraft.item.Items;
-import net.minecraft.util.hit.EntityHitResult;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.item.Items;
+import net.minecraft.world.item.enchantment.Enchantments;
+import net.minecraft.world.phys.EntityHitResult;
 
 /** Totem-to-knockback-sword attack substitution; conditional recovery domains are in receipt.json. */
 public class TotemHitFeature extends Feature {
@@ -66,7 +66,7 @@ public class TotemHitFeature extends Feature {
     @Subscribe
     private void onHotbarKey(HotbarKeyEvent event) {
         if (knockbackSwordSlot == -1 || event.slot != knockbackSwordSlot) return;
-        if (client.player == null || (long) client.player.age - lastSwordSwapTick > 2L) {
+        if (client.player == null || (long) client.player.tickCount - lastSwordSwapTick > 2L) {
             resetSwordSwap();
             return;
         }
@@ -85,16 +85,16 @@ public class TotemHitFeature extends Feature {
     private void onAttackKey(AttackKeyEvent event) {
         if (isOutsideWorld() || client.isPaused()) return;
         if (swordSwapPending) {
-            boolean recent = (long) client.player.age - lastSwordSwapTick <= 2L;
+            boolean recent = (long) client.player.tickCount - lastSwordSwapTick <= 2L;
             resetSwordSwap();
-            if (recent && InventoryItems.isLegacySword(client.player.getMainHandStack().getItem())) {
+            if (recent && InventoryItems.isLegacySword(client.player.getMainHandItem().getItem())) {
                 if (!event.hasClicks()) event.addClick();
                 hotbarActionActive = true;
             }
             return;
         }
-        if (!event.hasClicks() || client.player.getMainHandStack().getItem() != Items.TOTEM_OF_UNDYING) return;
-        if (!(client.crosshairTarget instanceof EntityHitResult hit)
+        if (!event.hasClicks() || client.player.getMainHandItem().getItem() != Items.TOTEM_OF_UNDYING) return;
+        if (!(client.hitResult instanceof EntityHitResult hit)
                 || !(hit.getEntity() instanceof LivingEntity target)) return;
         if (!TargetSelection.isValidTarget(target)) return;
         int slot = findKnockbackSword();
@@ -102,7 +102,7 @@ public class TotemHitFeature extends Feature {
         event.setClickCount(0);
         knockbackSwordSlot = slot;
         swordSwapPending = true;
-        lastSwordSwapTick = client.player.age;
+        lastSwordSwapTick = client.player.tickCount;
     }
 
     private void resetSwordSwap() {

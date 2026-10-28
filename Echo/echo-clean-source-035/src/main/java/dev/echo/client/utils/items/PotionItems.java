@@ -2,15 +2,15 @@ package dev.echo.client.utils.items;
 
 import java.util.Optional;
 import java.util.function.Predicate;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.component.DataComponentTypes;
-import net.minecraft.component.type.PotionContentsComponent;
-import net.minecraft.entity.player.PlayerInventory;
-import net.minecraft.item.ItemStack;
-import net.minecraft.item.Items;
-import net.minecraft.potion.Potion;
-import net.minecraft.potion.Potions;
-import net.minecraft.registry.entry.RegistryEntry;
+import net.minecraft.client.Minecraft;
+import net.minecraft.core.Holder;
+import net.minecraft.core.component.DataComponents;
+import net.minecraft.world.entity.player.Inventory;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
+import net.minecraft.world.item.alchemy.Potion;
+import net.minecraft.world.item.alchemy.PotionContents;
+import net.minecraft.world.item.alchemy.Potions;
 
 /**
  * Searches splash-potion registry entries in the hotbar and offhand.
@@ -22,18 +22,18 @@ public class PotionItems {
     public PotionItems() {}
 
     /** Returns the first matching hotbar index, or -1; visits slots 0 through 8. */
-    public static int findPotion(Predicate<RegistryEntry<Potion>> predicate) {
-        PlayerInventory inventory = MinecraftClient.getInstance().player.getInventory();
+    public static int findPotion(Predicate<Holder<Potion>> predicate) {
+        Inventory inventory = Minecraft.getInstance().player.getInventory();
         for (int slot = 0; slot <= 8; slot++) {
-            ItemStack stack = inventory.getStack(slot);
+            ItemStack stack = inventory.getItem(slot);
             if (stack.getItem() != Items.SPLASH_POTION) {
                 continue;
             }
-            PotionContentsComponent contents = stack.get(DataComponentTypes.POTION_CONTENTS);
+            PotionContents contents = stack.get(DataComponents.POTION_CONTENTS);
             if (contents == null) {
                 continue;
             }
-            Optional<RegistryEntry<Potion>> potion = contents.potion();
+            Optional<Holder<Potion>> potion = contents.potion();
             if (potion.isPresent() && predicate.test(potion.get())) {
                 return slot;
             }
@@ -133,16 +133,16 @@ public class PotionItems {
     }
 
     /** Tests only the offhand stack's base potion entry, not custom status effects. */
-    public static boolean holdsPotion(Predicate<RegistryEntry<Potion>> predicate) {
-        ItemStack stack = MinecraftClient.getInstance().player.getOffHandStack();
+    public static boolean holdsPotion(Predicate<Holder<Potion>> predicate) {
+        ItemStack stack = Minecraft.getInstance().player.getOffhandItem();
         if (stack.getItem() != Items.SPLASH_POTION) {
             return false;
         }
-        PotionContentsComponent contents = stack.get(DataComponentTypes.POTION_CONTENTS);
+        PotionContents contents = stack.get(DataComponents.POTION_CONTENTS);
         if (contents == null) {
             return false;
         }
-        Optional<RegistryEntry<Potion>> potion = contents.potion();
+        Optional<Holder<Potion>> potion = contents.potion();
         return potion.isPresent() && predicate.test(potion.get());
     }
 

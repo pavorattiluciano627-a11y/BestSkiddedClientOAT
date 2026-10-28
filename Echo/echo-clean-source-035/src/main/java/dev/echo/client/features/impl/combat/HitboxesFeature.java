@@ -10,9 +10,9 @@ import dev.echo.client.features.FeatureInfo;
 import dev.echo.client.setting.BooleanSetting;
 import dev.echo.client.setting.EntityTypeListSetting;
 import dev.echo.client.setting.FloatSetting;
-import net.minecraft.entity.Entity;
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.util.math.Box;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.phys.AABB;
 
 /** Configurable entity hitbox expansion, including gliding-player height restoration. */
 public class HitboxesFeature extends Feature {
@@ -60,24 +60,24 @@ public class HitboxesFeature extends Feature {
         if (!entityTypes.accepts(entity)) {
             return;
         }
-        Box box = baseBoundingBox(entity).expand((double) entity.getTargetingMargin());
+        AABB box = baseBoundingBox(entity).inflate((double) entity.getPickRadius());
         if (uniform.getValue()) {
             float expansion = expandSize.getValue();
-            event.setBoundingBox(box.expand((double) expansion, (double) expansion, (double) expansion));
+            event.setBoundingBox(box.inflate((double) expansion, (double) expansion, (double) expansion));
             return;
         }
         float x = expandX.getValue();
         float up = expandYUp.getValue();
         float down = expandYDown.getValue();
         float z = expandZ.getValue();
-        event.setBoundingBox(new Box(box.minX - (double) x, box.minY - (double) down,
+        event.setBoundingBox(new AABB(box.minX - (double) x, box.minY - (double) down,
             box.minZ - (double) z, box.maxX + (double) x, box.maxY + (double) up, box.maxZ + (double) z));
     }
 
-    private static Box baseBoundingBox(Entity entity) {
-        Box box = entity.getBoundingBox();
-        if (staticHitbox.getValue() && entity instanceof PlayerEntity player && player.isGliding()) {
-            box = new Box(box.minX, box.minY, box.minZ, box.maxX,
+    private static AABB baseBoundingBox(Entity entity) {
+        AABB box = entity.getBoundingBox();
+        if (staticHitbox.getValue() && entity instanceof Player player && player.isFallFlying()) {
+            box = new AABB(box.minX, box.minY, box.minZ, box.maxX,
                 box.minY + STANDING_PLAYER_HEIGHT, box.maxZ);
         }
         return box;

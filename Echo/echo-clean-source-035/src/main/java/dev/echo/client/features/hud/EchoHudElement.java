@@ -8,7 +8,7 @@ import dev.echo.client.hud.HudRenderer;
 import dev.echo.client.setting.FloatSetting;
 import dev.echo.client.bootstrap.CatalogText;
 import dev.echo.client.ui.UiSize;
-import net.minecraft.client.MinecraftClient;
+import net.minecraft.client.Minecraft;
 
 /** Appearance, reference-canvas placement and balanced rendering for a HUD element. */
 public abstract class EchoHudElement extends HudFeature {
@@ -79,7 +79,7 @@ public abstract class EchoHudElement extends HudFeature {
 
     protected boolean isRightOfScreenCenter() {
         int viewportWidth = (int) Math.ceil(
-                MinecraftClient.getInstance().getWindow().getFramebufferWidth() / 2.0);
+                Minecraft.getInstance().getWindow().getWidth() / 2.0);
         return getX() + getWidth() * 0.5f > viewportWidth * 0.5f;
     }
 

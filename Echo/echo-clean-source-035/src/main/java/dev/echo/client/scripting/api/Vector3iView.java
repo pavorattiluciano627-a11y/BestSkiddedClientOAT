@@ -1,6 +1,6 @@
 package dev.echo.client.scripting.api;
 
-import net.minecraft.util.math.Vec3i;
+import net.minecraft.core.Vec3i;
 
 /** Integer vector; Java overflow and division-by-zero behavior are intentional. */
 public class Vector3iView {

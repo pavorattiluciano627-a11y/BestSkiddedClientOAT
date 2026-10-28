@@ -1,6 +1,6 @@
 package dev.echo.client.handlers;
 
-import net.minecraft.client.MinecraftClient;
+import net.minecraft.client.Minecraft;
 
 /** Converts angular changes to mouse counts while retaining fractional remainders. */
 final class MouseSensitivity {
@@ -26,7 +26,7 @@ final class MouseSensitivity {
     }
 
     static float angularStep(boolean fineScale) {
-        double sensitivity = MinecraftClient.getInstance().options.getMouseSensitivity().getValue()
+        double sensitivity = Minecraft.getInstance().options.sensitivity().get()
                 * 0.6F + 0.2F;
         double scaled = sensitivity * sensitivity * sensitivity * 8.0;
         return (float) (scaled * (fineScale ? 0.01875 : 0.15));

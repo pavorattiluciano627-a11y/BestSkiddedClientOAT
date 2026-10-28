@@ -1,7 +1,7 @@
 package dev.echo.client.render;
 
 import com.mojang.blaze3d.textures.GpuTextureView;
-import com.mojang.blaze3d.textures.TextureFormat;
+import com.mojang.blaze3d.GpuFormat;
 import dev.echo.render.buffer.Buffer;
 import dev.echo.render.buffer.BufferAccess;
 import dev.echo.render.buffer.BufferInfo;
@@ -22,11 +22,11 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.font.BakedGlyph;
-import net.minecraft.client.font.BakedGlyphImpl;
-import net.minecraft.client.font.GlyphProvider;
-import net.minecraft.text.StyleSpriteSource;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.GlyphSource;
+import net.minecraft.client.gui.font.glyphs.BakedGlyph;
+import net.minecraft.client.gui.font.glyphs.BakedSheetGlyph;
+import net.minecraft.network.chat.FontDescription;
 
 /** Minecraft glyph metrics and atlas-run batching, retaining actual named Yarn glyph types. */
 public class MinecraftTextBatch implements RenderBatch {
@@ -62,11 +62,11 @@ public class MinecraftTextBatch implements RenderBatch {
     }
 
     public BakedGlyph[] bake(CharSequence text) {
-        GlyphProvider provider = MinecraftClient.getInstance().textRenderer.fonts.getGlyphs(StyleSpriteSource.DEFAULT);
+        GlyphSource provider = Minecraft.getInstance().font.provider.glyphs(FontDescription.DEFAULT);
         BakedGlyph[] glyphs = new BakedGlyph[text.length()];
         for (int index = 0; index < text.length(); index++) {
             char character = text.charAt(index);
-            if (character != '\n') glyphs[index] = provider.get(character);
+            if (character != '\n') glyphs[index] = provider.getGlyph(character);
         }
         return glyphs;
     }
@@ -80,10 +80,10 @@ public class MinecraftTextBatch implements RenderBatch {
                 y += fontHeight(size);
                 continue;
             }
-            if (glyph instanceof BakedGlyphImpl drawable) {
+            if (glyph instanceof BakedSheetGlyph drawable) {
                 addGlyph(drawable, x, y, scale, color, depth);
             }
-            x += glyph.getMetrics().getAdvance() * scale;
+            x += glyph.info().getAdvance() * scale;
         }
         return x;
     }
@@ -97,7 +97,7 @@ public class MinecraftTextBatch implements RenderBatch {
                 maximum = Math.max(maximum, lineWidth);
                 lineWidth = 0.0f;
             } else {
-                lineWidth += glyph.getMetrics().getAdvance() * scale;
+                lineWidth += glyph.info().getAdvance() * scale;
             }
         }
         return Math.max(maximum, lineWidth);
@@ -105,11 +105,11 @@ public class MinecraftTextBatch implements RenderBatch {
 
     public float fontHeight(float size) {
         // Present in the original classfile; the older typed source view omitted this null check.
-        Objects.requireNonNull(MinecraftClient.getInstance().textRenderer);
+        Objects.requireNonNull(Minecraft.getInstance().font);
         return size * 9.0f / 8.0f;
     }
 
-    private void addGlyph(BakedGlyphImpl glyph, float x, float y, float scale, int color, float depth) {
+    private void addGlyph(BakedSheetGlyph glyph, float x, float y, float scale, int color, float depth) {
         if (firstInstance + pendingCount >= capacity) grow();
         TextureView texture = importedTextures.computeIfAbsent(glyph.textureView,
                 source -> GlTextureBridge.importColor(device, source));
@@ -118,11 +118,11 @@ public class MinecraftTextBatch implements RenderBatch {
             textureRuns.add(texture);
             runStarts.add(firstInstance + pendingCount);
         }
-        int monochrome = glyph.textureView.texture().getFormat() == TextureFormat.RED8 ? 1 : 0;
+        int monochrome = glyph.textureView.texture().getFormat() == GpuFormat.R8_UNORM ? 1 : 0;
         long address = instances.mappedAddress() + (long) (firstInstance + pendingCount) * STRIDE;
-        NativeMemoryWrites.putFloat4(address, x + glyph.minX * scale, y + glyph.minY * scale,
-                (glyph.maxX - glyph.minX) * scale, (glyph.maxY - glyph.minY) * scale);
-        NativeMemoryWrites.putFloat4(address + 16, glyph.minU, glyph.minV, glyph.maxU, glyph.maxV);
+        NativeMemoryWrites.putFloat4(address, x + glyph.left * scale, y + glyph.up * scale,
+                (glyph.right - glyph.left) * scale, (glyph.down - glyph.up) * scale);
+        NativeMemoryWrites.putFloat4(address + 16, glyph.u0, glyph.v0, glyph.u1, glyph.v1);
         NativeMemoryWrites.putInt2(address + 32, color, monochrome);
         NativeMemoryWrites.putFloat(address + 40, depth);
         pendingCount++;

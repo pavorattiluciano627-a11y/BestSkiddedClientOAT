@@ -3,10 +3,10 @@ package dev.echo.client.utils.trajectory;
 import dev.echo.client.utils.movement.PlayerEyePositions;
 import java.util.Collections;
 import java.util.List;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.entity.Entity;
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.util.math.Vec3d;
+import net.minecraft.client.Minecraft;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.phys.Vec3;
 
 /** Fluid-aware projectile factories; conditional original binding domain is in the receipt. */
 public final class FluidAwareProjectileTrajectories {
@@ -14,32 +14,32 @@ public final class FluidAwareProjectileTrajectories {
 
     private FluidAwareProjectileTrajectories() {}
 
-    public static List<Vec3d> fromPlayer(PlayerEntity player, float tickDelta) {
-        if (player == null || MinecraftClient.getInstance().world == null) {
+    public static List<Vec3> fromPlayer(Player player, float tickDelta) {
+        if (player == null || Minecraft.getInstance().level == null) {
             return Collections.emptyList();
         }
         // The original accepts tickDelta but does not read it in this factory.
-        Vec3d position = PlayerEyePositions.loweredEyePosition(player);
-        Vec3d velocity = PlayerProjectileLaunch.direction(player, 0.0F).multiply(LAUNCH_SPEED)
+        Vec3 position = PlayerEyePositions.loweredEyePosition(player);
+        Vec3 velocity = PlayerProjectileLaunch.direction(player, 0.0F).scale(LAUNCH_SPEED)
                 .add(PlayerProjectileLaunch.inheritedMotion(player));
         FluidAwareProjectileSimulation simulation = new FluidAwareProjectileSimulation(position, velocity, player);
         return TrajectorySteps.collect(80, simulation::getPosition, simulation::isStopped, simulation::step);
     }
 
-    public static List<Vec3d> fromVectors(Vec3d position, Vec3d velocity) {
-        if (position == null || velocity == null || MinecraftClient.getInstance().world == null) {
+    public static List<Vec3> fromVectors(Vec3 position, Vec3 velocity) {
+        if (position == null || velocity == null || Minecraft.getInstance().level == null) {
             return Collections.emptyList();
         }
         FluidAwareProjectileSimulation simulation = new FluidAwareProjectileSimulation(position, velocity, null);
         return TrajectorySteps.collect(80, simulation::getPosition, simulation::isStopped, simulation::step);
     }
 
-    public static List<Vec3d> fromEntity(Entity entity) {
-        if (entity == null || MinecraftClient.getInstance().world == null) {
+    public static List<Vec3> fromEntity(Entity entity) {
+        if (entity == null || Minecraft.getInstance().level == null) {
             return Collections.emptyList();
         }
         FluidAwareProjectileSimulation simulation = new FluidAwareProjectileSimulation(
-                entity.getEntityPos(), entity.getVelocity(), entity);
+                entity.position(), entity.getDeltaMovement(), entity);
         return TrajectorySteps.collect(80, simulation::getPosition, simulation::isStopped, simulation::step);
     }
 }

@@ -5,7 +5,7 @@ import dev.echo.client.events.input.PlayerInputEvent;
 import dev.echo.client.features.Category;
 import dev.echo.client.features.Feature;
 import dev.echo.client.features.FeatureInfo;
-import net.minecraft.util.PlayerInput;
+import net.minecraft.world.entity.player.Input;
 
 /** Candidate under the callsite and guard obligations in needs.json. */
 public class NullMoveFeature extends Feature {
@@ -33,7 +33,7 @@ public class NullMoveFeature extends Feature {
 
     @Subscribe
     public void onMovementInput(PlayerInputEvent event) {
-        if (isOutsideWorld() || client.currentScreen != null) {
+        if (isOutsideWorld() || client.gui.screen() != null) {
             return;
         }
 
@@ -68,7 +68,7 @@ public class NullMoveFeature extends Feature {
         }
 
         // History is the physical input, not the flags modified above.
-        PlayerInput physicalInput = event.originalInput;
+        Input physicalInput = event.originalInput;
         previousLeft = physicalInput.left();
         previousRight = physicalInput.right();
         previousForward = physicalInput.forward();

@@ -1,7 +1,7 @@
 package dev.echo.client.utils.items;
 
-import net.minecraft.entity.LivingEntity;
-import net.minecraft.util.Hand;
+import net.minecraft.world.InteractionHand;
+import net.minecraft.world.entity.LivingEntity;
 
 /** Hand-swing operation used by the client item utilities. */
 public final class ActiveHand {
@@ -10,7 +10,7 @@ public final class ActiveHand {
     }
 
     /** Delegates to the entity, preserving its animation, packets, and exceptions. */
-    public static void swingHand(LivingEntity entity, Hand hand) {
-        entity.swingHand(hand);
+    public static void swingHand(LivingEntity entity, InteractionHand hand) {
+        entity.swing(hand);
     }
 }

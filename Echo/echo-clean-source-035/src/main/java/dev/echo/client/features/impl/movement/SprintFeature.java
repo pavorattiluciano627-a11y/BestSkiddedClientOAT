@@ -8,7 +8,7 @@ import dev.echo.client.handlers.SprintOverrideHandler;
 import dev.echo.client.setting.BooleanSetting;
 import dev.echo.client.utils.interaction.EntityInteractions;
 import dev.echo.client.utils.strings.Concat;
-import net.minecraft.client.MinecraftClient;
+import net.minecraft.client.Minecraft;
 
 /** Automatic sprint-key input, respecting the shared per-tick suppression request. */
 public class SprintFeature extends Feature {
@@ -33,15 +33,15 @@ public class SprintFeature extends Feature {
     public void onDisable() {
         int controlState = DiveBombFeature.readSharedControlState();
         try {
-            Class.forName(MinecraftClient.class.getName(), true, MinecraftClient.class.getClassLoader());
+            Class.forName(Minecraft.class.getName(), true, Minecraft.class.getClassLoader());
         } catch (ClassNotFoundException failure) {
             throw new IllegalStateException("Resolved class initialization failed", failure);
         }
-        MinecraftClient observedClient = client;
+        Minecraft observedClient = client;
         if (controlState == 0 && observedClient.player != null) {
             SprintOverrideHandler.resetOverrides();
             try {
-                Class.forName(MinecraftClient.class.getName(), true, MinecraftClient.class.getClassLoader());
+                Class.forName(Minecraft.class.getName(), true, Minecraft.class.getClassLoader());
             } catch (ClassNotFoundException failure) {
                 throw new IllegalStateException("Resolved class initialization failed", failure);
             }

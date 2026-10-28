@@ -1,12 +1,12 @@
 package dev.echo.client.events.render;
 
+import com.mojang.blaze3d.vertex.PoseStack;
 import dev.echo.client.events.Event;
 import dev.echo.client.events.input.KeybindingEvent;
 import dev.echo.client.render.WorldRenderContext;
-import net.minecraft.client.render.Camera;
-import net.minecraft.client.render.GameRenderer;
-import net.minecraft.client.render.WorldRenderer;
-import net.minecraft.client.util.math.MatrixStack;
+import net.minecraft.client.Camera;
+import net.minecraft.client.renderer.GameRenderer;
+import net.minecraft.client.renderer.LevelRenderer;
 import org.joml.Matrix4f;
 
 /**
@@ -15,14 +15,14 @@ import org.joml.Matrix4f;
  * this functional analysis candidate; their production-removal proofs are pending.
  */
 public class WorldRenderEvent extends Event {
-    private final MatrixStack matrices;
+    private final PoseStack matrices;
     private final float tickProgress;
     private final float dynamicDeltaTicks;
     private final Camera camera;
     private final GameRenderer gameRenderer;
     private final Matrix4f projectionMatrix;
     private final Matrix4f viewMatrix;
-    private final WorldRenderer worldRenderer;
+    private final LevelRenderer worldRenderer;
     private final WorldRenderContext renderContext;
 
     /**
@@ -37,9 +37,9 @@ public class WorldRenderEvent extends Event {
      * @param worldRenderer active world renderer
      * @param renderContext client's world drawing context
      */
-    public WorldRenderEvent(MatrixStack matrices, float tickProgress, float dynamicDeltaTicks,
+    public WorldRenderEvent(PoseStack matrices, float tickProgress, float dynamicDeltaTicks,
                             Camera camera, GameRenderer gameRenderer, Matrix4f projectionMatrix,
-                            Matrix4f viewMatrix, WorldRenderer worldRenderer,
+                            Matrix4f viewMatrix, LevelRenderer worldRenderer,
                             WorldRenderContext renderContext) {
         this.matrices = matrices;
         this.tickProgress = tickProgress;
@@ -57,7 +57,7 @@ public class WorldRenderEvent extends Event {
     }
 
     /** @return the shared matrix stack */
-    public MatrixStack getMatrices() { return matrices; }
+    public PoseStack getMatrices() { return matrices; }
     /** @return render interpolation progress */
     public float getTickProgress() { return tickProgress; }
     /** @return the dynamic delta ticks */
@@ -71,7 +71,7 @@ public class WorldRenderEvent extends Event {
     /** @return the shared view matrix */
     public Matrix4f getViewMatrix() { return viewMatrix; }
     /** @return the world renderer */
-    public WorldRenderer getWorldRenderer() { return worldRenderer; }
+    public LevelRenderer getWorldRenderer() { return worldRenderer; }
     /** @return the world drawing context */
     public WorldRenderContext getRenderContext() { return renderContext; }
 }

@@ -25,21 +25,21 @@ import dev.echo.client.utils.targeting.AttackRange;
 import dev.echo.client.utils.targeting.AttackRangeProperties;
 import dev.echo.client.utils.targeting.EntityPredicates;
 import dev.echo.client.utils.targeting.TargetSelection;
+import net.minecraft.core.BlockPos;
+import net.minecraft.tags.BlockTags;
+import net.minecraft.tags.FluidTags;
+import net.minecraft.util.Mth;
+import net.minecraft.world.InteractionHand;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.ai.attributes.Attributes;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.enchantment.Enchantments;
+import net.minecraft.world.level.levelgen.Heightmap;
+import net.minecraft.world.phys.AABB;
+import net.minecraft.world.phys.Vec3;
 import dev.echo.client.utils.strings.Concat;
-import net.minecraft.enchantment.Enchantments;
-import net.minecraft.entity.Entity;
-import net.minecraft.entity.LivingEntity;
-import net.minecraft.entity.attribute.EntityAttributes;
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.item.ItemStack;
-import net.minecraft.registry.tag.BlockTags;
-import net.minecraft.registry.tag.FluidTags;
-import net.minecraft.util.Hand;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.Box;
-import net.minecraft.util.math.MathHelper;
-import net.minecraft.util.math.Vec3d;
-import net.minecraft.world.Heightmap;
 
 /** One-tick knockback redirection, preserving the packet/attack two-phase order. */
 public class DisplaceFeature extends Feature {
@@ -100,7 +100,7 @@ public class DisplaceFeature extends Feature {
         }
         if (!shouldQueueAttack(event)) return;
         queuedYaw = queuedYaw((LivingEntity) event.getTarget());
-        queuedPitch = client.player.getPitch();
+        queuedPitch = client.player.getXRot();
         queuedTargetId = event.getTarget().getId();
         remainingInputTicks = ATTACK_DELAY;
         rotationScope = rotations().override(this, RotationPriority.CRITICAL,
@@ -131,16 +131,16 @@ public class DisplaceFeature extends Feature {
             closeRotationScopeAndReset();
             return;
         }
-        Entity target = client.world == null ? null : client.world.getEntityById(queuedTargetId);
+        Entity target = client.level == null ? null : client.level.getEntity(queuedTargetId);
         if (!canAttack(target) || !intersectsCrosshair(target)) {
             closeRotationScopeAndReset();
             return;
         }
         attackQueued = false;
         performingQueuedAttack = true;
-        lastAttackAge = client.player.age;
-        client.interactionManager.attackEntity(client.player, target);
-        if (!client.player.isSpectator()) ActiveHand.swingHand(client.player, Hand.MAIN_HAND);
+        lastAttackAge = client.player.tickCount;
+        client.gameMode.attack(client.player, target);
+        if (!client.player.isSpectator()) ActiveHand.swingHand(client.player, InteractionHand.MAIN_HAND);
     }
 
     @Subscribe(priority = EventPriority.HIGHEST)
@@ -154,7 +154,7 @@ public class DisplaceFeature extends Feature {
     }
 
     private boolean attackedThisTick() {
-        return client.player != null && client.player.age == lastAttackAge;
+        return client.player != null && client.player.tickCount == lastAttackAge;
     }
 
     @Subscribe(priority = EventPriority.HIGHEST)
@@ -172,48 +172,48 @@ public class DisplaceFeature extends Feature {
                 || resetAfterMovementPacket || performingQueuedAttack) return false;
         if (event.getPlayer() != client.player || !(event.getTarget() instanceof LivingEntity target)) return false;
         if (!TargetSelection.isValidTarget(target)) return false;
-        if (!(client.player.getAttackCooldownProgress(0.5F) > 0.9F)) return false;
-        if (target.getAttributeValue(EntityAttributes.KNOCKBACK_RESISTANCE) >= 1.0) return false;
-        if (target instanceof PlayerEntity player && EntityPredicates.isBlocking(player)) return false;
+        if (!(client.player.getAttackStrengthScale(0.5F) > 0.9F)) return false;
+        if (target.getAttributeValue(Attributes.KNOCKBACK_RESISTANCE) >= 1.0) return false;
+        if (target instanceof Player player && EntityPredicates.isBlocking(player)) return false;
         if (!hasKnockback()) return false;
         return canAttack(target);
     }
 
     private boolean canAttack(Entity entity) {
         if (!(entity instanceof LivingEntity target)) return false;
-        if (client.player == null || client.interactionManager == null) return false;
+        if (client.player == null || client.gameMode == null) return false;
         if (!TargetSelection.isValidTarget(target)) return false;
-        ItemStack stack = client.player.getStackInHand(Hand.MAIN_HAND);
-        if (!stack.isItemEnabled(client.world.getEnabledFeatures())) return false;
-        if (client.player.isRiding()) return false;
-        if (client.player.isBelowMinimumAttackCharge(stack, 0)) return false;
+        ItemStack stack = client.player.getItemInHand(InteractionHand.MAIN_HAND);
+        if (!stack.isItemEnabled(client.level.enabledFeatures())) return false;
+        if (client.player.isHandsBusy()) return false;
+        if (client.player.cannotAttackWithItem(stack, 0)) return false;
         return AttackRange.canAttack(client.player, target);
     }
 
     private float queuedYaw(LivingEntity target) {
         if (dynamic.getValue()) {
-            BlockPos origin = target.getBlockPos();
-            BlockPos hazard = BlockPos.findClosest(origin, HAZARD_HORIZONTAL_RANGE, HAZARD_VERTICAL_RANGE,
+            BlockPos origin = target.blockPosition();
+            BlockPos hazard = BlockPos.findClosestMatch(origin, HAZARD_HORIZONTAL_RANGE, HAZARD_VERTICAL_RANGE,
                     pos -> isHazard(pos, origin.getY())).orElse(null);
             if (hazard != null) {
-                Vec3d destination = Vec3d.ofCenter(hazard);
+                Vec3 destination = Vec3.atCenterOf(hazard);
                 double x = destination.x - target.getX();
                 double z = destination.z - target.getZ();
                 if (x * x + z * z > 0.01) {
-                    return Rotation.lookingAt(target.getEntityPos(), destination).yaw();
+                    return Rotation.lookingAt(target.position(), destination).yaw();
                 }
             }
         }
-        float yaw = client.player.getYaw();
-        if (direction.isSelected(LEFT)) return MathHelper.wrapDegrees(yaw - yawOffset.getValue());
-        if (direction.isSelected(RIGHT)) return MathHelper.wrapDegrees(yaw + yawOffset.getValue());
-        return MathHelper.wrapDegrees(yaw + 180.0F);
+        float yaw = client.player.getYRot();
+        if (direction.isSelected(LEFT)) return Mth.wrapDegrees(yaw - yawOffset.getValue());
+        if (direction.isSelected(RIGHT)) return Mth.wrapDegrees(yaw + yawOffset.getValue());
+        return Mth.wrapDegrees(yaw + 180.0F);
     }
 
     private boolean hasKnockback() {
         if (client.player.isSprinting()) return true;
         if (!knockbackEnchant.getValue()) return false;
-        return ItemProperties.hasEnchantment(client.player.getStackInHand(Hand.MAIN_HAND), Enchantments.KNOCKBACK);
+        return ItemProperties.hasEnchantment(client.player.getItemInHand(InteractionHand.MAIN_HAND), Enchantments.KNOCKBACK);
     }
 
     private void resetAttackState() {
@@ -232,17 +232,17 @@ public class DisplaceFeature extends Feature {
     }
 
     private boolean intersectsCrosshair(Entity target) {
-        Vec3d eyes = client.player.getCameraPosVec(1.0F);
-        Vec3d look = client.player.getRotationVector(client.player.getPitch(), client.player.getYaw());
-        Vec3d end = eyes.add(look.multiply(AttackRangeProperties.getEffectiveMaxRange(client.player)));
-        Box box = target.getBoundingBox().expand(target.getTargetingMargin());
-        return box.contains(eyes) || box.raycast(eyes, end).isPresent();
+        Vec3 eyes = client.player.getEyePosition(1.0F);
+        Vec3 look = client.player.calculateViewVector(client.player.getXRot(), client.player.getYRot());
+        Vec3 end = eyes.add(look.scale(AttackRangeProperties.getEffectiveMaxRange(client.player)));
+        AABB box = target.getBoundingBox().inflate(target.getPickRadius());
+        return box.contains(eyes) || box.clip(eyes, end).isPresent();
     }
 
     private boolean isHazard(BlockPos position, int targetY) {
-        if (client.world.getBlockState(position).isIn(BlockTags.FIRE)) return true;
-        if (client.world.getFluidState(position).isIn(FluidTags.LAVA)) return true;
-        return targetY - client.world.getTopY(Heightmap.Type.MOTION_BLOCKING, position.getX(), position.getZ()) > MINIMUM_DROP;
+        if (client.level.getBlockState(position).is(BlockTags.FIRE)) return true;
+        if (client.level.getFluidState(position).is(FluidTags.LAVA)) return true;
+        return targetY - client.level.getHeight(Heightmap.Types.MOTION_BLOCKING, position.getX(), position.getZ()) > MINIMUM_DROP;
     }
 
     public static CharSequence bootstrapDirectionOption() { return BACK; }

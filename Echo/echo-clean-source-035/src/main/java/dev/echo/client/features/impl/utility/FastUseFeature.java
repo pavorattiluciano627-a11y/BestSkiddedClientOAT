@@ -9,7 +9,7 @@ import dev.echo.client.mixin.MinecraftClientAccessor;
 import dev.echo.client.setting.FloatRangeSetting;
 import dev.echo.client.setting.ItemListSetting;
 import dev.echo.client.setting.specialized.FastUseItemListSetting;
-import net.minecraft.item.Item;
+import net.minecraft.world.item.Item;
 
 /** Reduces the client item-use cooldown after an allowed item-use operation. */
 public class FastUseFeature extends Feature {
@@ -37,12 +37,12 @@ public class FastUseFeature extends Feature {
         if (isOutsideWorld()) {
             return;
         }
-        if (client.interactionManager == null || client.interactionManager.isBreakingBlock()) {
+        if (client.gameMode == null || client.gameMode.isDestroying()) {
             return;
         }
         if (items.getSelectedCount() > 0) {
-            Item mainHandItem = client.player.getMainHandStack().getItem();
-            Item offHandItem = client.player.getOffHandStack().getItem();
+            Item mainHandItem = client.player.getMainHandItem().getItem();
+            Item offHandItem = client.player.getOffhandItem().getItem();
             if (!items.isEntrySelected(mainHandItem) && !items.isEntrySelected(offHandItem)) {
                 return;
             }

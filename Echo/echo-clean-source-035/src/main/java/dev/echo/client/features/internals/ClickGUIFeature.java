@@ -8,7 +8,7 @@ import dev.echo.client.features.FeatureInfo;
 import dev.echo.client.screens.ScreenManager;
 import dev.echo.client.setting.BooleanSetting;
 import dev.echo.client.setting.FloatSetting;
-import net.minecraft.client.MinecraftClient;
+import net.minecraft.client.Minecraft;
 import org.lwjgl.system.Platform;
 
 /** Opens the dashboard and owns its scrolling and stream-proof controls. */
@@ -82,7 +82,7 @@ public class ClickGUIFeature extends Feature {
         // Keep the effective-value read before the platform flag and the switch
         // before fullscreen invalidation. A switch failure prevents invalidation.
         Echo.setExternalRendererEnabled(streamProof.getValue() && SUPPORTS_STREAM_PROOF);
-        MinecraftClient currentClient = MinecraftClient.getInstance();
+        Minecraft currentClient = Minecraft.getInstance();
         if (currentClient == null || currentClient.getWindow() == null) {
             return;
         }

@@ -4,26 +4,26 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
 import java.util.function.Predicate;
-import net.minecraft.block.AbstractRailBlock;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.component.DataComponentTypes;
-import net.minecraft.component.type.ItemEnchantmentsComponent;
-import net.minecraft.enchantment.Enchantment;
-import net.minecraft.entity.player.PlayerInventory;
-import net.minecraft.item.BlockItem;
-import net.minecraft.item.CrossbowItem;
-import net.minecraft.item.Item;
-import net.minecraft.item.ItemStack;
-import net.minecraft.item.Items;
-import net.minecraft.item.MaceItem;
-import net.minecraft.item.SplashPotionItem;
-import net.minecraft.network.packet.c2s.play.PlayerActionC2SPacket;
-import net.minecraft.network.packet.c2s.play.UpdateSelectedSlotC2SPacket;
-import net.minecraft.registry.RegistryKey;
-import net.minecraft.registry.entry.RegistryEntry;
-import net.minecraft.registry.tag.ItemTags;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.Direction;
+import net.minecraft.client.Minecraft;
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
+import net.minecraft.core.Holder;
+import net.minecraft.core.component.DataComponents;
+import net.minecraft.network.protocol.game.ServerboundPlayerActionPacket;
+import net.minecraft.network.protocol.game.ServerboundSetCarriedItemPacket;
+import net.minecraft.resources.ResourceKey;
+import net.minecraft.tags.ItemTags;
+import net.minecraft.world.entity.player.Inventory;
+import net.minecraft.world.item.BlockItem;
+import net.minecraft.world.item.CrossbowItem;
+import net.minecraft.world.item.Item;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
+import net.minecraft.world.item.MaceItem;
+import net.minecraft.world.item.SplashPotionItem;
+import net.minecraft.world.item.enchantment.Enchantment;
+import net.minecraft.world.item.enchantment.ItemEnchantments;
+import net.minecraft.world.level.block.BaseRailBlock;
 
 /**
  * Readable inventory operations recovered under the non-null guard branch.
@@ -37,21 +37,21 @@ public final class InventoryItems {
         if (slot < 0 || slot > 8) {
             return;
         }
-        PlayerInventory inventory = MinecraftClient.getInstance().player.getInventory();
+        Inventory inventory = Minecraft.getInstance().player.getInventory();
         if (inventory.getSelectedSlot() != slot) {
             inventory.setSelectedSlot(slot);
         }
     }
 
     public static void swapHands() {
-        MinecraftClient.getInstance().player.networkHandler.sendPacket(new PlayerActionC2SPacket(
-                PlayerActionC2SPacket.Action.SWAP_ITEM_WITH_OFFHAND, BlockPos.ORIGIN, Direction.DOWN));
+        Minecraft.getInstance().player.connection.send(new ServerboundPlayerActionPacket(
+                ServerboundPlayerActionPacket.Action.SWAP_ITEM_WITH_OFFHAND, BlockPos.ZERO, Direction.DOWN));
     }
 
     public static boolean selectItemFromHotbar(Predicate<Item> matches) {
-        PlayerInventory inventory = MinecraftClient.getInstance().player.getInventory();
+        Inventory inventory = Minecraft.getInstance().player.getInventory();
         for (int slot = 0; slot < 9; slot++) {
-            if (matches.test(inventory.getStack(slot).getItem())) {
+            if (matches.test(inventory.getItem(slot).getItem())) {
                 inventory.setSelectedSlot(slot);
                 return true;
             }
@@ -64,9 +64,9 @@ public final class InventoryItems {
     }
 
     public static boolean containsItemInHotbar(Predicate<Item> matches) {
-        PlayerInventory inventory = MinecraftClient.getInstance().player.getInventory();
+        Inventory inventory = Minecraft.getInstance().player.getInventory();
         for (int slot = 0; slot < 9; slot++) {
-            if (matches.test(inventory.getStack(slot).getItem())) {
+            if (matches.test(inventory.getItem(slot).getItem())) {
                 return true;
             }
         }
@@ -74,9 +74,9 @@ public final class InventoryItems {
     }
 
     public static int findStackInHotbar(Predicate<ItemStack> matches) {
-        PlayerInventory inventory = MinecraftClient.getInstance().player.getInventory();
+        Inventory inventory = Minecraft.getInstance().player.getInventory();
         for (int slot = 0; slot <= 8; slot++) {
-            if (matches.test(inventory.getStack(slot))) {
+            if (matches.test(inventory.getItem(slot))) {
                 return slot;
             }
         }
@@ -84,10 +84,10 @@ public final class InventoryItems {
     }
 
     public static int countItems(Predicate<Item> matches) {
-        PlayerInventory inventory = MinecraftClient.getInstance().player.getInventory();
+        Inventory inventory = Minecraft.getInstance().player.getInventory();
         int count = 0;
         for (int slot = 0; slot < 36; slot++) {
-            ItemStack stack = inventory.getStack(slot);
+            ItemStack stack = inventory.getItem(slot);
             if (matches.test(stack.getItem())) {
                 count += stack.getCount();
             }
@@ -96,10 +96,10 @@ public final class InventoryItems {
     }
 
     public static int countStorageItems(Predicate<Item> matches) {
-        PlayerInventory inventory = MinecraftClient.getInstance().player.getInventory();
+        Inventory inventory = Minecraft.getInstance().player.getInventory();
         int count = 0;
         for (int slot = 9; slot < 36; slot++) {
-            ItemStack stack = inventory.getStack(slot);
+            ItemStack stack = inventory.getItem(slot);
             if (matches.test(stack.getItem())) {
                 count += stack.getCount();
             }
@@ -108,9 +108,9 @@ public final class InventoryItems {
     }
 
     public static int findAnySwordInHotbar() {
-        PlayerInventory inventory = MinecraftClient.getInstance().player.getInventory();
+        Inventory inventory = Minecraft.getInstance().player.getInventory();
         for (int slot = 0; slot < 9; slot++) {
-            Item item = inventory.getStack(slot).getItem();
+            Item item = inventory.getItem(slot).getItem();
             if (isLegacySword(item) || item == Items.COPPER_SWORD) {
                 return slot;
             }
@@ -124,7 +124,7 @@ public final class InventoryItems {
     }
 
     public static boolean isFood(ItemStack stack) {
-        return stack.getComponents().contains(DataComponentTypes.FOOD);
+        return stack.getComponents().has(DataComponents.FOOD);
     }
 
     public static boolean selectSword() {
@@ -137,10 +137,10 @@ public final class InventoryItems {
     }
 
     public static int findTotemInHotbar() {
-        assert MinecraftClient.getInstance().player != null;
-        PlayerInventory inventory = MinecraftClient.getInstance().player.getInventory();
+        assert Minecraft.getInstance().player != null;
+        Inventory inventory = Minecraft.getInstance().player.getInventory();
         for (int slot = 0; slot < 9; slot++) {
-            if (inventory.getStack(slot).getItem() == Items.TOTEM_OF_UNDYING) {
+            if (inventory.getItem(slot).getItem() == Items.TOTEM_OF_UNDYING) {
                 return slot;
             }
         }
@@ -152,16 +152,16 @@ public final class InventoryItems {
         if (slot == -1) {
             return false;
         }
-        MinecraftClient.getInstance().player.getInventory().setSelectedSlot(slot);
+        Minecraft.getInstance().player.getInventory().setSelectedSlot(slot);
         return true;
     }
 
     public static int findRandomStorageTotem() {
-        PlayerInventory inventory = MinecraftClient.getInstance().player.getInventory();
+        Inventory inventory = Minecraft.getInstance().player.getInventory();
         Random random = new Random();
         List<Integer> slots = new ArrayList<>();
         for (int slot = 9; slot < 36; slot++) {
-            if (inventory.getStack(slot).getItem() == Items.TOTEM_OF_UNDYING) {
+            if (inventory.getItem(slot).getItem() == Items.TOTEM_OF_UNDYING) {
                 slots.add(slot);
             }
         }
@@ -169,26 +169,26 @@ public final class InventoryItems {
     }
 
     public static int findSplashPotion(String effectText) {
-        PlayerInventory inventory = MinecraftClient.getInstance().player.getInventory();
+        Inventory inventory = Minecraft.getInstance().player.getInventory();
         Random random = new Random();
         int start = random.nextInt(27) + 9;
         for (int offset = 0; offset < 27; offset++) {
             // Original wraps modulo 36, so a search can reach hotbar slots.
             int slot = (start + offset) % 36;
-            ItemStack stack = inventory.getStack(slot);
+            ItemStack stack = inventory.getItem(slot);
             if (stack.getItem() instanceof SplashPotionItem) {
                 // A nonmatching first potion ends the search in the artifact.
-                return stack.get(DataComponentTypes.POTION_CONTENTS).getEffects().toString().contains(effectText) ? slot : -1;
+                return stack.get(DataComponents.POTION_CONTENTS).getAllEffects().toString().contains(effectText) ? slot : -1;
             }
         }
         return -1;
     }
 
     public static List<Integer> emptyHotbarSlots() {
-        PlayerInventory inventory = MinecraftClient.getInstance().player.getInventory();
+        Inventory inventory = Minecraft.getInstance().player.getInventory();
         List<Integer> slots = new ArrayList<>();
         for (int slot = 0; slot < 9; slot++) {
-            if (inventory.getStack(slot).isEmpty()) {
+            if (inventory.getItem(slot).isEmpty()) {
                 slots.add(slot);
             }
         }
@@ -196,9 +196,9 @@ public final class InventoryItems {
     }
 
     public static int findAxeInHotbar() {
-        PlayerInventory inventory = MinecraftClient.getInstance().player.getInventory();
+        Inventory inventory = Minecraft.getInstance().player.getInventory();
         for (int slot = 0; slot < 9; slot++) {
-            if (isAxe(inventory.getStack(slot))) {
+            if (isAxe(inventory.getItem(slot))) {
                 return slot;
             }
         }
@@ -216,17 +216,17 @@ public final class InventoryItems {
     }
 
     public static boolean holdsChestplateInMainHand() {
-        return isChestplate(MinecraftClient.getInstance().player.getMainHandStack().getItem());
+        return isChestplate(Minecraft.getInstance().player.getMainHandItem().getItem());
     }
 
     public static boolean holdsChestplateInOffHand() {
-        return isChestplate(MinecraftClient.getInstance().player.getOffHandStack().getItem());
+        return isChestplate(Minecraft.getInstance().player.getOffhandItem().getItem());
     }
 
     public static int findChestplateInHotbar() {
-        PlayerInventory inventory = MinecraftClient.getInstance().player.getInventory();
+        Inventory inventory = Minecraft.getInstance().player.getInventory();
         for (int slot = 0; slot < 9; slot++) {
-            if (isChestplate(inventory.getStack(slot).getItem())) {
+            if (isChestplate(inventory.getItem(slot).getItem())) {
                 return slot;
             }
         }
@@ -234,15 +234,15 @@ public final class InventoryItems {
     }
 
     public static boolean wearsElytra() {
-        return MinecraftClient.getInstance().player.getInventory().getStack(38).getItem() == Items.ELYTRA;
+        return Minecraft.getInstance().player.getInventory().getItem(38).getItem() == Items.ELYTRA;
     }
 
     public static ItemStack mainHandStack() {
-        return MinecraftClient.getInstance().player.getMainHandStack();
+        return Minecraft.getInstance().player.getMainHandItem();
     }
 
     public static boolean holdsInMainHand(Item item) {
-        return MinecraftClient.getInstance().player.getMainHandStack().getItem() == item;
+        return Minecraft.getInstance().player.getMainHandItem().getItem() == item;
     }
 
     public static boolean holdsInEitherHand(Item item) {
@@ -250,7 +250,7 @@ public final class InventoryItems {
     }
 
     public static boolean holdsInOffHand(Item item) {
-        return MinecraftClient.getInstance().player.getOffHandStack().getItem() == item;
+        return Minecraft.getInstance().player.getOffhandItem().getItem() == item;
     }
 
     public static boolean isChargedCrossbow(ItemStack stack) {
@@ -258,11 +258,11 @@ public final class InventoryItems {
     }
 
     public static boolean isRail(ItemStack stack) {
-        return stack.getItem() instanceof BlockItem blockItem && blockItem.getBlock() instanceof AbstractRailBlock;
+        return stack.getItem() instanceof BlockItem blockItem && blockItem.getBlock() instanceof BaseRailBlock;
     }
 
     public static boolean holdsSword() {
-        Item item = MinecraftClient.getInstance().player.getMainHandStack().getItem();
+        Item item = Minecraft.getInstance().player.getMainHandItem().getItem();
         return item == Items.WOODEN_SWORD || item == Items.STONE_SWORD || item == Items.COPPER_SWORD
                 || item == Items.IRON_SWORD || item == Items.GOLDEN_SWORD || item == Items.DIAMOND_SWORD || item == Items.NETHERITE_SWORD;
     }
@@ -272,7 +272,7 @@ public final class InventoryItems {
     }
 
     public static boolean holdsSpear() {
-        return isSpear(MinecraftClient.getInstance().player.getMainHandStack().getItem());
+        return isSpear(Minecraft.getInstance().player.getMainHandItem().getItem());
     }
 
     public static int findSpearInHotbar() {
@@ -285,42 +285,42 @@ public final class InventoryItems {
     }
 
     public static boolean isAxe(ItemStack stack) {
-        return stack.isIn(ItemTags.AXES);
+        return stack.is(ItemTags.AXES);
     }
 
     public static boolean holdsAxe() {
-        Item item = MinecraftClient.getInstance().player.getMainHandStack().getItem();
+        Item item = Minecraft.getInstance().player.getMainHandItem().getItem();
         return item == Items.WOODEN_AXE || item == Items.STONE_AXE || item == Items.COPPER_AXE
                 || item == Items.IRON_AXE || item == Items.GOLDEN_AXE || item == Items.DIAMOND_AXE || item == Items.NETHERITE_AXE;
     }
 
     public static boolean holdsPickaxe() {
-        Item item = MinecraftClient.getInstance().player.getMainHandStack().getItem();
+        Item item = Minecraft.getInstance().player.getMainHandItem().getItem();
         return item == Items.WOODEN_PICKAXE || item == Items.STONE_PICKAXE || item == Items.COPPER_PICKAXE
                 || item == Items.IRON_PICKAXE || item == Items.GOLDEN_PICKAXE || item == Items.DIAMOND_PICKAXE || item == Items.NETHERITE_PICKAXE;
     }
 
     public static boolean holdsShovel() {
-        Item item = MinecraftClient.getInstance().player.getMainHandStack().getItem();
+        Item item = Minecraft.getInstance().player.getMainHandItem().getItem();
         return item == Items.WOODEN_SHOVEL || item == Items.STONE_SHOVEL || item == Items.COPPER_SHOVEL
                 || item == Items.IRON_SHOVEL || item == Items.GOLDEN_SHOVEL || item == Items.DIAMOND_SHOVEL || item == Items.NETHERITE_SHOVEL;
     }
 
     public static boolean holdsHoe() {
-        Item item = MinecraftClient.getInstance().player.getMainHandStack().getItem();
+        Item item = Minecraft.getInstance().player.getMainHandItem().getItem();
         return item == Items.WOODEN_HOE || item == Items.STONE_HOE || item == Items.COPPER_HOE
                 || item == Items.IRON_HOE || item == Items.GOLDEN_HOE || item == Items.DIAMOND_HOE || item == Items.NETHERITE_HOE;
     }
 
-    public static boolean hasEnchantment(ItemStack stack, RegistryKey<Enchantment> enchantment) {
-        return stack.getOrDefault(DataComponentTypes.ENCHANTMENTS, ItemEnchantmentsComponent.DEFAULT)
-                .getEnchantments().stream().anyMatch(entry -> entry.matchesKey(enchantment));
+    public static boolean hasEnchantment(ItemStack stack, ResourceKey<Enchantment> enchantment) {
+        return stack.getOrDefault(DataComponents.ENCHANTMENTS, ItemEnchantments.EMPTY)
+                .keySet().stream().anyMatch(entry -> entry.is(enchantment));
     }
 
-    public static int getEnchantmentLevel(ItemStack stack, RegistryKey<Enchantment> enchantment) {
-        ItemEnchantmentsComponent enchantments = stack.getOrDefault(DataComponentTypes.ENCHANTMENTS, ItemEnchantmentsComponent.DEFAULT);
-        for (RegistryEntry<Enchantment> entry : enchantments.getEnchantments()) {
-            if (entry.matchesKey(enchantment)) {
+    public static int getEnchantmentLevel(ItemStack stack, ResourceKey<Enchantment> enchantment) {
+        ItemEnchantments enchantments = stack.getOrDefault(DataComponents.ENCHANTMENTS, ItemEnchantments.EMPTY);
+        for (Holder<Enchantment> entry : enchantments.keySet()) {
+            if (entry.is(enchantment)) {
                 return enchantments.getLevel(entry);
             }
         }
@@ -328,7 +328,7 @@ public final class InventoryItems {
     }
 
     public static int findItemWithEnchantmentInHotbar(Predicate<ItemStack> matches,
-                                                     RegistryKey<Enchantment> enchantment, boolean allowFallback) {
+                                                     ResourceKey<Enchantment> enchantment, boolean allowFallback) {
         if (enchantment != null) {
             int slot = findStackInHotbar(stack -> !stack.isEmpty() && matches.test(stack) && hasEnchantment(stack, enchantment));
             if (slot != -1) {
@@ -338,16 +338,16 @@ public final class InventoryItems {
         return allowFallback ? findStackInHotbar(stack -> !stack.isEmpty() && matches.test(stack)) : -1;
     }
 
-    public static int findMaceWithEnchantmentInHotbar(RegistryKey<Enchantment> enchantment, boolean allowFallback) {
+    public static int findMaceWithEnchantmentInHotbar(ResourceKey<Enchantment> enchantment, boolean allowFallback) {
         return findItemWithEnchantmentInHotbar(stack -> stack.getItem() instanceof MaceItem, enchantment, allowFallback);
     }
 
     public static void sendSelectedSlot(int slot) {
-        MinecraftClient.getInstance().player.networkHandler.sendPacket(new UpdateSelectedSlotC2SPacket(slot));
+        Minecraft.getInstance().player.connection.send(new ServerboundSetCarriedItemPacket(slot));
     }
 
     public static void sendCurrentSlot() {
-        MinecraftClient.getInstance().player.networkHandler.sendPacket(
-                new UpdateSelectedSlotC2SPacket(MinecraftClient.getInstance().player.getInventory().getSelectedSlot()));
+        Minecraft.getInstance().player.connection.send(
+                new ServerboundSetCarriedItemPacket(Minecraft.getInstance().player.getInventory().getSelectedSlot()));
     }
 }

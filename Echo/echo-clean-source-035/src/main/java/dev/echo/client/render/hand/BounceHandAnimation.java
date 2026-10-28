@@ -1,8 +1,8 @@
 package dev.echo.client.render.hand;
 
-import net.minecraft.client.util.math.MatrixStack;
-import net.minecraft.util.Arm;
-import net.minecraft.util.math.MathHelper;
+import com.mojang.blaze3d.vertex.PoseStack;
+import net.minecraft.util.Mth;
+import net.minecraft.world.entity.HumanoidArm;
 
 public class BounceHandAnimation extends HandAnimation {
     public BounceHandAnimation() {
@@ -10,8 +10,8 @@ public class BounceHandAnimation extends HandAnimation {
     }
 
     @Override
-    public void apply(float swingProgress, MatrixStack matrices, int direction, Arm arm) {
+    public void apply(float swingProgress, PoseStack matrices, int direction, HumanoidArm arm) {
         HandPoseTransform.translate(matrices, arm,
-                0.2F * MathHelper.sin(MathHelper.sqrt(swingProgress) * (float) (Math.PI * 2)));
+                0.2F * Mth.sin(Mth.sqrt(swingProgress) * (float) (Math.PI * 2)));
     }
 }

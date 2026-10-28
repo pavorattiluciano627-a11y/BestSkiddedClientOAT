@@ -11,7 +11,7 @@ import dev.echo.render.pipeline.GraphicsPipeline;
 import dev.echo.render.pipeline.GraphicsPipelineInfo;
 import dev.echo.render.pipeline.PrimitiveTopology;
 import dev.echo.render.vertex.VertexFormat;
-import net.minecraft.util.math.Vec3d;
+import net.minecraft.world.phys.Vec3;
 
 /** Original instanced box mesh: one position/extent/color instance draws 36 vertices. */
 public final class BoxBatch implements RenderBatch {
@@ -44,7 +44,7 @@ public final class BoxBatch implements RenderBatch {
             grow();
         }
         long address = instances.mappedAddress() + (long) instanceCount * INSTANCE_BYTES;
-        Vec3d camera = Echo.worldRenderer.cameraPosition;
+        Vec3 camera = Echo.worldRenderer.cameraPosition;
         NativeMemoryWrites.putFloat3(address, (float) (x - camera.x), (float) (y - camera.y), (float) (z - camera.z));
         NativeMemoryWrites.putFloat3(address + 12L, (float) width, (float) height, (float) depth);
         NativeMemoryWrites.putInt(address + 24L, color);

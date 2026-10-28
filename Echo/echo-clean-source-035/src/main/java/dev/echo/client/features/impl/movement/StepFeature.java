@@ -6,7 +6,7 @@ import dev.echo.client.features.Feature;
 import dev.echo.client.features.FeatureInfo;
 import dev.echo.client.setting.BooleanSetting;
 import dev.echo.client.setting.FloatSetting;
-import net.minecraft.entity.attribute.EntityAttributes;
+import net.minecraft.world.entity.ai.attributes.Attributes;
 
 /** Configurable player step height, preserving the original lifecycle restoration order. */
 public class StepFeature extends Feature {
@@ -18,7 +18,7 @@ public class StepFeature extends Feature {
     }
 
     private void setStepHeight(float value) {
-        client.player.getAttributeInstance(EntityAttributes.STEP_HEIGHT).setBaseValue(value);
+        client.player.getAttribute(Attributes.STEP_HEIGHT).setBaseValue(value);
     }
 
     @Override
@@ -29,8 +29,8 @@ public class StepFeature extends Feature {
     @Override
     public void onDisable() {
         super.onDisable();
-        client.player.getAttributeInstance(
-                net.minecraft.entity.attribute.EntityAttributes.STEP_HEIGHT).setBaseValue(0.6f);
+        client.player.getAttribute(
+                net.minecraft.world.entity.ai.attributes.Attributes.STEP_HEIGHT).setBaseValue(0.6f);
     }
 
     @Subscribe
@@ -38,7 +38,7 @@ public class StepFeature extends Feature {
         if (isOutsideWorld()) {
             return;
         }
-        if (client.player.isSneaking() && disableOnSneak.getValue()) {
+        if (client.player.isShiftKeyDown() && disableOnSneak.getValue()) {
             return;
         }
         setStepHeight(height.getValue());

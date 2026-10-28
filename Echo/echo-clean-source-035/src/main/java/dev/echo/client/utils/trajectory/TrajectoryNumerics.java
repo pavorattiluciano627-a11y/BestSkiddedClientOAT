@@ -1,7 +1,7 @@
 package dev.echo.client.utils.trajectory;
 
 import java.util.Random;
-import net.minecraft.util.math.Vec3d;
+import net.minecraft.world.phys.Vec3;
 
 /** Candidate numerical bodies, pending the branch invariants documented in needs.json. */
 public final class TrajectoryNumerics {
@@ -31,7 +31,7 @@ public final class TrajectoryNumerics {
     }
 
     public static double bisectReach(double[] start, double[] end, double lower,
-            double upper, Vec3d launchPosition, Vec3d inheritedVelocity, int ticks) {
+            double upper, Vec3 launchPosition, Vec3 inheritedVelocity, int ticks) {
         double lowerResidual = LaunchTrajectoryMath.reachResidual(
                 start, end, lower, launchPosition, inheritedVelocity, ticks);
         for (int iteration = 0; iteration < 24; iteration++) {
@@ -59,13 +59,13 @@ public final class TrajectoryNumerics {
         return spread;
     }
 
-    public static Vec3d[] movingTargetSpread() {
-        net.minecraft.util.math.random.Random random = net.minecraft.util.math.random.Random.create(436193L);
-        Vec3d[] spread = new Vec3d[16];
-        spread[0] = Vec3d.ZERO;
+    public static Vec3[] movingTargetSpread() {
+        net.minecraft.util.RandomSource random = net.minecraft.util.RandomSource.create(436193L);
+        Vec3[] spread = new Vec3[16];
+        spread[0] = Vec3.ZERO;
         for (int sample = 1; sample < 16; sample++) {
-            spread[sample] = new Vec3d(random.nextTriangular(0.0, 0.0172275),
-                    random.nextTriangular(0.0, 0.0172275), random.nextTriangular(0.0, 0.0172275));
+            spread[sample] = new Vec3(random.triangle(0.0, 0.0172275),
+                    random.triangle(0.0, 0.0172275), random.triangle(0.0, 0.0172275));
         }
         return spread;
     }

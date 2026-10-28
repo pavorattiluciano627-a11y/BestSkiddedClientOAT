@@ -10,9 +10,9 @@ import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import java.util.WeakHashMap;
-import net.minecraft.entity.EquipmentSlot;
-import net.minecraft.entity.attribute.EntityAttributes;
-import net.minecraft.entity.player.PlayerEntity;
+import net.minecraft.world.entity.EquipmentSlot;
+import net.minecraft.world.entity.ai.attributes.Attributes;
+import net.minecraft.world.entity.player.Player;
 
 /**
  * Original per-player/per-age bot cache and ordered stateful classifier chain.
@@ -22,21 +22,21 @@ public final class CachedPlayerTargets {
     private static final List<PlayerRule> RULES = List.of(
             new NameRule(), new BlissRule(), new MovementRule(),
             new ScaleRule(), new PlayerListRule(), new TextureProfileRule());
-    private static final Map<PlayerEntity, Long> RESULTS = new WeakHashMap<>();
+    private static final Map<Player, Long> RESULTS = new WeakHashMap<>();
 
     private CachedPlayerTargets() {}
 
-    public static boolean isBot(PlayerEntity player, TargetsFeature targets) {
+    public static boolean isBot(Player player, TargetsFeature targets) {
         Long cached = RESULTS.get(player);
-        if (cached != null && (cached >> 1) == (long) player.age) {
+        if (cached != null && (cached >> 1) == (long) player.tickCount) {
             return (cached & 1L) != 0L;
         }
         boolean result = classify(player, targets);
-        RESULTS.put(player, ((long) player.age << 1) | (result ? 1L : 0L));
+        RESULTS.put(player, ((long) player.tickCount << 1) | (result ? 1L : 0L));
         return result;
     }
 
-    private static boolean classify(PlayerEntity player, TargetsFeature targets) {
+    private static boolean classify(Player player, TargetsFeature targets) {
         for (PlayerRule rule : RULES) {
             if (rule.isBot(player, targets)) {
                 return true;
@@ -48,14 +48,14 @@ public final class CachedPlayerTargets {
     /** Inlined source contracts for the six original QueueFactory implementations. */
     private interface PlayerRule {
         CharSequence name();
-        boolean isBot(PlayerEntity player, TargetsFeature targets);
+        boolean isBot(Player player, TargetsFeature targets);
     }
 
     // Original RecordController. Default-locale conversion and double name read are deliberate.
     private static final class NameRule implements PlayerRule {
         public CharSequence name() { return TargetsFeature.NAME; }
 
-        public boolean isBot(PlayerEntity player, TargetsFeature targets) {
+        public boolean isBot(Player player, TargetsFeature targets) {
             if (!TargetsFeature.antiBotChecks.isSelected(name())) {
                 return false;
             }
@@ -64,7 +64,7 @@ public final class CachedPlayerTargets {
                     || name.startsWith("cit") || name.startsWith("npc");
         }
 
-        private String normalizedDisplayName(PlayerEntity player) {
+        private String normalizedDisplayName(Player player) {
             if (player.getDisplayName() == null) {
                 return "";
             }
@@ -82,15 +82,15 @@ public final class CachedPlayerTargets {
 
         public CharSequence name() { return TargetsFeature.BLISS; }
 
-        public boolean isBot(PlayerEntity player, TargetsFeature targets) {
+        public boolean isBot(Player player, TargetsFeature targets) {
             if (!TargetsFeature.antiBotChecks.isSelected(name())) {
                 resetAll(player);
                 return false;
             }
-            if (player.isGliding()) {
-                seenGliding.add(player.getUuid());
+            if (player.isFallFlying()) {
+                seenGliding.add(player.getUUID());
             }
-            if (seenGliding.contains(player.getUuid())) {
+            if (seenGliding.contains(player.getUUID())) {
                 resetTransient(player);
                 return false;
             }
@@ -102,11 +102,11 @@ public final class CachedPlayerTargets {
                 resetAll(player);
                 return false;
             }
-            if (player.isOnGround()) {
+            if (player.onGround()) {
                 resetAll(player);
                 return false;
             }
-            UUID id = player.getUuid();
+            UUID id = player.getUUID();
             if (player.fallDistance > 0.0) {
                 seenFalling.add(id);
             }
@@ -118,21 +118,21 @@ public final class CachedPlayerTargets {
             return !seenFalling.contains(id);
         }
 
-        private boolean hasAnyArmor(PlayerEntity player) {
-            return !player.getEquippedStack(EquipmentSlot.HEAD).isEmpty()
-                    || !player.getEquippedStack(EquipmentSlot.CHEST).isEmpty()
-                    || !player.getEquippedStack(EquipmentSlot.LEGS).isEmpty()
-                    || !player.getEquippedStack(EquipmentSlot.FEET).isEmpty();
+        private boolean hasAnyArmor(Player player) {
+            return !player.getItemBySlot(EquipmentSlot.HEAD).isEmpty()
+                    || !player.getItemBySlot(EquipmentSlot.CHEST).isEmpty()
+                    || !player.getItemBySlot(EquipmentSlot.LEGS).isEmpty()
+                    || !player.getItemBySlot(EquipmentSlot.FEET).isEmpty();
         }
 
-        private void resetAll(PlayerEntity player) {
-            UUID id = player.getUuid();
+        private void resetAll(Player player) {
+            UUID id = player.getUUID();
             resetTransient(player);
             seenGliding.remove(id);
         }
 
-        private void resetTransient(PlayerEntity player) {
-            UUID id = player.getUuid();
+        private void resetTransient(Player player) {
+            UUID id = player.getUUID();
             airborneChecks.remove(id);
             seenFalling.remove(id);
         }
@@ -144,21 +144,21 @@ public final class CachedPlayerTargets {
 
         public CharSequence name() { return TargetsFeature.MOVEMENT; }
 
-        public boolean isBot(PlayerEntity player, TargetsFeature targets) {
+        public boolean isBot(Player player, TargetsFeature targets) {
             if (!TargetsFeature.antiBotChecks.isSelected(name())) {
                 return false;
             }
             return !hasMoved(player);
         }
 
-        private boolean hasMoved(PlayerEntity player) {
-            if (CLIENT.getNetworkHandler() == null) {
+        private boolean hasMoved(Player player) {
+            if (CLIENT.getConnection() == null) {
                 return false;
             }
-            if (player.lastX != player.getX() || player.lastZ != player.getZ()) {
-                movedPlayers.add(player.getUuid());
+            if (player.xo != player.getX() || player.zo != player.getZ()) {
+                movedPlayers.add(player.getUUID());
             }
-            return movedPlayers.contains(player.getUuid());
+            return movedPlayers.contains(player.getUUID());
         }
     }
 
@@ -166,11 +166,11 @@ public final class CachedPlayerTargets {
     private static final class ScaleRule implements PlayerRule {
         public CharSequence name() { return TargetsFeature.SCALE; }
 
-        public boolean isBot(PlayerEntity player, TargetsFeature targets) {
+        public boolean isBot(Player player, TargetsFeature targets) {
             if (!TargetsFeature.antiBotChecks.isSelected(name())) {
                 return false;
             }
-            double scale = player.getAttributeValue(EntityAttributes.SCALE);
+            double scale = player.getAttributeValue(Attributes.SCALE);
             return scale < 0.75 || scale > 1.25;
         }
     }
@@ -179,14 +179,14 @@ public final class CachedPlayerTargets {
     private static final class PlayerListRule implements PlayerRule {
         public CharSequence name() { return TargetsFeature.TAB_LIST; }
 
-        public boolean isBot(PlayerEntity player, TargetsFeature targets) {
+        public boolean isBot(Player player, TargetsFeature targets) {
             if (!TargetsFeature.antiBotChecks.isSelected(name())) {
                 return false;
             }
-            if (CLIENT.getNetworkHandler() == null) {
+            if (CLIENT.getConnection() == null) {
                 return false;
             }
-            return CLIENT.getNetworkHandler().getPlayerListEntry(player.getUuid()) == null;
+            return CLIENT.getConnection().getPlayerInfo(player.getUUID()) == null;
         }
     }
 
@@ -196,7 +196,7 @@ public final class CachedPlayerTargets {
 
         public CharSequence name() { return TargetsFeature.ZETA_MMC; }
 
-        public boolean isBot(PlayerEntity player, TargetsFeature targets) {
+        public boolean isBot(Player player, TargetsFeature targets) {
             if (!TargetsFeature.antiBotChecks.isSelected(name())) {
                 return false;
             }

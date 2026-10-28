@@ -3,11 +3,11 @@ package dev.echo.client.screens;
 import dev.echo.client.Echo;
 import dev.echo.client.events.EventBus;
 import dev.echo.client.screens.dashboard.DashboardController;
-import net.minecraft.client.gui.Click;
-import net.minecraft.client.gui.DrawContext;
-import net.minecraft.client.input.CharInput;
-import net.minecraft.client.input.KeyInput;
-import net.minecraft.text.Text;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.minecraft.client.input.CharacterEvent;
+import net.minecraft.client.input.KeyEvent;
+import net.minecraft.client.input.MouseButtonEvent;
+import net.minecraft.network.chat.Component;
 
 /**
  * Minecraft screen adapter for the dashboard's registered renderer and input state.
@@ -44,7 +44,7 @@ public final class DashboardScreen extends EchoScreen {
 
     /** Constructs only the screen; the dashboard controller is acquired during init. */
     public DashboardScreen() {
-        super(Text.literal(SCREEN_TITLE));
+        super(Component.literal(SCREEN_TITLE));
     }
 
     /** Initializes the vanilla screen, registers this instance, then opens its controller. */
@@ -57,13 +57,13 @@ public final class DashboardScreen extends EchoScreen {
 
     /** Updates pointer state; the controller's registered render event draws the dashboard. */
     @Override
-    public void render(DrawContext context, int mouseX, int mouseY, float tickDelta) {
+    public void extractRenderState(GuiGraphicsExtractor context, int mouseX, int mouseY, float tickDelta) {
         DashboardController.INSTANCE.mouseMoved(toUiX(mouseX), toUiY(mouseY));
     }
 
     /** Dispatches a press before attempting vanilla child-widget handling. */
     @Override
-    public boolean mouseClicked(Click click, boolean doubled) {
+    public boolean mouseClicked(MouseButtonEvent click, boolean doubled) {
         return DashboardController.INSTANCE.mouseClicked(
                 toUiX((float) click.x()), toUiY((float) click.y()), click.button())
                 || super.mouseClicked(click, doubled);
@@ -71,7 +71,7 @@ public final class DashboardScreen extends EchoScreen {
 
     /** Preserves the original drag contract: the controller receives position and button. */
     @Override
-    public boolean mouseDragged(Click click, double deltaX, double deltaY) {
+    public boolean mouseDragged(MouseButtonEvent click, double deltaX, double deltaY) {
         return DashboardController.INSTANCE.mouseDragged(
                 toUiX((float) click.x()), toUiY((float) click.y()), click.button())
                 || super.mouseDragged(click, deltaX, deltaY);
@@ -79,7 +79,7 @@ public final class DashboardScreen extends EchoScreen {
 
     /** Delivers release even when the controller declines to consume it. */
     @Override
-    public boolean mouseReleased(Click click) {
+    public boolean mouseReleased(MouseButtonEvent click) {
         return DashboardController.INSTANCE.mouseReleased(
                 toUiX((float) click.x()), toUiY((float) click.y()), click.button())
                 || super.mouseReleased(click);
@@ -95,14 +95,14 @@ public final class DashboardScreen extends EchoScreen {
 
     /** Preserves the physical key, scan code and modifier tuple. */
     @Override
-    public boolean keyPressed(KeyInput input) {
+    public boolean keyPressed(KeyEvent input) {
         return DashboardController.INSTANCE.keyPressed(input.key(), input.scancode(), input.modifiers())
                 || super.keyPressed(input);
     }
 
     /** Forwards the full Unicode code point without narrowing it to a UTF-16 character. */
     @Override
-    public boolean charTyped(CharInput input) {
+    public boolean charTyped(CharacterEvent input) {
         return DashboardController.INSTANCE.charTyped(input.codepoint()) || super.charTyped(input);
     }
 
@@ -118,7 +118,7 @@ public final class DashboardScreen extends EchoScreen {
 
     /** The dashboard leaves the integrated game running. */
     @Override
-    public boolean shouldPause() {
+    public boolean isPauseScreen() {
         return false;
     }
 }

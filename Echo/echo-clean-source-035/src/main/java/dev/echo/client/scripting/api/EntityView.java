@@ -1,7 +1,7 @@
 package dev.echo.client.scripting.api;
 
-import net.minecraft.entity.Entity;
-import net.minecraft.registry.Registries;
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.world.entity.Entity;
 
 public class EntityView {
     protected final Entity entity;
@@ -11,19 +11,19 @@ public class EntityView {
     }
 
     public Vector3View getPosition() {
-        return new Vector3View(entity.getEntityPos());
+        return new Vector3View(entity.position());
     }
 
     public Vector3View getEyePosition() {
-        return new Vector3View(entity.getEyePos());
+        return new Vector3View(entity.getEyePosition());
     }
 
     public float getYaw() {
-        return entity.getYaw();
+        return entity.getYRot();
     }
 
     public float getPitch() {
-        return entity.getPitch();
+        return entity.getXRot();
     }
 
     public boolean isAlive() {
@@ -35,7 +35,7 @@ public class EntityView {
     }
 
     public int getAge() {
-        return entity.age;
+        return entity.tickCount;
     }
 
     public String getName() {
@@ -47,7 +47,7 @@ public class EntityView {
     }
 
     public String getTypeId() {
-        return Registries.ENTITY_TYPE.getId(entity.getType()).toString();
+        return BuiltInRegistries.ENTITY_TYPE.getKey(entity.getType()).toString();
     }
 
     public boolean hasCustomName() {
@@ -55,14 +55,14 @@ public class EntityView {
     }
 
     public double distanceTo(EntityView other) {
-        return Math.sqrt(entity.squaredDistanceTo(other.entity));
+        return Math.sqrt(entity.distanceToSqr(other.entity));
     }
 
     public float getWidth() {
-        return entity.getWidth();
+        return entity.getBbWidth();
     }
 
     public float getHeight() {
-        return entity.getHeight();
+        return entity.getBbHeight();
     }
 }

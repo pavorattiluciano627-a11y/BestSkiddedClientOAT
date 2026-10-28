@@ -1,7 +1,7 @@
 package dev.echo.client.utils.network;
 
-import net.minecraft.network.packet.s2c.play.EntityVelocityUpdateS2CPacket;
-import net.minecraft.util.math.Vec3d;
+import net.minecraft.network.protocol.game.ClientboundSetEntityMotionPacket;
+import net.minecraft.world.phys.Vec3;
 
 /** Provides the entity and vector carried by an entity velocity packet. */
 public final class VelocityPackets {
@@ -13,8 +13,8 @@ public final class VelocityPackets {
      * @param packet the velocity packet
      * @return the target entity identifier
      */
-    public static int entityId(EntityVelocityUpdateS2CPacket packet) {
-        return packet.getEntityId();
+    public static int entityId(ClientboundSetEntityMotionPacket packet) {
+        return packet.id();
     }
 
     /**
@@ -23,7 +23,7 @@ public final class VelocityPackets {
      * @param packet the velocity packet
      * @return the velocity vector
      */
-    public static Vec3d velocity(EntityVelocityUpdateS2CPacket packet) {
-        return packet.getVelocity();
+    public static Vec3 velocity(ClientboundSetEntityMotionPacket packet) {
+        return packet.movement();
     }
 }

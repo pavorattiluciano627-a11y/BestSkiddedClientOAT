@@ -1,16 +1,16 @@
 package dev.echo.client.render;
 
+import com.mojang.blaze3d.pipeline.RenderTarget;
+import com.mojang.blaze3d.pipeline.TextureTarget;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.textures.GpuTextureView;
 import dev.echo.client.Echo;
 import dev.echo.client.mixin.GameRendererAccessor;
 import dev.echo.render.texture.TextureView;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.gl.Framebuffer;
-import net.minecraft.client.gl.PostEffectProcessor;
-import net.minecraft.client.gl.SimpleFramebuffer;
-import net.minecraft.client.render.DefaultFramebufferSet;
-import net.minecraft.util.Identifier;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.renderer.LevelTargetBundle;
+import net.minecraft.client.renderer.PostChain;
+import net.minecraft.resources.Identifier;
 
 /**
  * Captures the main color attachment and applies Minecraft's blur post-effect.
@@ -18,42 +18,43 @@ import net.minecraft.util.Identifier;
  * and the original static initializer remain separately gated in the proof ledger.
  */
 public final class FramebufferBlur implements AutoCloseable {
-    private static final Identifier EFFECT = Identifier.ofVanilla("blur");
+    private static final Identifier EFFECT = Identifier.withDefaultNamespace("blur");
     private static final String FRAMEBUFFER_NAME = "echo_screen_frame";
 
-    private Framebuffer framebuffer;
+    private RenderTarget framebuffer;
     private TextureView colorTexture;
     private TextureView depthTexture;
     private boolean active;
     private GpuTextureView importedColorAttachment;
 
     public void captureMainFramebuffer() {
-        Framebuffer main = MinecraftClient.getInstance().getFramebuffer();
+        RenderTarget main = Minecraft.getInstance().gameRenderer.mainRenderTarget();
         if (framebuffer == null) {
-            framebuffer = new SimpleFramebuffer(FRAMEBUFFER_NAME, main.textureWidth, main.textureHeight, true);
-        } else if (framebuffer.textureWidth != main.textureWidth || framebuffer.textureHeight != main.textureHeight) {
-            framebuffer.resize(main.textureWidth, main.textureHeight);
+            framebuffer = new TextureTarget(FRAMEBUFFER_NAME, main.width, main.height, true,
+                    com.mojang.blaze3d.GpuFormat.RGBA8_UNORM);
+        } else if (framebuffer.width != main.width || framebuffer.height != main.height) {
+            framebuffer.resize(main.width, main.height);
         }
         RenderSystem.getDevice().createCommandEncoder().copyTextureToTexture(
-                main.getColorAttachment(), framebuffer.getColorAttachment(),
-                0, 0, 0, 0, 0, main.textureWidth, main.textureHeight);
+                main.getColorTexture(), framebuffer.getColorTexture(),
+                0, 0, 0, 0, 0, main.width, main.height);
 
-        if (framebuffer.getColorAttachmentView() != importedColorAttachment) {
-            importedColorAttachment = framebuffer.getColorAttachmentView();
+        if (framebuffer.getColorTextureView() != importedColorAttachment) {
+            importedColorAttachment = framebuffer.getColorTextureView();
             colorTexture = GlTextureBridge.importColor(Echo.renderDevice, importedColorAttachment);
-            depthTexture = GlTextureBridge.importView(Echo.renderDevice, framebuffer.getDepthAttachmentView(),
+            depthTexture = GlTextureBridge.importView(Echo.renderDevice, framebuffer.getDepthTextureView(),
                     Echo.renderDevice.depthFormat());
         }
         active = true;
     }
 
     public void applyBlur() {
-        PostEffectProcessor effect = MinecraftClient.getInstance().getShaderLoader()
-                .loadPostEffect(EFFECT, DefaultFramebufferSet.MAIN_ONLY);
+        PostChain effect = Minecraft.getInstance().getShaderManager()
+                .getPostChain(EFFECT, LevelTargetBundle.MAIN_TARGETS);
         if (effect == null) {
             return;
         }
-        effect.render(framebuffer, ((GameRendererAccessor) MinecraftClient.getInstance().gameRenderer).getPool());
+        effect.process(framebuffer, ((GameRendererAccessor) Minecraft.getInstance().gameRenderer).getPool());
     }
 
     public void resetFrame() {
@@ -63,11 +64,11 @@ public final class FramebufferBlur implements AutoCloseable {
     @Override
     public void close() {
         if (framebuffer != null) {
-            framebuffer.delete();
+            framebuffer.destroyBuffers();
         }
     }
 
-    public Framebuffer framebuffer() { return framebuffer; }
+    public RenderTarget framebuffer() { return framebuffer; }
     public TextureView colorTexture() { return colorTexture; }
     public TextureView depthTexture() { return depthTexture; }
     public boolean isActive() { return active; }

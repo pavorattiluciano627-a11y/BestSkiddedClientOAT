@@ -4,14 +4,14 @@ import static dev.echo.client.MinecraftAccess.CLIENT;
 
 import dev.echo.client.Echo;
 import dev.echo.client.MinecraftAccess;
-import net.minecraft.entity.Entity;
-import net.minecraft.entity.projectile.ProjectileUtil;
-import net.minecraft.util.hit.BlockHitResult;
-import net.minecraft.util.hit.HitResult;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.Box;
-import net.minecraft.util.math.Vec3d;
-import net.minecraft.world.RaycastContext;
+import net.minecraft.core.BlockPos;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.projectile.ProjectileUtil;
+import net.minecraft.world.level.ClipContext;
+import net.minecraft.world.phys.AABB;
+import net.minecraft.world.phys.BlockHitResult;
+import net.minecraft.world.phys.HitResult;
+import net.minecraft.world.phys.Vec3;
 
 /**
  * Block-interaction rays and rotation-aware hit matching. The world-04 receipt
@@ -23,31 +23,31 @@ public final class BlockRaycasts implements MinecraftAccess {
 
     /** Casts from the local player's camera at the end of the tick. */
     public static BlockHitResult raycast(float yaw, float pitch) {
-        if (CLIENT.player == null || CLIENT.world == null) {
+        if (CLIENT.player == null || CLIENT.level == null) {
             return null;
         }
-        return raycast(CLIENT.player.getCameraPosVec(1.0F), yaw, pitch);
+        return raycast(CLIENT.player.getEyePosition(1.0F), yaw, pitch);
     }
 
     /** Uses the player's block interaction range, outline shapes, and no fluids. */
-    public static BlockHitResult raycast(Vec3d origin, float yaw, float pitch) {
-        if (CLIENT.player == null || CLIENT.world == null) {
+    public static BlockHitResult raycast(Vec3 origin, float yaw, float pitch) {
+        if (CLIENT.player == null || CLIENT.level == null) {
             return null;
         }
-        Vec3d end = origin.add(CLIENT.player.getRotationVector(pitch, yaw)
-                .multiply(CLIENT.player.getBlockInteractionRange()));
-        return CLIENT.world.raycast(new RaycastContext(origin, end,
-                RaycastContext.ShapeType.OUTLINE, RaycastContext.FluidHandling.NONE, CLIENT.player));
+        Vec3 end = origin.add(CLIENT.player.calculateViewVector(pitch, yaw)
+                .scale(CLIENT.player.blockInteractionRange()));
+        return CLIENT.level.clip(new ClipContext(origin, end,
+                ClipContext.Block.OUTLINE, ClipContext.Fluid.NONE, CLIENT.player));
     }
 
     /** Casts to an explicit endpoint from the interpolated local-player camera. */
-    public static HitResult raycastTo(Vec3d end, float tickDelta) {
-        if (CLIENT.player == null || CLIENT.world == null) {
+    public static HitResult raycastTo(Vec3 end, float tickDelta) {
+        if (CLIENT.player == null || CLIENT.level == null) {
             return null;
         }
-        Vec3d origin = CLIENT.player.getCameraPosVec(tickDelta);
-        return CLIENT.world.raycast(new RaycastContext(origin, end,
-                RaycastContext.ShapeType.OUTLINE, RaycastContext.FluidHandling.NONE, CLIENT.player));
+        Vec3 origin = CLIENT.player.getEyePosition(tickDelta);
+        return CLIENT.level.clip(new ClipContext(origin, end,
+                ClipContext.Block.OUTLINE, ClipContext.Fluid.NONE, CLIENT.player));
     }
 
     /**
@@ -63,13 +63,13 @@ public final class BlockRaycasts implements MinecraftAccess {
                 || !actual.getBlockPos().equals(expected.getBlockPos())) {
             return false;
         }
-        if (requireSameSide && actual.getSide() != expected.getSide()) {
+        if (requireSameSide && actual.getDirection() != expected.getDirection()) {
             return false;
         }
-        Vec3d origin = CLIENT.player.getCameraPosVec(1.0F);
-        return ProjectileUtil.raycast(CLIENT.player, origin, actual.getPos(),
-                new Box(origin, actual.getPos()).expand(1.0), Entity::canHit,
-                origin.squaredDistanceTo(actual.getPos())) == null;
+        Vec3 origin = CLIENT.player.getEyePosition(1.0F);
+        return ProjectileUtil.getEntityHitResult(CLIENT.player, origin, actual.getLocation(),
+                new AABB(origin, actual.getLocation()).inflate(1.0), Entity::isPickable,
+                origin.distanceToSqr(actual.getLocation())) == null;
     }
 
     /** Geometric reach test against a slightly expanded unit block box. */
@@ -77,9 +77,9 @@ public final class BlockRaycasts implements MinecraftAccess {
         if (CLIENT.player == null || position == null) {
             return false;
         }
-        Vec3d origin = CLIENT.player.getCameraPosVec(1.0F);
-        Vec3d direction = CLIENT.player.getRotationVector(pitch, yaw);
-        Vec3d end = origin.add(direction.multiply(CLIENT.player.getBlockInteractionRange()));
-        return new Box(position).expand(1.0E-4).raycast(origin, end).isPresent();
+        Vec3 origin = CLIENT.player.getEyePosition(1.0F);
+        Vec3 direction = CLIENT.player.calculateViewVector(pitch, yaw);
+        Vec3 end = origin.add(direction.scale(CLIENT.player.blockInteractionRange()));
+        return new AABB(position).inflate(1.0E-4).clip(origin, end).isPresent();
     }
 }

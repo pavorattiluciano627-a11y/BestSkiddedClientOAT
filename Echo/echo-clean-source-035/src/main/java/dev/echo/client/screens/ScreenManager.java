@@ -3,7 +3,7 @@ package dev.echo.client.screens;
 import dev.echo.client.Echo;
 import dev.echo.client.MinecraftAccess;
 import dev.echo.client.setting.Setting;
-import net.minecraft.client.MinecraftClient;
+import net.minecraft.client.Minecraft;
 
 /**
  * Owns the reusable dashboard screen and the setting currently receiving UI input.
@@ -28,7 +28,7 @@ public class ScreenManager implements MinecraftAccess {
         if (Echo.eventsDisabled || Echo.uiRenderer == null) {
             return;
         }
-        MinecraftClient.getInstance().setScreen(dashboardScreen);
+        Minecraft.getInstance().gui.setScreen(dashboardScreen);
     }
 
     /**
@@ -37,13 +37,13 @@ public class ScreenManager implements MinecraftAccess {
      * @return whether the current screen is the stored dashboard reference
      */
     public boolean isOpen() {
-        return MinecraftClient.getInstance().currentScreen == dashboardScreen;
+        return Minecraft.getInstance().gui.screen() == dashboardScreen;
     }
 
     /** Clears setting focus before the normal Minecraft screen-removal callback. */
     public void close() {
         focusedSetting = null;
-        MinecraftClient.getInstance().setScreen(null);
+        Minecraft.getInstance().gui.setScreen(null);
     }
 
     /** Closes the current screen, then releases the reusable dashboard reference. */

@@ -1,15 +1,15 @@
 package dev.echo.client.events.world;
 
 import dev.echo.client.events.Event;
-import net.minecraft.entity.Entity;
-import net.minecraft.util.math.Box;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.phys.AABB;
 
 /** A replaceable hitbox for an immutable entity reference. No normalization is done. */
 public class EntityHitboxEvent extends Event {
     private final Entity entity;
-    private Box boundingBox;
+    private AABB boundingBox;
 
-    public EntityHitboxEvent(Entity entity, Box boundingBox) {
+    public EntityHitboxEvent(Entity entity, AABB boundingBox) {
         this.entity = entity;
         this.boundingBox = boundingBox;
     }
@@ -18,11 +18,11 @@ public class EntityHitboxEvent extends Event {
         return entity;
     }
 
-    public Box getBoundingBox() {
+    public AABB getBoundingBox() {
         return boundingBox;
     }
 
-    public void setBoundingBox(Box boundingBox) {
+    public void setBoundingBox(AABB boundingBox) {
         this.boundingBox = boundingBox;
     }
 }

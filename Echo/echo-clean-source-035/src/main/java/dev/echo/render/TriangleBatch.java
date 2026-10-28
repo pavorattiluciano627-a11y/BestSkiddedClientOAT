@@ -12,7 +12,7 @@ import dev.echo.render.pipeline.GraphicsPipeline;
 import dev.echo.render.pipeline.GraphicsPipelineInfo;
 import dev.echo.render.pipeline.PrimitiveTopology;
 import dev.echo.render.vertex.VertexFormat;
-import net.minecraft.util.math.Vec3d;
+import net.minecraft.world.phys.Vec3;
 
 /**
  * Instanced world triangles with camera-relative positions and per-vertex color.
@@ -45,7 +45,7 @@ public class TriangleBatch implements RenderBatch {
                 .size(capacity * BYTES_PER_INSTANCE).mapped(true).dynamic(true).build());
     }
 
-    public void addTriangle(Vec3d camera,
+    public void addTriangle(Vec3 camera,
             double firstX, double firstY, double firstZ, int firstColor,
             double secondX, double secondY, double secondZ, int secondColor,
             double thirdX, double thirdY, double thirdZ, int thirdColor) {

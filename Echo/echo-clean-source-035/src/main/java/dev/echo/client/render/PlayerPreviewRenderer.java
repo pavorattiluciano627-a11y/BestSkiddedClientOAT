@@ -4,10 +4,10 @@ import com.mojang.blaze3d.textures.GpuTextureView;
 import dev.echo.client.Echo;
 import dev.echo.client.ui.UiBounds;
 import dev.echo.render.texture.TextureView;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.render.entity.state.EntityRenderState;
-import net.minecraft.client.render.entity.state.LivingEntityRenderState;
-import net.minecraft.entity.EntityPose;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.renderer.entity.state.EntityRenderState;
+import net.minecraft.client.renderer.entity.state.LivingEntityRenderState;
+import net.minecraft.world.entity.Pose;
 import org.joml.Quaternionf;
 import org.joml.Vector3f;
 
@@ -88,7 +88,7 @@ public final class PlayerPreviewRenderer {
         if (Echo.renderDevice == null) {
             return;
         }
-        var player = MinecraftClient.getInstance().player;
+        var player = Minecraft.getInstance().player;
         if (player == null) {
             return;
         }
@@ -104,15 +104,15 @@ public final class PlayerPreviewRenderer {
         float pitch = (float) Math.atan(
                 (request.modelBaseY() - request.modelHeight() * 0.5F - request.mouseY()) / mouseDivisor);
         if (state instanceof LivingEntityRenderState living) {
-            living.bodyYaw = 180.0F + yaw * 20.0F;
-            living.relativeHeadYaw = yaw * 20.0F;
-            living.pitch = living.pose == EntityPose.GLIDING ? 0.0F : -pitch * 20.0F;
-            living.width /= living.baseScale;
-            living.height /= living.baseScale;
-            living.baseScale = 1.0F;
+            living.bodyRot = 180.0F + yaw * 20.0F;
+            living.yRot = yaw * 20.0F;
+            living.xRot = living.pose == Pose.FALL_FLYING ? 0.0F : -pitch * 20.0F;
+            living.boundingBoxWidth /= living.scale;
+            living.boundingBoxHeight /= living.scale;
+            living.scale = 1.0F;
         }
         float pitchRadians = pitch * 20.0F * 0.017453292F;
-        float entityHeight = Math.max(state.height, 0.1F);
+        float entityHeight = Math.max(state.boundingBoxHeight, 0.1F);
         float logicalScale = request.modelHeight() / entityHeight;
         float verticalOffset = (request.modelBaseY() - request.height() * 0.5F) / logicalScale
                 - entityHeight * 0.5F;
@@ -136,7 +136,7 @@ public final class PlayerPreviewRenderer {
     private static void updateProjectedBounds(Request request, EntityRenderState state,
                                                float pitchRadians, float entityHeight,
                                                float logicalScale, float verticalOffset) {
-        float halfWidth = Math.max(state.width, 0.1F) * 0.5F;
+        float halfWidth = Math.max(state.boundingBoxWidth, 0.1F) * 0.5F;
         float sin = (float) Math.sin(pitchRadians);
         float cos = (float) Math.cos(pitchRadians);
         float center = entityHeight * 0.5F + verticalOffset;
@@ -155,6 +155,6 @@ public final class PlayerPreviewRenderer {
         float bottom = Math.max(front.bottom(), back.bottom());
         bounds = new UiBounds(left, top, projectedWidth, bottom - top);
         eyeY = request.height() * 0.5F
-                + (center - state.standingEyeHeight * cos) * logicalScale;
+                + (center - state.eyeHeight * cos) * logicalScale;
     }
 }

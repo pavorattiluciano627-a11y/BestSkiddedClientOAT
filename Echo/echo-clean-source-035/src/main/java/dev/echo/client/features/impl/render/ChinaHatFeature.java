@@ -11,7 +11,7 @@ import dev.echo.client.setting.ColorSetting;
 import dev.echo.client.setting.FloatSetting;
 import dev.echo.client.utils.strings.Concat;
 import java.awt.Color;
-import net.minecraft.util.math.Vec3d;
+import net.minecraft.world.phys.Vec3;
 import org.joml.Matrix4f;
 import org.joml.Vector3f;
 
@@ -50,7 +50,7 @@ public class ChinaHatFeature extends Feature {
             return;
         }
         DepthTestedWorldGeometry geometry = context.getDepthTestedGeometry();
-        Vec3d camera = context.cameraPosition;
+        Vec3 camera = context.cameraPosition;
         float ringRadius = radius.getValue();
         float coneHeight = height.getValue();
         boolean rainbow = mode.isSelected("Rainbow");

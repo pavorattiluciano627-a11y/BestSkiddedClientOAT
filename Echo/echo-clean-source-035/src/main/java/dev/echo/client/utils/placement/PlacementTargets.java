@@ -1,16 +1,16 @@
 package dev.echo.client.utils.placement;
 
 import dev.echo.client.MinecraftAccess;
-import net.minecraft.block.BlockState;
-import net.minecraft.util.hit.BlockHitResult;
-import net.minecraft.util.hit.HitResult;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.Box;
-import net.minecraft.util.math.Direction;
-import net.minecraft.util.math.MathHelper;
-import net.minecraft.util.math.Vec3d;
-import net.minecraft.util.shape.VoxelShape;
-import net.minecraft.world.RaycastContext;
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
+import net.minecraft.util.Mth;
+import net.minecraft.world.level.ClipContext;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.phys.AABB;
+import net.minecraft.world.phys.BlockHitResult;
+import net.minecraft.world.phys.HitResult;
+import net.minecraft.world.phys.Vec3;
+import net.minecraft.world.phys.shapes.VoxelShape;
 
 /** Complete target-selection source candidate with original iteration and visibility semantics. */
 public final class PlacementTargets implements MinecraftAccess {
@@ -33,21 +33,21 @@ public final class PlacementTargets implements MinecraftAccess {
 
     public static PlacementTarget find(BlockPos position, boolean requireVisible,
             boolean allowPartialSupport, boolean ignoreEntities) {
-        if (position == null || CLIENT.world == null || CLIENT.player == null) {
+        if (position == null || CLIENT.level == null || CLIENT.player == null) {
             return null;
         }
-        Vec3d eye = CLIENT.player.getEyePos();
+        Vec3 eye = CLIENT.player.getEyePosition();
         PlacementTarget nearest = null;
         double nearestDistance = Double.MAX_VALUE;
         if (requireVisible) {
             PlacementTarget directlyHit = findReplaceableOutline(eye, position);
             if (directlyHit != null) {
                 nearest = directlyHit;
-                nearestDistance = eye.squaredDistanceTo(directlyHit.hitResult().getPos());
+                nearestDistance = eye.distanceToSqr(directlyHit.hitResult().getLocation());
             }
         }
         for (Direction neighborDirection : Direction.values()) {
-            BlockPos neighbor = position.offset(neighborDirection);
+            BlockPos neighbor = position.relative(neighborDirection);
             Direction face = neighborDirection.getOpposite();
             if (!supportsFace(neighbor, face, allowPartialSupport)) {
                 continue;
@@ -57,7 +57,7 @@ public final class PlacementTargets implements MinecraftAccess {
             if (candidate == null) {
                 continue;
             }
-            double distance = eye.squaredDistanceTo(candidate.hitResult().getPos());
+            double distance = eye.distanceToSqr(candidate.hitResult().getLocation());
             if (distance < nearestDistance) {
                 nearestDistance = distance;
                 nearest = candidate;
@@ -66,21 +66,21 @@ public final class PlacementTargets implements MinecraftAccess {
         return nearest;
     }
 
-    private static PlacementTarget findReplaceableOutline(Vec3d eye, BlockPos position) {
-        BlockState state = CLIENT.world.getBlockState(position);
-        if (!state.isReplaceable()) {
+    private static PlacementTarget findReplaceableOutline(Vec3 eye, BlockPos position) {
+        BlockState state = CLIENT.level.getBlockState(position);
+        if (!state.canBeReplaced()) {
             return null;
         }
-        VoxelShape shape = state.getOutlineShape(CLIENT.world, position);
+        VoxelShape shape = state.getShape(CLIENT.level, position);
         if (shape.isEmpty()) {
             return null;
         }
-        for (Box bounds : shape.getBoundingBoxes()) {
-            Vec3d center = new Vec3d(position.getX() + (bounds.minX + bounds.maxX) * 0.5,
+        for (AABB bounds : shape.toAabbs()) {
+            Vec3 center = new Vec3(position.getX() + (bounds.minX + bounds.maxX) * 0.5,
                     position.getY() + (bounds.minY + bounds.maxY) * 0.5,
                     position.getZ() + (bounds.minZ + bounds.maxZ) * 0.5);
-            BlockHitResult hit = CLIENT.world.raycast(new RaycastContext(eye, center,
-                    RaycastContext.ShapeType.OUTLINE, RaycastContext.FluidHandling.NONE, CLIENT.player));
+            BlockHitResult hit = CLIENT.level.clip(new ClipContext(eye, center,
+                    ClipContext.Block.OUTLINE, ClipContext.Fluid.NONE, CLIENT.player));
             if (hit.getType() == HitResult.Type.BLOCK && hit.getBlockPos().equals(position)) {
                 return new PlacementTarget(position, hit);
             }
@@ -93,11 +93,11 @@ public final class PlacementTargets implements MinecraftAccess {
     }
 
     public static boolean hasSupport(BlockPos position, boolean allowPartialSupport) {
-        if (position == null || CLIENT.world == null) {
+        if (position == null || CLIENT.level == null) {
             return false;
         }
         for (Direction direction : Direction.values()) {
-            if (supportsFace(position.offset(direction), direction.getOpposite(), allowPartialSupport)) {
+            if (supportsFace(position.relative(direction), direction.getOpposite(), allowPartialSupport)) {
                 return true;
             }
         }
@@ -105,27 +105,27 @@ public final class PlacementTargets implements MinecraftAccess {
     }
 
     public static boolean supportsFace(BlockPos position, Direction face, boolean allowPartialSupport) {
-        BlockState state = CLIENT.world.getBlockState(position);
-        if (state.isSideSolidFullSquare(CLIENT.world, position, face)) {
+        BlockState state = CLIENT.level.getBlockState(position);
+        if (state.isFaceSturdy(CLIENT.level, position, face)) {
             return true;
         }
-        return allowPartialSupport && !state.isReplaceable()
-                && !state.getOutlineShape(CLIENT.world, position).isEmpty()
-                && !state.getCollisionShape(CLIENT.world, position).isEmpty();
+        return allowPartialSupport && !state.canBeReplaced()
+                && !state.getShape(CLIENT.level, position).isEmpty()
+                && !state.getCollisionShape(CLIENT.level, position).isEmpty();
     }
 
-    private static PlacementTarget findAgainstNeighbor(Vec3d eye, BlockPos position, BlockPos neighbor,
+    private static PlacementTarget findAgainstNeighbor(Vec3 eye, BlockPos position, BlockPos neighbor,
             Direction neighborDirection, Direction face, boolean requireVisible, boolean ignoreEntities) {
-        VoxelShape outline = CLIENT.world.getBlockState(neighbor).getOutlineShape(CLIENT.world, neighbor);
+        VoxelShape outline = CLIENT.level.getBlockState(neighbor).getShape(CLIENT.level, neighbor);
         if (outline.isEmpty()) {
             return null;
         }
-        Box bounds = outline.getBoundingBox().offset(neighbor);
-        double reachSquared = MathHelper.square(CLIENT.player.getBlockInteractionRange());
+        AABB bounds = outline.bounds().move(neighbor);
+        double reachSquared = Mth.square(CLIENT.player.blockInteractionRange());
         for (double[] offset : FACE_SAMPLES) {
-            Vec3d point = PlacementRaycasts.pointOnFace(bounds, face, offset[0], offset[1]);
+            Vec3 point = PlacementRaycasts.pointOnFace(bounds, face, offset[0], offset[1]);
             BlockHitResult hit = new BlockHitResult(point, face, neighbor, false);
-            if (eye.squaredDistanceTo(point) > reachSquared || !PlacementRaycasts.facesEye(hit, eye)) {
+            if (eye.distanceToSqr(point) > reachSquared || !PlacementRaycasts.facesEye(hit, eye)) {
                 continue;
             }
             if (requireVisible) {

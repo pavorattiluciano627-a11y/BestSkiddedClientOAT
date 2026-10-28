@@ -13,8 +13,8 @@ import java.awt.Color;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import net.minecraft.client.input.CharInput;
-import net.minecraft.client.input.KeyInput;
+import net.minecraft.client.input.CharacterEvent;
+import net.minecraft.client.input.KeyEvent;
 
 /**
  * The original movable script-list panel owned by the category-panel screen.
@@ -118,7 +118,7 @@ public class ScriptsPanel {
         return wasDragging;
     }
 
-    public boolean charTyped(CharInput input) {
+    public boolean charTyped(CharacterEvent input) {
         if (!searchFocused) return false;
         char character = (char) input.codepoint();
         if (Character.isISOControl(character)) return false;
@@ -126,7 +126,7 @@ public class ScriptsPanel {
         return true;
     }
 
-    public boolean keyPressed(KeyInput input) {
+    public boolean keyPressed(KeyEvent input) {
         if (!searchFocused) return false;
         if (input.key() == InputKey.ESCAPE.code()) {
             searchFocused = false;

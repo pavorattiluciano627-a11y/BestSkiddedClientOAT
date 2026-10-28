@@ -5,10 +5,10 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.function.Predicate;
 import java.util.stream.IntStream;
-import net.minecraft.entity.LivingEntity;
-import net.minecraft.item.ItemStack;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.Vec3d;
+import net.minecraft.core.BlockPos;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.phys.Vec3;
 
 /** Wall-first center-column enclosure search with the original support-column tie-breaker. */
 public class NearestPlacementSearch extends PlacementSearch {
@@ -31,9 +31,9 @@ public class NearestPlacementSearch extends PlacementSearch {
     }
 
     @Override
-    public List<PlacementFilter> plan(LivingEntity target, Vec3d displacement) {
+    public List<PlacementFilter> plan(LivingEntity target, Vec3 displacement) {
         PlacementBounds bounds = PlacementBounds.atCenter(target, displacement, PlacementWorldQueries::isReplaceable);
-        Vec3d eye = CLIENT.player.getEyePos();
+        Vec3 eye = CLIENT.player.getEyePosition();
         Comparator<BlockPos> farthest = PlacementDistances.farthestFirst(eye);
         List<BlockPos> top = roof(bounds);
         List<BlockPos> column = top.isEmpty() || anyPlaceable(top) ? List.of() : supportColumn(bounds, eye);
@@ -41,7 +41,7 @@ public class NearestPlacementSearch extends PlacementSearch {
         sides.removeAll(column);
         sides.sort(farthest);
         top.sort(farthest);
-        List<BlockPos> below = sides.stream().map(BlockPos::down).filter(PlacementWorldQueries::isReplaceable).toList();
+        List<BlockPos> below = sides.stream().map(BlockPos::below).filter(PlacementWorldQueries::isReplaceable).toList();
         List<PlacementFilter> result = new ArrayList<>();
         append(result, sides, PlacementStackPredicates.WALL_ITEMS);
         append(result, below, PlacementStackPredicates.WALL_ITEMS);
@@ -52,9 +52,9 @@ public class NearestPlacementSearch extends PlacementSearch {
         return result;
     }
 
-    private static List<BlockPos> supportColumn(PlacementBounds bounds, Vec3d eye) {
+    private static List<BlockPos> supportColumn(PlacementBounds bounds, Vec3 eye) {
         return perimeter(bounds).stream()
-                .map(base -> IntStream.rangeClosed(bounds.minY(), bounds.aboveTop()).mapToObj(base::withY)
+                .map(base -> IntStream.rangeClosed(bounds.minY(), bounds.aboveTop()).mapToObj(base::atY)
                         .filter(PlacementWorldQueries::isReplaceable).toList())
                 .filter(column -> !column.isEmpty())
                 .filter(column -> column.stream().noneMatch(PlacementWorldQueries::hasBlockingEntity))

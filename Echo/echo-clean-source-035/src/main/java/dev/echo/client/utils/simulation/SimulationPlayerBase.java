@@ -1,36 +1,36 @@
 package dev.echo.client.utils.simulation;
 
 import com.mojang.authlib.GameProfile;
-import net.minecraft.block.BlockState;
-import net.minecraft.client.world.ClientWorld;
-import net.minecraft.entity.Entity;
-import net.minecraft.entity.damage.DamageSource;
-import net.minecraft.registry.entry.RegistryEntry;
-import net.minecraft.sound.SoundEvent;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.world.event.GameEvent;
+import net.minecraft.client.multiplayer.ClientLevel;
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.Holder;
+import net.minecraft.sounds.SoundEvent;
+import net.minecraft.world.damagesource.DamageSource;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.gameevent.GameEvent;
 
 /**
  * The original prediction player's movement capabilities and world-effect policy.
  * Physics and copied player state are supplied by the concrete simulation player.
  */
 public abstract class SimulationPlayerBase extends ClientPlayerCopy {
-    protected SimulationPlayerBase(ClientWorld world, GameProfile profile) {
+    protected SimulationPlayerBase(ClientLevel world, GameProfile profile) {
         super(world, profile);
     }
 
     @Override
-    public boolean canMoveVoluntarily() {
+    public boolean canSimulateMovement() {
         return true;
     }
 
     @Override
-    public boolean canActVoluntarily() {
+    public boolean isEffectiveAi() {
         return true;
     }
 
     @Override
-    protected boolean isControlledByMainPlayer() {
+    protected boolean isLocalClientAuthoritative() {
         return true;
     }
 
@@ -40,12 +40,12 @@ public abstract class SimulationPlayerBase extends ClientPlayerCopy {
     }
 
     @Override
-    protected Entity.MoveEffect getMoveEffect() {
-        return Entity.MoveEffect.NONE;
+    protected Entity.MovementEmission getMovementEmission() {
+        return Entity.MovementEmission.NONE;
     }
 
     @Override
-    protected void fall(double heightDifference, boolean onGround, BlockState landedState, BlockPos landedPosition) {
+    protected void checkFallDamage(double heightDifference, boolean onGround, BlockState landedState, BlockPos landedPosition) {
         // The original prediction override intentionally suppresses landing effects.
     }
 
@@ -55,22 +55,22 @@ public abstract class SimulationPlayerBase extends ClientPlayerCopy {
     }
 
     @Override
-    public void emitGameEvent(RegistryEntry<GameEvent> event, Entity source) {
+    public void gameEvent(Holder<GameEvent> event, Entity source) {
         // The original prediction override intentionally suppresses world-listener events.
     }
 
     @Override
-    public boolean clientDamage(DamageSource source) {
+    public boolean hurtClient(DamageSource source) {
         return false;
     }
 
     @Override
-    public void pushAwayFrom(Entity other) {
+    public void push(Entity other) {
         // The original prediction override intentionally leaves other entities untouched.
     }
 
     @Override
-    protected void onSwimmingStart() {
+    protected void doWaterSplashEffect() {
         // The original prediction override intentionally suppresses splash effects.
     }
 }

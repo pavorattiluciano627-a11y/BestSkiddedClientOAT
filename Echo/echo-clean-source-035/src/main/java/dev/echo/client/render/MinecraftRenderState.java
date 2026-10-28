@@ -1,13 +1,13 @@
 package dev.echo.client.render;
 
+import com.mojang.blaze3d.pipeline.RenderTarget;
 import com.mojang.blaze3d.textures.GpuTextureView;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.gl.Framebuffer;
-import net.minecraft.client.gui.screen.Overlay;
-import net.minecraft.client.gui.screen.Screen;
-import net.minecraft.client.network.AbstractClientPlayerEntity;
-import net.minecraft.client.render.Camera;
-import net.minecraft.entity.player.PlayerEntity;
+import net.minecraft.client.Camera;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.screens.Overlay;
+import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.client.player.AbstractClientPlayer;
+import net.minecraft.world.entity.player.Player;
 
 /**
  * Original Minecraft render/query operations and shared control state.
@@ -26,59 +26,59 @@ public final class MinecraftRenderState {
 
     private MinecraftRenderState() {}
 
-    public static GpuTextureView playerSkin(PlayerEntity player) {
+    public static GpuTextureView playerSkin(Player player) {
         boolean alternate = getRenderControlFlag();
-        if (!alternate && !(player instanceof AbstractClientPlayerEntity)) {
+        if (!alternate && !(player instanceof AbstractClientPlayer)) {
             return null;
         }
         // The alternate branch still performs the original cast before returning null.
-        AbstractClientPlayerEntity clientPlayer = (AbstractClientPlayerEntity) player;
+        AbstractClientPlayer clientPlayer = (AbstractClientPlayer) player;
         if (alternate) {
             return null;
         }
-        var texture = MinecraftClient.getInstance().getTextureManager()
+        var texture = Minecraft.getInstance().getTextureManager()
                 .getTexture(clientPlayer.getSkin().body().texturePath());
-        return texture == null ? null : texture.getGlTextureView();
+        return texture == null ? null : texture.getTextureView();
     }
 
     public static Screen getScreen() {
-        return MinecraftClient.getInstance().currentScreen;
+        return Minecraft.getInstance().gui.screen();
     }
 
     public static void setScreen(Screen screen) {
-        MinecraftClient.getInstance().setScreen(screen);
+        Minecraft.getInstance().gui.setScreen(screen);
     }
 
     public static Overlay getOverlay() {
-        return MinecraftClient.getInstance().getOverlay();
+        return Minecraft.getInstance().gui.overlay();
     }
 
     public static boolean isHudHidden() {
-        return MinecraftClient.getInstance().options.hudHidden;
+        return Minecraft.getInstance().gui.hud.isHidden();
     }
 
     public static boolean hasOverlay() {
         return getOverlay() != null;
     }
 
-    public static Framebuffer getFramebuffer(MinecraftClient client) {
-        return client.getFramebuffer();
+    public static RenderTarget getFramebuffer(Minecraft client) {
+        return client.gameRenderer.mainRenderTarget();
     }
 
-    public static Camera getCamera(MinecraftClient client) {
-        return client.gameRenderer.getCamera();
+    public static Camera getCamera(Minecraft client) {
+        return client.gameRenderer.mainCamera();
     }
 
-    public static boolean isConnectedToLocalServer(MinecraftClient client) {
-        return client.isConnectedToLocalServer();
+    public static boolean isConnectedToLocalServer(Minecraft client) {
+        return client.hasSingleplayerServer();
     }
 
-    public static void reloadWorldRenderer(MinecraftClient client) {
+    public static void reloadWorldRenderer(Minecraft client) {
         boolean alternate = getRenderControlFlag();
-        if (!alternate && client.world == null) {
+        if (!alternate && client.level == null) {
             return;
         }
-        client.worldRenderer.reload();
+        client.levelRenderer.resetLevelRenderData();
     }
 
     public static void setRenderControlFlag(boolean value) {

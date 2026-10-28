@@ -26,8 +26,8 @@ import dev.echo.client.utils.interaction.EntityInteractions;
 import dev.echo.client.utils.items.InventoryItems;
 import dev.echo.client.utils.targeting.EntityPredicates;
 import dev.echo.client.utils.targeting.TargetSelection;
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.util.hit.EntityHitResult;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.phys.EntityHitResult;
 
 /** Shield-breaking attack input, axe selection, timing, stun follow-up and own-shield restoration. */
 public class ShieldBreakerFeature extends Feature {
@@ -52,9 +52,9 @@ public class ShieldBreakerFeature extends Feature {
     private ActionTimer attackTimer;
     private ActionTimer switchTimer;
     private int selectedAxeSlot;
-    private PlayerEntity shieldTarget;
-    private PlayerEntity previousShieldTarget;
-    private PlayerEntity timedAttackTarget;
+    private Player shieldTarget;
+    private Player previousShieldTarget;
+    private Player timedAttackTarget;
     private boolean attackDelayActive;
     private boolean switchDelayActive;
     private boolean ownShieldReleased;
@@ -161,7 +161,7 @@ public class ShieldBreakerFeature extends Feature {
         }
         TargetsFeature.shieldBreakActive = false;
         if (shieldTarget != null) {
-            PlayerEntity target = shieldTarget;
+            Player target = shieldTarget;
             shieldTarget = null;
             if (InventoryItems.holdsAxe()) addShieldAttack(event, target);
             return;
@@ -176,14 +176,14 @@ public class ShieldBreakerFeature extends Feature {
         if (restoreShieldRequested) {
             restoreShieldRequested = false;
             ownShieldReleased = false;
-            if (KeybindingCache.isPressed(client.options.useKey) && EntityInteractions.holdsShield()) {
-                client.options.useKey.setPressed(true);
+            if (KeybindingCache.isPressed(client.options.keyUse) && EntityInteractions.holdsShield()) {
+                client.options.keyUse.setDown(true);
                 if (!event.hasClicks()) event.addClick();
             }
             return;
         }
-        if (KeybindingCache.isPressed(client.options.useKey)) {
-            client.options.useKey.setPressed(false);
+        if (KeybindingCache.isPressed(client.options.keyUse)) {
+            client.options.keyUse.setDown(false);
             event.setClickCount(0);
         } else {
             ownShieldReleased = false;
@@ -194,8 +194,8 @@ public class ShieldBreakerFeature extends Feature {
         if (!event.hasClicks() || !passesItemConditions()) return;
         if (DeferredActionQueue.hasPendingActions() && !DeferredActionQueue.contains(this)) return;
         if (EntityInteractions.isUsingOffhand()) return;
-        PlayerEntity target = findShieldTarget();
-        if (target == null || client.attackCooldown > 0 || AttackCooldownTracker.hasNonFireHurtWindow(target)) return;
+        Player target = findShieldTarget();
+        if (target == null || client.missTime > 0 || AttackCooldownTracker.hasNonFireHurtWindow(target)) return;
         if (InventoryItems.holdsAxe()) {
             addShieldAttack(event, target);
             return;
@@ -211,9 +211,9 @@ public class ShieldBreakerFeature extends Feature {
     private void handleNormalAttack(AttackKeyEvent event) {
         if (!passesItemConditions()) return;
         if (DeferredActionQueue.hasPendingActions() && !DeferredActionQueue.contains(this)) return;
-        PlayerEntity target = findShieldTarget();
+        Player target = findShieldTarget();
         if (target == null) { resetShieldAttackTiming(); return; }
-        if (EntityInteractions.isBlocking() || client.attackCooldown > 0
+        if (EntityInteractions.isBlocking() || client.missTime > 0
                 || AttackCooldownTracker.hasNonFireHurtWindow(target)) return;
         if (!InventoryItems.holdsAxe() || attackDelayActive) return;
         if (!switchTimer.hasElapsedMillis((double) attackDelay.sampleGaussian())) return;
@@ -224,7 +224,7 @@ public class ShieldBreakerFeature extends Feature {
         if (!mode.isSelected(modeOption2) || isOutsideWorld()) return;
         if (MinecraftRenderState.getScreen() != null || !passesItemConditions()) return;
         if (DeferredActionQueue.hasPendingActions() && !DeferredActionQueue.contains(this)) return;
-        PlayerEntity target = findShieldTarget();
+        Player target = findShieldTarget();
         if (target == null) { resetShieldAttackTiming(); return; }
         if (target != timedAttackTarget) {
             timedAttackTarget = target;
@@ -232,7 +232,7 @@ public class ShieldBreakerFeature extends Feature {
             switchTimer.reset();
         }
         if (unblockTickPending || EntityInteractions.isBlocking() || InventoryItems.holdsAxe()) return;
-        if (client.attackCooldown > 0 || AttackCooldownTracker.hasNonFireHurtWindow(target)) return;
+        if (client.missTime > 0 || AttackCooldownTracker.hasNonFireHurtWindow(target)) return;
         if (!autoSwap.getValue() || switchDelayActive) return;
         if (!attackTimer.hasElapsedMillis((double) reactionDelay.sampleGaussian())) return;
         int slot = findAxeSlot();
@@ -243,7 +243,7 @@ public class ShieldBreakerFeature extends Feature {
         switchTimer.reset();
     }
 
-    private void addShieldAttack(AttackKeyEvent event, PlayerEntity target) {
+    private void addShieldAttack(AttackKeyEvent event, Player target) {
         if (!event.hasClicks()) event.addClick();
         TargetsFeature.currentTarget = target;
         if (stun.getValue()) previousShieldTarget = target;
@@ -251,9 +251,9 @@ public class ShieldBreakerFeature extends Feature {
         switchTimer.reset();
     }
 
-    private PlayerEntity findShieldTarget() {
-        if (!(client.crosshairTarget instanceof EntityHitResult hit)
-                || !(hit.getEntity() instanceof PlayerEntity target)) return null;
+    private Player findShieldTarget() {
+        if (!(client.hitResult instanceof EntityHitResult hit)
+                || !(hit.getEntity() instanceof Player target)) return null;
         if (!EntityPredicates.isBlocking(target) || EntityPredicates.isOutsideBlockingArc(target)) return null;
         if (!TargetSelection.isValidTarget(target) || TargetSelection.resolveTarget(target) != target) return null;
         return target;
@@ -272,9 +272,9 @@ public class ShieldBreakerFeature extends Feature {
         if (!mode.isSelected(modeOption2) || !unblockOwnShield.getValue() || ownShieldReleased) return;
         if (isOutsideWorld() || MinecraftRenderState.getScreen() != null || !passesItemConditions()) return;
         if (DeferredActionQueue.hasPendingActions() && !DeferredActionQueue.contains(this)) return;
-        PlayerEntity target = findShieldTarget();
+        Player target = findShieldTarget();
         if (target == null || !EntityInteractions.isBlocking() || AttackCooldownTracker.hasNonFireHurtWindow(target)) return;
-        client.options.useKey.setPressed(false);
+        client.options.keyUse.setDown(false);
         EntityInteractions.stopUsingItem();
         ownShieldReleased = true;
         unblockTickPending = true;
@@ -321,7 +321,7 @@ public class ShieldBreakerFeature extends Feature {
 
     private static void initializePlayerEntityClass() {
         try {
-            Class.forName(PlayerEntity.class.getName(), true, PlayerEntity.class.getClassLoader());
+            Class.forName(Player.class.getName(), true, Player.class.getClassLoader());
         } catch (ClassNotFoundException failure) {
             throw new IllegalStateException("Resolved class initialization failed", failure);
         }

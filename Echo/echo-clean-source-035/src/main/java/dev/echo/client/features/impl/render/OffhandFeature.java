@@ -7,10 +7,10 @@ import dev.echo.client.features.hud.EchoHudElement;
 import dev.echo.client.hud.HudElementLayout;
 import dev.echo.client.hud.HudElementType;
 import dev.echo.client.hud.HudRenderer;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.player.LocalPlayer;
+import net.minecraft.world.item.ItemStack;
 import dev.echo.client.bootstrap.CatalogText;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.network.ClientPlayerEntity;
-import net.minecraft.item.ItemStack;
 
 /** Offhand cell using the hotbar's render-eligibility policy. */
 public class OffhandFeature extends EchoHudElement {
@@ -21,8 +21,8 @@ public class OffhandFeature extends EchoHudElement {
 
     @Override
     protected boolean shouldRender() {
-        ClientPlayerEntity player = MinecraftClient.getInstance().player;
-        return player != null && !player.getOffHandStack().isEmpty()
+        LocalPlayer player = Minecraft.getInstance().player;
+        return player != null && !player.getOffhandItem().isEmpty()
                 && FeatureManager.find(HotbarFeature.class)
                         .map(feature -> ((HotbarFeature) feature).canRenderHotbar()).orElse(false);
     }

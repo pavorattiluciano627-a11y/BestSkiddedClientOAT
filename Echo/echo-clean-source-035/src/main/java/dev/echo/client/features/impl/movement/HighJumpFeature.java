@@ -11,11 +11,11 @@ import dev.echo.client.setting.ChoiceSetting;
 import dev.echo.client.setting.FloatSetting;
 import dev.echo.client.setting.IntSetting;
 import dev.echo.client.utils.strings.Concat;
-import net.minecraft.block.ShulkerBoxBlock;
-import net.minecraft.client.gui.screen.ingame.ShulkerBoxScreen;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.Box;
-import net.minecraft.util.math.Vec3d;
+import net.minecraft.client.gui.screens.inventory.ShulkerBoxScreen;
+import net.minecraft.core.BlockPos;
+import net.minecraft.world.level.block.ShulkerBoxBlock;
+import net.minecraft.world.phys.AABB;
+import net.minecraft.world.phys.Vec3;
 
 /** Normal jump boosting and shulker interaction with the original twenty-tick trigger window. */
 public class HighJumpFeature extends Feature {
@@ -25,7 +25,7 @@ public class HighJumpFeature extends Feature {
     private static ChoiceSetting mode;
     private static FloatSetting lift;
     private static IntSetting ticks;
-    private net.minecraft.util.math.BlockPos pendingPlacement;
+    private net.minecraft.core.BlockPos pendingPlacement;
     private int placementTimeoutTicks;
     private int remainingJumpTicks;
 
@@ -48,7 +48,7 @@ public class HighJumpFeature extends Feature {
         if (isOutsideWorld() || !mode.isSelected(NORMAL_MODE)) {
             return;
         }
-        if (!event.jump || !client.player.isOnGround()) {
+        if (!event.jump || !client.player.onGround()) {
             return;
         }
         remainingJumpTicks = ticks.getValue();
@@ -63,7 +63,7 @@ public class HighJumpFeature extends Feature {
         if (!isShulkerBox(position) || !isPlayerNear(position)) {
             return;
         }
-        pendingPlacement = position.toImmutable();
+        pendingPlacement = position.immutable();
         placementTimeoutTicks = PLACEMENT_TIMEOUT;
     }
 
@@ -95,12 +95,12 @@ public class HighJumpFeature extends Feature {
         if (remainingJumpTicks <= 0) {
             return;
         }
-        if (client.player.hasVehicle() || client.player.isTouchingWater() || client.player.isInLava()) {
+        if (client.player.isPassenger() || client.player.isInWater() || client.player.isInLava()) {
             remainingJumpTicks = 0;
             return;
         }
-        Vec3d velocity = client.player.getVelocity();
-        client.player.setVelocity(velocity.x, Math.max(velocity.y, lift.getValue()), velocity.z);
+        Vec3 velocity = client.player.getDeltaMovement();
+        client.player.setDeltaMovement(velocity.x, Math.max(velocity.y, lift.getValue()), velocity.z);
         client.player.setOnGround(false);
         remainingJumpTicks--;
     }
@@ -109,8 +109,8 @@ public class HighJumpFeature extends Feature {
     public void onDisable() {
         super.onDisable();
         try {
-            Class.forName(net.minecraft.util.math.BlockPos.class.getName(), true,
-                    net.minecraft.util.math.BlockPos.class.getClassLoader());
+            Class.forName(net.minecraft.core.BlockPos.class.getName(), true,
+                    net.minecraft.core.BlockPos.class.getClassLoader());
         } catch (ClassNotFoundException failure) {
             throw new IllegalStateException("Resolved class initialization failed", failure);
         }
@@ -120,11 +120,11 @@ public class HighJumpFeature extends Feature {
     }
 
     private boolean isShulkerBox(BlockPos position) {
-        return client.world.getBlockState(position).getBlock() instanceof ShulkerBoxBlock;
+        return client.level.getBlockState(position).getBlock() instanceof ShulkerBoxBlock;
     }
 
     private boolean isPlayerNear(BlockPos position) {
-        return client.player.getBoundingBox().intersects(new Box(position).expand(0.25));
+        return client.player.getBoundingBox().intersects(new AABB(position).inflate(0.25));
     }
 
     private void clearJumpState() {

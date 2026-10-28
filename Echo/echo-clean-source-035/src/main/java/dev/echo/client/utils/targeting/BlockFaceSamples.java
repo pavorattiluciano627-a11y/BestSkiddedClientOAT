@@ -3,12 +3,12 @@ package dev.echo.client.utils.targeting;
 import dev.echo.client.MinecraftAccess;
 import java.util.Arrays;
 import java.util.concurrent.ThreadLocalRandom;
-import net.minecraft.util.hit.BlockHitResult;
-import net.minecraft.util.hit.HitResult;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.Direction;
-import net.minecraft.util.math.Vec3d;
-import net.minecraft.world.RaycastContext;
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
+import net.minecraft.world.level.ClipContext;
+import net.minecraft.world.phys.BlockHitResult;
+import net.minecraft.world.phys.HitResult;
+import net.minecraft.world.phys.Vec3;
 
 /** Whole block-face sampler; original key, marker and cache domains remain explicit. */
 public final class BlockFaceSamples implements MinecraftAccess {
@@ -23,24 +23,24 @@ public final class BlockFaceSamples implements MinecraftAccess {
     private BlockFaceSamples() {
     }
 
-    public static Vec3d findClearAimPoint(BlockPos position, float partialTick) {
+    public static Vec3 findClearAimPoint(BlockPos position, float partialTick) {
         if (position == null) {
             return null;
         }
-        if (CLIENT.player == null || CLIENT.world == null) {
-            return Vec3d.ofCenter(position);
+        if (CLIENT.player == null || CLIENT.level == null) {
+            return Vec3.atCenterOf(position);
         }
         // The original always supplies 1.0F here; partialTick is not read.
-        Vec3d eye = CLIENT.player.getCameraPosVec(1.0F);
-        Vec3d center = Vec3d.ofCenter(position);
-        Vec3d fromCenter = eye.subtract(center);
+        Vec3 eye = CLIENT.player.getEyePosition(1.0F);
+        Vec3 center = Vec3.atCenterOf(position);
+        Vec3 fromCenter = eye.subtract(center);
         Direction[] faces = Direction.values().clone();
         Arrays.sort(faces, (first, second) -> compareFacing(fromCenter, first, second));
         for (Direction face : faces) {
             if (directionDot(face, fromCenter) <= 0.0) {
                 continue;
             }
-            Vec3d clearPoint = findOnFace(eye, position, center, face);
+            Vec3 clearPoint = findOnFace(eye, position, center, face);
             if (clearPoint != null) {
                 return clearPoint;
             }
@@ -48,35 +48,35 @@ public final class BlockFaceSamples implements MinecraftAccess {
         return center;
     }
 
-    private static int compareFacing(Vec3d fromCenter, Direction first, Direction second) {
+    private static int compareFacing(Vec3 fromCenter, Direction first, Direction second) {
         return Double.compare(directionDot(second, fromCenter), directionDot(first, fromCenter));
     }
 
-    private static double directionDot(Direction direction, Vec3d displacement) {
+    private static double directionDot(Direction direction, Vec3 displacement) {
         // Multiplication is intentional: a zero component multiplied by infinity is NaN.
-        return direction.getOffsetX() * displacement.x
-                + direction.getOffsetY() * displacement.y
-                + direction.getOffsetZ() * displacement.z;
+        return direction.getStepX() * displacement.x
+                + direction.getStepY() * displacement.y
+                + direction.getStepZ() * displacement.z;
     }
 
-    public static boolean rayHitsBlock(Vec3d start, Vec3d point, BlockPos expectedBlock) {
-        if (CLIENT.world == null || CLIENT.player == null) {
+    public static boolean rayHitsBlock(Vec3 start, Vec3 point, BlockPos expectedBlock) {
+        if (CLIENT.level == null || CLIENT.player == null) {
             return false;
         }
-        Vec3d direction = point.subtract(start);
-        if (direction.lengthSquared() < 1.0E-8) {
+        Vec3 direction = point.subtract(start);
+        if (direction.lengthSqr() < 1.0E-8) {
             return true;
         }
-        Vec3d end = start.add(direction.normalize().multiply(CLIENT.player.getBlockInteractionRange()));
-        BlockHitResult hit = CLIENT.world.raycast(new RaycastContext(start, end,
-                RaycastContext.ShapeType.OUTLINE, RaycastContext.FluidHandling.NONE, CLIENT.player));
+        Vec3 end = start.add(direction.normalize().scale(CLIENT.player.blockInteractionRange()));
+        BlockHitResult hit = CLIENT.level.clip(new ClipContext(start, end,
+                ClipContext.Block.OUTLINE, ClipContext.Fluid.NONE, CLIENT.player));
         return hit.getType() == HitResult.Type.BLOCK && hit.getBlockPos().equals(expectedBlock);
     }
 
-    private static Vec3d findOnFace(Vec3d eye, BlockPos position, Vec3d center, Direction face) {
-        double faceX = center.x + face.getOffsetX() * 0.5;
-        double faceY = center.y + face.getOffsetY() * 0.5;
-        double faceZ = center.z + face.getOffsetZ() * 0.5;
+    private static Vec3 findOnFace(Vec3 eye, BlockPos position, Vec3 center, Direction face) {
+        double faceX = center.x + face.getStepX() * 0.5;
+        double faceY = center.y + face.getStepY() * 0.5;
+        double faceZ = center.z + face.getStepZ() * 0.5;
         Direction.Axis axis = face.getAxis();
         double towardEyeU;
         double towardEyeV;
@@ -112,7 +112,7 @@ public final class BlockFaceSamples implements MinecraftAccess {
                 {0.0, -towardEyeV * 0.3}
         };
         for (double[] offset : offsets) {
-            Vec3d point = offsetOnFace(axis, faceX, faceY, faceZ, offset[0], offset[1]);
+            Vec3 point = offsetOnFace(axis, faceX, faceY, faceZ, offset[0], offset[1]);
             if (rayHitsBlock(eye, point, position)) {
                 return point;
             }
@@ -120,11 +120,11 @@ public final class BlockFaceSamples implements MinecraftAccess {
         return null;
     }
 
-    private static Vec3d offsetOnFace(Direction.Axis axis, double x, double y, double z, double u, double v) {
+    private static Vec3 offsetOnFace(Direction.Axis axis, double x, double y, double z, double u, double v) {
         return switch (axis) {
-            case X -> new Vec3d(x, y + u, z + v);
-            case Y -> new Vec3d(x + u, y, z + v);
-            case Z -> new Vec3d(x + u, y + v, z);
+            case X -> new Vec3(x, y + u, z + v);
+            case Y -> new Vec3(x + u, y, z + v);
+            case Z -> new Vec3(x + u, y + v, z);
             default -> throw new MatchException(null, null);
         };
     }

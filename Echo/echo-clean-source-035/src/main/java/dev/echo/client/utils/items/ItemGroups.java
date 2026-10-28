@@ -4,13 +4,13 @@ import dev.echo.client.setting.list.RegistryEntryGroup;
 import dev.echo.client.text.SegmentedText;
 import java.util.ArrayList;
 import java.util.List;
-import net.minecraft.component.DataComponentTypes;
-import net.minecraft.item.Item;
-import net.minecraft.item.ItemStack;
-import net.minecraft.item.Items;
-import net.minecraft.item.MaceItem;
-import net.minecraft.registry.tag.ItemTags;
-import net.minecraft.registry.tag.TagKey;
+import net.minecraft.core.component.DataComponents;
+import net.minecraft.tags.ItemTags;
+import net.minecraft.tags.TagKey;
+import net.minecraft.world.item.Item;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
+import net.minecraft.world.item.MaceItem;
 
 /** Lazily initialized, shared item-group objects with fresh outer-list copies. */
 public final class ItemGroups {
@@ -18,7 +18,7 @@ public final class ItemGroups {
     }
 
     private static RegistryEntryGroup<Item> createTagGroup(CharSequence label, TagKey<Item> tag) {
-        return new RegistryEntryGroup<>(label, item -> new ItemStack(item).isIn(tag));
+        return new RegistryEntryGroup<>(label, item -> new ItemStack(item).is(tag));
     }
 
     private static List<RegistryEntryGroup<Item>> createGroups() {
@@ -38,7 +38,7 @@ public final class ItemGroups {
         groups.add(createTagGroup(SegmentedText.literal("Spears"), ItemTags.SPEARS));
         groups.add(createTagGroup(SegmentedText.literal("Planks"), ItemTags.PLANKS));
         groups.add(new RegistryEntryGroup<>(SegmentedText.literal("Food"),
-                item -> new ItemStack(item).contains(DataComponentTypes.FOOD)));
+                item -> new ItemStack(item).has(DataComponents.FOOD)));
         return groups;
     }
 

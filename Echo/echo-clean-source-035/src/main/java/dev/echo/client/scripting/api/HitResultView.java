@@ -1,8 +1,8 @@
 package dev.echo.client.scripting.api;
 
-import net.minecraft.util.hit.BlockHitResult;
-import net.minecraft.util.hit.EntityHitResult;
-import net.minecraft.util.hit.HitResult;
+import net.minecraft.world.phys.BlockHitResult;
+import net.minecraft.world.phys.EntityHitResult;
+import net.minecraft.world.phys.HitResult;
 
 public class HitResultView {
     private final HitResult hit;
@@ -16,7 +16,7 @@ public class HitResultView {
     }
 
     public Vector3View getPosition() {
-        return new Vector3View(hit.getPos());
+        return new Vector3View(hit.getLocation());
     }
 
     public Vector3iView getBlockPosition() {

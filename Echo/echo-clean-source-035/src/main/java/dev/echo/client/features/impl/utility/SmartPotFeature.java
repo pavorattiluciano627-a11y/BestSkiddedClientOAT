@@ -15,8 +15,8 @@ import dev.echo.client.setting.FloatRangeSetting;
 import dev.echo.client.utils.ActionTimer;
 import dev.echo.client.utils.items.InventoryItems;
 import dev.echo.client.utils.items.PotionItems;
-import net.minecraft.entity.effect.StatusEffects;
-import net.minecraft.util.math.Vec3d;
+import net.minecraft.world.effect.MobEffects;
+import net.minecraft.world.phys.Vec3;
 
 /** Healing/buff selection with independently sampled aiming, use and restoration delays. */
 public class SmartPotFeature extends Feature {
@@ -100,27 +100,27 @@ public class SmartPotFeature extends Feature {
 
     private void selectBuffPotions() {
         if (!autoBuff.getValue()) return;
-        if (angleCheck.getValue() && client.player.getPitch() < 90.0F - fov.sampleUniform()) return;
-        if (client.player.hasStatusEffect(StatusEffects.SPEED)
-                && client.player.hasStatusEffect(StatusEffects.STRENGTH)) return;
+        if (angleCheck.getValue() && client.player.getXRot() < 90.0F - fov.sampleUniform()) return;
+        if (client.player.hasEffect(MobEffects.SPEED)
+                && client.player.hasEffect(MobEffects.STRENGTH)) return;
 
         // These <= resets are literal original behavior, including repeated calls in the same tick.
-        if (speedAttemptTick != -1 && client.player.age <= speedAttemptTick) speedAttemptTick = -1;
-        if (strengthAttemptTick != -1 && client.player.age <= strengthAttemptTick) strengthAttemptTick = -1;
-        if (!client.player.hasStatusEffect(StatusEffects.SPEED) && client.player.age > speedAttemptTick) {
+        if (speedAttemptTick != -1 && client.player.tickCount <= speedAttemptTick) speedAttemptTick = -1;
+        if (strengthAttemptTick != -1 && client.player.tickCount <= strengthAttemptTick) strengthAttemptTick = -1;
+        if (!client.player.hasEffect(MobEffects.SPEED) && client.player.tickCount > speedAttemptTick) {
             if (useMatchingHeldPotion(PotionItems.holdsSpeedPotion())) {
-                speedAttemptTick = client.player.age;
+                speedAttemptTick = client.player.tickCount;
             } else {
                 int slot = PotionItems.findSpeedPotion();
-                if (slot != -1 && selectPotion(slot)) speedAttemptTick = client.player.age;
+                if (slot != -1 && selectPotion(slot)) speedAttemptTick = client.player.tickCount;
             }
         }
-        if (client.player.hasStatusEffect(StatusEffects.STRENGTH) || client.player.age <= strengthAttemptTick) return;
+        if (client.player.hasEffect(MobEffects.STRENGTH) || client.player.tickCount <= strengthAttemptTick) return;
         if (useMatchingHeldPotion(PotionItems.holdsStrengthPotion())) {
-            strengthAttemptTick = client.player.age;
+            strengthAttemptTick = client.player.tickCount;
         } else {
             int slot = PotionItems.findStrengthPotion();
-            if (slot != -1 && selectPotion(slot)) strengthAttemptTick = client.player.age;
+            if (slot != -1 && selectPotion(slot)) strengthAttemptTick = client.player.tickCount;
         }
     }
 
@@ -130,10 +130,10 @@ public class SmartPotFeature extends Feature {
         if (autoAim.getValue() && silentAim.getValue()) {
             pitch = rotations().effectiveRotation().pitch();
         } else {
-            pitch = client.player.getPitch();
+            pitch = client.player.getXRot();
         }
         boolean angleAllowed = !angleCheck.getValue() || pitch >= minimumPitch;
-        return client.player.isOnGround() && needsHealing() && angleAllowed;
+        return client.player.onGround() && needsHealing() && angleAllowed;
     }
 
     private boolean selectPotion(int slot) {
@@ -168,7 +168,7 @@ public class SmartPotFeature extends Feature {
     }
 
     private boolean canAct() {
-        return !isOutsideWorld() && client.currentScreen == null;
+        return !isOutsideWorld() && client.gui.screen() == null;
     }
 
     private boolean hasHealingPotion() {
@@ -185,7 +185,7 @@ public class SmartPotFeature extends Feature {
 
     private void aimDownward() {
         float minimumPitch = 90.0F - fov.sampleUniform();
-        Vec3d point = client.player.getEyePos().add(Vec3d.fromPolar(Math.max(minimumPitch, 89.9F), client.player.getYaw()));
+        Vec3 point = client.player.getEyePosition().add(Vec3.directionFromRotation(Math.max(minimumPitch, 89.9F), client.player.getYRot()));
         RotationSettings settings = RotationSettings.uniform(
                 silentAim.getValue() ? RotationVisibility.SILENT : RotationVisibility.VISIBLE,
                 AimTransition.EASED, 450.0F);

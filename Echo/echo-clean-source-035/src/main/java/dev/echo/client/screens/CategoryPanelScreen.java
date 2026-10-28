@@ -30,11 +30,12 @@ import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import net.minecraft.client.gui.Click;
-import net.minecraft.client.gui.DrawContext;
-import net.minecraft.client.input.CharInput;
-import net.minecraft.client.input.KeyInput;
-import net.minecraft.text.Text;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
+import dev.echo.client.input.CharacterInputModifiers;
+import net.minecraft.client.input.CharacterEvent;
+import net.minecraft.client.input.KeyEvent;
+import net.minecraft.client.input.MouseButtonEvent;
+import net.minecraft.network.chat.Component;
 
 /**
  * Original alternate category-panel screen, including draggable category order,
@@ -65,7 +66,7 @@ public class CategoryPanelScreen extends EchoScreen implements MinecraftAccess {
 
     /** Preserves the original allocation/publication sequence and zero-filled slots. */
     public CategoryPanelScreen() {
-        super(Text.literal(""));
+        super(Component.literal(""));
         visibility = new Tween(Easing.EASE_OUT_BACK, 50.0);
         navigation = new NavigationSidebar();
         configs = new ConfigsPanel(this);
@@ -106,9 +107,9 @@ public class CategoryPanelScreen extends EchoScreen implements MinecraftAccess {
     }
 
     @Override
-    public void render(DrawContext context, int mouseX, int mouseY, float tickDelta) {
+    public void extractRenderState(GuiGraphicsExtractor context, int mouseX, int mouseY, float tickDelta) {
         if (visibility.startValue() == 1.0 && visibility.isFinished()) {
-            close();
+            onClose();
             return;
         }
         int logicalX = (int) toUiX(mouseX);
@@ -266,7 +267,7 @@ public class CategoryPanelScreen extends EchoScreen implements MinecraftAccess {
     }
 
     @Override
-    public boolean keyPressed(KeyInput input) {
+    public boolean keyPressed(KeyEvent input) {
         if (navigation.isSelected(NavigationPage.CONFIGS) && configs.keyPressed(input)) {
             return true;
         }
@@ -307,7 +308,7 @@ public class CategoryPanelScreen extends EchoScreen implements MinecraftAccess {
     }
 
     @Override
-    public boolean mouseClicked(Click click, boolean doubled) {
+    public boolean mouseClicked(MouseButtonEvent click, boolean doubled) {
         float mouseX = toUiX((float) click.x());
         float mouseY = toUiY((float) click.y());
         if (bindingCard != null) {
@@ -354,14 +355,14 @@ public class CategoryPanelScreen extends EchoScreen implements MinecraftAccess {
                     return true;
                 }
             } else {
-                return panel.mouseClicked(new Click(mouseX, mouseY, click.buttonInfo()));
+                return panel.mouseClicked(new MouseButtonEvent(mouseX, mouseY, click.buttonInfo()));
             }
         }
         return super.mouseClicked(click, doubled);
     }
 
     @Override
-    public boolean mouseDragged(Click click, double deltaX, double deltaY) {
+    public boolean mouseDragged(MouseButtonEvent click, double deltaX, double deltaY) {
         float mouseX = toUiX((float) click.x());
         float mouseY = toUiY((float) click.y());
         if (navigation.mouseDragged(mouseX, mouseY, click.button(), width, height)) {
@@ -379,7 +380,7 @@ public class CategoryPanelScreen extends EchoScreen implements MinecraftAccess {
     }
 
     @Override
-    public boolean mouseReleased(Click click) {
+    public boolean mouseReleased(MouseButtonEvent click) {
         float mouseX = toUiX((float) click.x());
         float mouseY = toUiY((float) click.y());
         if (navigation.mouseReleased(click.button())) {
@@ -431,7 +432,7 @@ public class CategoryPanelScreen extends EchoScreen implements MinecraftAccess {
     }
 
     @Override
-    public boolean charTyped(CharInput input) {
+    public boolean charTyped(CharacterEvent input) {
         if (navigation.isSelected(NavigationPage.CONFIGS) && configs.charTyped(input)) {
             return true;
         }
@@ -440,7 +441,7 @@ public class CategoryPanelScreen extends EchoScreen implements MinecraftAccess {
         }
         if (ScreenManager.focusedSetting != null) {
             for (CategoryPanel panel : panels) {
-                panel.charTyped((char) input.codepoint(), input.modifiers());
+                panel.charTyped((char) input.codepoint(), CharacterInputModifiers.modifiers(input));
             }
             return true;
         }
@@ -454,7 +455,7 @@ public class CategoryPanelScreen extends EchoScreen implements MinecraftAccess {
     }
 
     @Override
-    public boolean shouldPause() {
+    public boolean isPauseScreen() {
         return false;
     }
 

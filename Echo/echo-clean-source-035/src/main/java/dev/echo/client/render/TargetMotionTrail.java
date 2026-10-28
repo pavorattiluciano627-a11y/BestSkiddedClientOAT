@@ -5,12 +5,12 @@ import dev.echo.client.render.math.RenderMath;
 import dev.echo.client.setting.ColorSetting;
 import dev.echo.client.utils.targeting.TargetSelection;
 import java.util.ArrayDeque;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.entity.LivingEntity;
+import net.minecraft.client.Minecraft;
+import net.minecraft.world.entity.LivingEntity;
 
 /** Target-centered orbit history with fading ribbons and the original three-part highlight band. */
 public class TargetMotionTrail {
-    private static final MinecraftClient CLIENT = MinecraftClient.getInstance();
+    private static final Minecraft CLIENT = Minecraft.getInstance();
     private static final double FULL_CIRCLE = Math.PI * 2;
     private static final double HEIGHT_PERIOD_SECONDS = 1.7;
     private static final double HEIGHT_FRACTION = 0.9;
@@ -43,7 +43,7 @@ public class TargetMotionTrail {
     }
 
     public void render(WorldRenderEvent event) {
-        if (CLIENT.player == null || CLIENT.world == null) {
+        if (CLIENT.player == null || CLIENT.level == null) {
             return;
         }
         LivingEntity target = TargetSelection.recentlyAttacked(400);
@@ -59,17 +59,17 @@ public class TargetMotionTrail {
             lastSampleMillis = 0L;
         }
         float tickProgress = event.getTickProgress();
-        double previousX = target.lastX;
+        double previousX = target.xo;
         double currentX = target.getX();
         double x = previousX + (currentX - previousX) * (double) tickProgress;
-        double previousY = target.lastY;
+        double previousY = target.yo;
         double currentY = target.getY();
         double y = previousY + (currentY - previousY) * (double) tickProgress;
-        double previousZ = target.lastZ;
+        double previousZ = target.zo;
         double currentZ = target.getZ();
         double z = previousZ + (currentZ - previousZ) * (double) tickProgress;
-        double radius = (double) target.getWidth() * 0.85 / Math.cos(Math.PI / (double) segments);
-        double targetHeight = target.getHeight();
+        double radius = (double) target.getBbWidth() * 0.85 / Math.cos(Math.PI / (double) segments);
+        double targetHeight = target.getBbHeight();
         double elapsedSeconds = (double) (now - targetAcquiredMillis) / 1000.0;
         double heightPhase = (1.0 - Math.cos(elapsedSeconds / HEIGHT_PERIOD_SECONDS * FULL_CIRCLE)) * 0.5;
         double height = heightPhase * targetHeight * HEIGHT_FRACTION;

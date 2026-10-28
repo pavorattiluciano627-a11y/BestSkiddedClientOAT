@@ -1,8 +1,8 @@
 package dev.echo.client.hud;
 
-import net.minecraft.entity.EquipmentSlot;
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.item.ItemStack;
+import net.minecraft.world.entity.EquipmentSlot;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.ItemStack;
 
 /**
  * The original HudRenderer's live player inventory references and selection state.
@@ -18,7 +18,7 @@ public final class HudInventoryState {
     private ItemStack offhand = ItemStack.EMPTY;
     private int selectedSlot;
     private float attackCooldown = 1.0f;
-    private PlayerEntity player;
+    private Player player;
 
     /** Initializes every original stack slot with the shared EMPTY object. */
     public HudInventoryState() {
@@ -26,20 +26,20 @@ public final class HudInventoryState {
     }
 
     /** Reads current stacks in original hotbar, selected-slot, armor, offhand order. */
-    public void update(PlayerEntity player) {
+    public void update(Player player) {
         this.player = player;
         if (player == null) {
             reset();
             return;
         }
         for (int slot = 0; slot < 9; slot++) {
-            hotbar[slot] = player.getInventory().getStack(slot);
+            hotbar[slot] = player.getInventory().getItem(slot);
         }
         selectedSlot = Math.max(0, Math.min(8, player.getInventory().getSelectedSlot()));
         for (int slot = 0; slot < 4; slot++) {
-            armor[slot] = player.getEquippedStack(ARMOR_ORDER[slot]);
+            armor[slot] = player.getItemBySlot(ARMOR_ORDER[slot]);
         }
-        offhand = player.getOffHandStack();
+        offhand = player.getOffhandItem();
     }
 
     /** Resets the inventory portion of the HUD to its original no-player defaults. */
@@ -61,7 +61,7 @@ public final class HudInventoryState {
     /** Returns the bounded selected hotbar slot. */
     public int selectedSlot() { return selectedSlot; }
     /** Returns the player whose stacks are currently retained. */
-    public PlayerEntity player() { return player; }
+    public Player player() { return player; }
     /** Returns the original attack-indicator state. */
     public float attackCooldown() { return attackCooldown; }
     /** Stores the attack-indicator value calculated by the owning frame update. */

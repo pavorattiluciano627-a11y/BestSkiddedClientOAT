@@ -5,7 +5,7 @@ import dev.echo.client.events.Subscribe;
 import dev.echo.client.events.window.WindowFocusEvent;
 import dev.echo.client.events.window.WindowPositionEvent;
 import dev.echo.client.events.window.WindowSizeEvent;
-import net.minecraft.client.MinecraftClient;
+import net.minecraft.client.Minecraft;
 import org.lwjgl.PointerBuffer;
 import org.lwjgl.glfw.GLFW;
 import org.lwjgl.glfw.GLFWNativeCocoa;
@@ -42,7 +42,7 @@ public final class NativeWindow implements NativeWindowBackend {
 
     /** Creates a hidden overlay, optionally sharing the main OpenGL context. */
     public NativeWindow(boolean openGl) {
-        mainWindow = MinecraftClient.getInstance().getWindow().getHandle();
+        mainWindow = Minecraft.getInstance().getWindow().handle();
         GLFW.glfwDefaultWindowHints();
         GLFW.glfwWindowHint(GLFW.GLFW_CLIENT_API, openGl ? GLFW.GLFW_OPENGL_API : GLFW.GLFW_NO_API);
         if (openGl) {

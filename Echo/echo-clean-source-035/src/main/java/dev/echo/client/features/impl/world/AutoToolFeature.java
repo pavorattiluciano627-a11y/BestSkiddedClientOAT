@@ -8,11 +8,11 @@ import dev.echo.client.features.Category;
 import dev.echo.client.features.Feature;
 import dev.echo.client.features.FeatureInfo;
 import dev.echo.client.setting.BooleanSetting;
-import net.minecraft.enchantment.EnchantmentHelper;
-import net.minecraft.enchantment.Enchantments;
-import net.minecraft.item.ItemStack;
-import net.minecraft.util.hit.BlockHitResult;
-import net.minecraft.util.math.BlockPos;
+import net.minecraft.core.BlockPos;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.enchantment.EnchantmentHelper;
+import net.minecraft.world.item.enchantment.Enchantments;
+import net.minecraft.world.phys.BlockHitResult;
 
 /** Selects the fastest qualifying hotbar tool and restores the original slot on release. */
 public class AutoToolFeature extends Feature {
@@ -37,10 +37,10 @@ public class AutoToolFeature extends Feature {
         if (isOutsideWorld()) {
             return;
         }
-        if (client.crosshairTarget instanceof BlockHitResult hit
-                && !client.world.getBlockState(hit.getBlockPos()).isAir()
-                && (!requireClick.getValue() || client.options.attackKey.isPressed())
-                && (!requireShift.getValue() || client.options.sneakKey.isPressed())) {
+        if (client.hitResult instanceof BlockHitResult hit
+                && !client.level.getBlockState(hit.getBlockPos()).isAir()
+                && (!requireClick.getValue() || client.options.keyAttack.isDown())
+                && (!requireShift.getValue() || client.options.keyShift.isDown())) {
             int bestSlot = findBestToolSlot(hit.getBlockPos());
             if (bestSlot != -1) {
                 if (previousSlot == -1) {
@@ -61,7 +61,7 @@ public class AutoToolFeature extends Feature {
         int bestSlot = -1;
         float bestSpeed = 1.0f;
         for (int slot = 0; slot < 9; slot++) {
-            ItemStack stack = client.player.getInventory().getStack(slot);
+            ItemStack stack = client.player.getInventory().getItem(slot);
             if (stack.isEmpty()) {
                 continue;
             }
@@ -78,11 +78,11 @@ public class AutoToolFeature extends Feature {
         if (stack.isEmpty()) {
             return 0.0f;
         }
-        float speed = stack.getMiningSpeedMultiplier(client.world.getBlockState(position));
+        float speed = stack.getDestroySpeed(client.level.getBlockState(position));
         if (speed > 1.0f) {
-            var efficiency = client.world.getRegistryManager().getOptionalEntry(Enchantments.EFFICIENCY);
+            var efficiency = client.level.registryAccess().get(Enchantments.EFFICIENCY);
             if (efficiency.isPresent()) {
-                int level = EnchantmentHelper.getLevel(efficiency.get(), stack);
+                int level = EnchantmentHelper.getItemEnchantmentLevel(efficiency.get(), stack);
                 if (level > 0) {
                     speed += level * level + 1;
                 }

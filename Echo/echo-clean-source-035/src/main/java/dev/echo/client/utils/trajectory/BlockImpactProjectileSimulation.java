@@ -1,12 +1,12 @@
 package dev.echo.client.utils.trajectory;
 
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.entity.Entity;
-import net.minecraft.util.hit.BlockHitResult;
-import net.minecraft.util.hit.EntityHitResult;
-import net.minecraft.util.hit.HitResult;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.Vec3d;
+import net.minecraft.client.Minecraft;
+import net.minecraft.core.BlockPos;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.phys.BlockHitResult;
+import net.minecraft.world.phys.EntityHitResult;
+import net.minecraft.world.phys.HitResult;
+import net.minecraft.world.phys.Vec3;
 
 /** Candidate trajectory that retains the exact block impact and expands entity hits with age. */
 public class BlockImpactProjectileSimulation extends ProjectileSimulation {
@@ -16,38 +16,38 @@ public class BlockImpactProjectileSimulation extends ProjectileSimulation {
     private int age;
     private BlockHitResult blockImpact;
 
-    public BlockImpactProjectileSimulation(Vec3d position, Vec3d velocity) {
+    public BlockImpactProjectileSimulation(Vec3 position, Vec3 velocity) {
         this(position, velocity, null);
     }
 
-    public BlockImpactProjectileSimulation(Vec3d position, Vec3d velocity, Entity source) {
+    public BlockImpactProjectileSimulation(Vec3 position, Vec3 velocity, Entity source) {
         super(position, velocity, source);
-        age = source == null ? 0 : source.age;
+        age = source == null ? 0 : source.tickCount;
     }
 
     @Override
     public void step() {
-        if (stopped || MinecraftClient.getInstance().world == null) {
+        if (stopped || Minecraft.getInstance().level == null) {
             return;
         }
         age++;
-        boolean inFluid = !MinecraftClient.getInstance().world.getFluidState(BlockPos.ofFloored(position)).isEmpty();
-        Vec3d end = position.add(velocity);
+        boolean inFluid = !Minecraft.getInstance().level.getFluidState(BlockPos.containing(position)).isEmpty();
+        Vec3 end = position.add(velocity);
         updateLeftOwner(end);
         BlockHitResult blockHit = raycastBlocks(position, end, collisionSource());
         EntityHitResult entityHit = collideEntities(end, Math.max(0.0F, Math.min(0.3F, (age - 2) / 20.0F)));
         if (entityHitComesFirst(blockHit, entityHit)) {
-            stopAt(entityHit.getPos());
+            stopAt(entityHit.getLocation());
             return;
         }
         if (blockHit.getType() != HitResult.Type.MISS) {
-            position = blockHit.getPos();
+            position = blockHit.getLocation();
             blockImpact = blockHit;
             stopped = true;
             return;
         }
         position = end;
-        velocity = velocity.multiply(inFluid ? (double) FLUID_DRAG : (double) AIR_DRAG);
+        velocity = velocity.scale(inFluid ? (double) FLUID_DRAG : (double) AIR_DRAG);
         velocity = velocity.subtract(0.0, GRAVITY, 0.0);
     }
 

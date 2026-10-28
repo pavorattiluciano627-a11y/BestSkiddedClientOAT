@@ -1,13 +1,13 @@
 package dev.echo.client.utils.items;
 
-import net.minecraft.component.DataComponentTypes;
-import net.minecraft.component.type.ItemEnchantmentsComponent;
-import net.minecraft.enchantment.Enchantment;
-import net.minecraft.item.ItemStack;
-import net.minecraft.item.Items;
-import net.minecraft.item.MaceItem;
-import net.minecraft.registry.RegistryKey;
-import net.minecraft.registry.tag.ItemTags;
+import net.minecraft.core.component.DataComponents;
+import net.minecraft.resources.ResourceKey;
+import net.minecraft.tags.ItemTags;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
+import net.minecraft.world.item.MaceItem;
+import net.minecraft.world.item.enchantment.Enchantment;
+import net.minecraft.world.item.enchantment.ItemEnchantments;
 
 /** Item queries whose original bodies contain no application key or custom dispatch. */
 public final class ItemProperties {
@@ -15,11 +15,11 @@ public final class ItemProperties {
     }
 
     public static boolean isFood(ItemStack stack) {
-        return stack.getComponents().contains(DataComponentTypes.FOOD);
+        return stack.getComponents().has(DataComponents.FOOD);
     }
 
     public static boolean isAxe(ItemStack stack) {
-        return stack.isIn(ItemTags.AXES);
+        return stack.is(ItemTags.AXES);
     }
 
     public static boolean isMace(ItemStack stack) {
@@ -27,11 +27,11 @@ public final class ItemProperties {
     }
 
     public static boolean isGlowstone(ItemStack stack) {
-        return stack.isOf(Items.GLOWSTONE);
+        return stack.is(Items.GLOWSTONE);
     }
 
-    public static boolean hasEnchantment(ItemStack stack, RegistryKey<Enchantment> enchantment) {
-        return stack.getOrDefault(DataComponentTypes.ENCHANTMENTS, ItemEnchantmentsComponent.DEFAULT)
-                .getEnchantments().stream().anyMatch(entry -> entry.matchesKey(enchantment));
+    public static boolean hasEnchantment(ItemStack stack, ResourceKey<Enchantment> enchantment) {
+        return stack.getOrDefault(DataComponents.ENCHANTMENTS, ItemEnchantments.EMPTY)
+                .keySet().stream().anyMatch(entry -> entry.is(enchantment));
     }
 }

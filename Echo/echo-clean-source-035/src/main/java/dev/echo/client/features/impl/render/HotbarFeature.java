@@ -10,10 +10,10 @@ import dev.echo.client.hud.HudElementType;
 import dev.echo.client.hud.HudLayout;
 import dev.echo.client.hud.HudRenderer;
 import dev.echo.render.FontAsset;
+import net.minecraft.client.Minecraft;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.ItemStack;
 import dev.echo.client.bootstrap.CatalogText;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.item.ItemStack;
 
 /** Nine live inventory cells, counts and the animated selection indicator. */
 public class HotbarFeature extends EchoHudElement {
@@ -76,10 +76,10 @@ public class HotbarFeature extends EchoHudElement {
     }
 
     boolean canRenderHotbar() {
-        MinecraftClient client = MinecraftClient.getInstance();
-        return client.world != null && client.player != null && !client.player.isSpectator()
-                && client.getCameraEntity() instanceof PlayerEntity
-                && MinecraftClient.getInstance().currentScreen == null
-                && !MinecraftClient.getInstance().options.hudHidden;
+        Minecraft client = Minecraft.getInstance();
+        return client.level != null && client.player != null && !client.player.isSpectator()
+                && client.getCameraEntity() instanceof Player
+                && Minecraft.getInstance().gui.screen() == null
+                && !Minecraft.getInstance().gui.hud.isHidden();
     }
 }

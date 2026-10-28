@@ -62,9 +62,9 @@ import java.util.Map;
 import java.util.Set;
 import java.util.function.Function;
 import java.util.function.Predicate;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.registry.Registry;
-import net.minecraft.registry.RegistryKey;
+import net.minecraft.client.Minecraft;
+import net.minecraft.core.Registry;
+import net.minecraft.resources.ResourceKey;
 import org.lwjgl.glfw.GLFW;
 
 /**
@@ -641,7 +641,7 @@ public final class DashboardController {
 
     private void requestRefresh() {
         if (Echo.featureConfig == null) return;
-        Echo.featureConfig.listAsync().thenAcceptAsync(this::acceptConfigMetadata, MinecraftClient.getInstance());
+        Echo.featureConfig.listAsync().thenAcceptAsync(this::acceptConfigMetadata, Minecraft.getInstance());
     }
 
     /** Original setQuery, including the encompassing catch and ordered partial updates. */
@@ -810,10 +810,10 @@ public final class DashboardController {
     }
 
     private static int guiWidth() {
-        return (int) Math.ceil(MinecraftClient.getInstance().getWindow().getFramebufferWidth() / 2.0);
+        return (int) Math.ceil(Minecraft.getInstance().getWindow().getWidth() / 2.0);
     }
     private static int guiHeight() {
-        return (int) Math.ceil(MinecraftClient.getInstance().getWindow().getFramebufferHeight() / 2.0);
+        return (int) Math.ceil(Minecraft.getInstance().getWindow().getHeight() / 2.0);
     }
     private void updateCanvas() {
         canvas = CanvasMetrics.fit(guiWidth(), guiHeight(), 1920.0f, 1080.0f);
@@ -2157,11 +2157,11 @@ public final class DashboardController {
         registryRows.clear();
         for (T entry : registry) {
             if (!filter.test(entry)) continue;
-            RegistryKey<T> registryKey = registry.getKey(entry).orElse(null);
+            ResourceKey<T> registryKey = registry.getResourceKey(entry).orElse(null);
             if (registryKey == null) continue;
             String label = labelProvider.apply(entry);
-            if (query.isEmpty() || label.toLowerCase(Locale.ROOT).contains(query) || registryKey.getValue().toString().contains(query)) {
-                registryRows.add(new RegistryPickerRow(registryKey.getValue(), label));
+            if (query.isEmpty() || label.toLowerCase(Locale.ROOT).contains(query) || registryKey.identifier().toString().contains(query)) {
+                registryRows.add(new RegistryPickerRow(registryKey.identifier(), label));
             }
         }
         registryRows.sort(Comparator.comparing(RegistryPickerRow::label));
@@ -3171,7 +3171,7 @@ public final class DashboardController {
                     return true;
                 }
                 case V -> {
-                    String clipboard = MinecraftClient.getInstance().keyboard.getClipboard();
+                    String clipboard = Minecraft.getInstance().keyboardHandler.getClipboard();
                     editor.insert(clipboard == null ? "" : clipboard.replace(CLIPBOARD_WINDOWS_NEWLINE, "\n").replace('\r', '\n'));
                     return true;
                 }

@@ -3,34 +3,34 @@ package dev.echo.client.utils.items;
 import dev.echo.client.scripting.api.ItemStackView;
 import dev.echo.client.utils.inventory.SlotAction;
 import dev.echo.client.utils.inventory.SlotPackets;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.entity.player.PlayerInventory;
-import net.minecraft.screen.PlayerScreenHandler;
+import net.minecraft.client.Minecraft;
+import net.minecraft.world.entity.player.Inventory;
+import net.minecraft.world.inventory.InventoryMenu;
 
 /**
  * Live inventory state and screen-slot swaps exposed through the player script view.
  * Recovery applicability is recorded in the accompanying provider receipt.
  */
 public class PlayerInventoryView {
-    private final PlayerInventory inventory;
+    private final Inventory inventory;
 
     /**
      * Retains the supplied inventory without validation or local-player substitution.
      *
      * @param inventory the inventory to wrap, including null
      */
-    public PlayerInventoryView(PlayerInventory inventory) {
+    public PlayerInventoryView(Inventory inventory) {
         this.inventory = inventory;
     }
 
     /** Returns a fresh view of the stack at the original, unmodified inventory index. */
     public ItemStackView getStack(int slot) {
-        return new ItemStackView(inventory.getStack(slot));
+        return new ItemStackView(inventory.getItem(slot));
     }
 
     /** Returns the wrapped inventory's current size. */
     public int size() {
-        return inventory.size();
+        return inventory.getContainerSize();
     }
 
     /** Returns the wrapped inventory's current selected slot. */
@@ -40,7 +40,7 @@ public class PlayerInventoryView {
 
     /** Returns a fresh view of the stack read using the current selected slot. */
     public ItemStackView getSelectedStack() {
-        return new ItemStackView(inventory.getStack(inventory.getSelectedSlot()));
+        return new ItemStackView(inventory.getItem(inventory.getSelectedSlot()));
     }
 
     /**
@@ -50,13 +50,13 @@ public class PlayerInventoryView {
      * @param button the original swap button integer, passed through unchanged
      */
     public void swap(int inventorySlot, int button) {
-        MinecraftClient client = MinecraftClient.getInstance();
-        if (client.interactionManager == null || client.player == null) {
+        Minecraft client = Minecraft.getInstance();
+        if (client.gameMode == null || client.player == null) {
             return;
         }
-        PlayerScreenHandler screenHandler = client.player.playerScreenHandler;
+        InventoryMenu screenHandler = client.player.inventoryMenu;
         SlotPackets.clickSlot(
-                screenHandler.syncId, toScreenSlot(inventorySlot), button, SlotAction.SWAP, client.player);
+                screenHandler.containerId, toScreenSlot(inventorySlot), button, SlotAction.SWAP, client.player);
     }
 
     /** Maps every signed integer using the original player-screen slot layout. */

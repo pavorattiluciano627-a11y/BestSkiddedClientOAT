@@ -1,23 +1,23 @@
 package dev.echo.client.events.render;
 
+import com.mojang.blaze3d.vertex.PoseStack;
 import dev.echo.client.events.Event;
 import dev.echo.client.render.DrawContextAdapter;
 import dev.echo.client.render.UiRenderer;
 import dev.echo.render.texture.TextureView;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.util.math.MatrixStack;
+import net.minecraft.client.Minecraft;
 import org.joml.Matrix4f;
 
 /** HUD render payload. Analysis candidate: linkage and shared renderer names await merge. */
 public class HudRenderEvent extends Event {
-    private MatrixStack matrices;
+    private PoseStack matrices;
     private float tickDelta;
     private DrawContextAdapter drawContext;
     private UiRenderer renderer;
     private TextureView texture;
 
     /** Captures the render frame's original references and interpolation value. */
-    public HudRenderEvent(MatrixStack matrices, float tickDelta, DrawContextAdapter drawContext,
+    public HudRenderEvent(PoseStack matrices, float tickDelta, DrawContextAdapter drawContext,
                           UiRenderer renderer, TextureView texture) {
         this.matrices = matrices;
         this.tickDelta = tickDelta;
@@ -28,7 +28,7 @@ public class HudRenderEvent extends Event {
 
     /** Returns the GUI width using the original fixed factor of two and upward rounding. */
     public int getWidth() {
-        return (int) Math.ceil(MinecraftClient.getInstance().getWindow().getFramebufferWidth() / 2.0);
+        return (int) Math.ceil(Minecraft.getInstance().getWindow().getWidth() / 2.0);
     }
 
     /** Returns a fresh identity matrix, independently of the supplied matrix stack. */
@@ -36,11 +36,11 @@ public class HudRenderEvent extends Event {
 
     /** Returns the GUI height using the original fixed factor of two and upward rounding. */
     public int getHeight() {
-        return (int) Math.ceil(MinecraftClient.getInstance().getWindow().getFramebufferHeight() / 2.0);
+        return (int) Math.ceil(Minecraft.getInstance().getWindow().getHeight() / 2.0);
     }
 
     /** Returns the supplied matrix stack. */
-    public MatrixStack getMatrices() { return matrices; }
+    public PoseStack getMatrices() { return matrices; }
 
     /** Returns the supplied interpolation value. */
     public float getTickDelta() { return tickDelta; }

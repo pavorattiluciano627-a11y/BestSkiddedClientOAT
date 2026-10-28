@@ -1,16 +1,16 @@
 package dev.echo.client.utils.simulation;
 
 import dev.echo.client.MinecraftAccess;
-import net.minecraft.client.world.ClientWorld;
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.util.math.Vec3d;
+import net.minecraft.client.multiplayer.ClientLevel;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.phys.Vec3;
 
 /** Complete functional candidate; original dispatch and guard domains remain explicit obligations. */
 public class PlayerPrediction implements MinecraftAccess {
     private static SimulatedPlayer simulationPlayer;
-    private static ClientWorld simulationWorld;
+    private static ClientLevel simulationWorld;
 
-    public static SimulatedPlayer forWorld(ClientWorld world) {
+    public static SimulatedPlayer forWorld(ClientLevel world) {
         if (simulationPlayer == null || simulationWorld != world) {
             simulationPlayer = new SimulatedPlayer(world);
             simulationWorld = world;
@@ -18,12 +18,12 @@ public class PlayerPrediction implements MinecraftAccess {
         return simulationPlayer;
     }
 
-    public static Vec3d predictDisplacement(PlayerEntity player, float forwardInput, float sidewaysInput) {
-        SimulatedPlayer simulation = forWorld((ClientWorld) player.getEntityWorld());
-        simulation.copyFrom(player, player.getVelocity(), player.getYaw(), player.getPitch(),
+    public static Vec3 predictDisplacement(Player player, float forwardInput, float sidewaysInput) {
+        SimulatedPlayer simulation = forWorld((ClientLevel) player.level());
+        simulation.copyFrom(player, player.getDeltaMovement(), player.getYRot(), player.getXRot(),
                 forwardInput, sidewaysInput, false);
-        simulation.setSneaking(false);
+        simulation.setShiftKeyDown(false);
         simulation.tickPrediction();
-        return simulation.getEntityPos().subtract(player.getEntityPos());
+        return simulation.position().subtract(player.position());
     }
 }

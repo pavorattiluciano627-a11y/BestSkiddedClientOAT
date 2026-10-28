@@ -25,7 +25,7 @@ import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Set;
 import net.fabricmc.loader.api.FabricLoader;
-import net.minecraft.client.MinecraftClient;
+import net.minecraft.client.Minecraft;
 
 /** Deferred terminal cleanup candidate; provider, key/cache and initialization review remains open. */
 public class SelfDestructFeature extends Feature {
@@ -65,8 +65,8 @@ public class SelfDestructFeature extends Feature {
             initializeClass(ScreenManager.class);
             Echo.screenManager.close();
         }
-        initializeClass(MinecraftClient.class);
-        client.send(this::finishSelfDestruct);
+        initializeClass(Minecraft.class);
+        client.schedule(this::finishSelfDestruct);
     }
 
     private void finishSelfDestruct() {

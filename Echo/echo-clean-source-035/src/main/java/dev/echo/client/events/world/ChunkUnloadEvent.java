@@ -2,7 +2,7 @@ package dev.echo.client.events.world;
 
 import dev.echo.client.events.Event;
 import java.lang.invoke.MethodHandles;
-import net.minecraft.util.math.ChunkPos;
+import net.minecraft.world.level.ChunkPos;
 
 /** Chunk coordinate payload published when its block entities are unloaded. */
 public class ChunkUnloadEvent extends Event {

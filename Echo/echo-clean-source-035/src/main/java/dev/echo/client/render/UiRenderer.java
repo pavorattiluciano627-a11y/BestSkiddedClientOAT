@@ -1,5 +1,6 @@
 package dev.echo.client.render;
 
+import com.mojang.blaze3d.pipeline.RenderTarget;
 import dev.echo.client.Echo;
 import dev.echo.render.EffectBatch;
 import dev.echo.render.IndexedTextureEffectBatch;
@@ -22,11 +23,10 @@ import java.util.OptionalDouble;
 import java.util.OptionalInt;
 import java.util.Queue;
 import java.util.function.Supplier;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.font.BakedGlyph;
-import net.minecraft.client.gl.Framebuffer;
-import net.minecraft.entity.LivingEntity;
-import net.minecraft.item.ItemStack;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.font.glyphs.BakedGlyph;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.item.ItemStack;
 import org.joml.Vector4i;
 
 /**
@@ -79,8 +79,8 @@ public class UiRenderer {
         if (capabilities.computeShaders() && capabilities.storageImages()) {
             backdrop = new ComputeBackdropEffect(device, 4);
         } else {
-            Framebuffer framebuffer = MinecraftClient.getInstance().getFramebuffer();
-            backdrop = new RenderPassBackdropEffect(device, 4, framebuffer.textureWidth, framebuffer.textureHeight);
+            RenderTarget framebuffer = Minecraft.getInstance().gameRenderer.mainRenderTarget();
+            backdrop = new RenderPassBackdropEffect(device, 4, framebuffer.width, framebuffer.height);
         }
         images = capabilities.sampledImageArrays()
                 ? new MultiTextureEffectBatch(device, cameraBuffer, false, true, false)
@@ -332,8 +332,8 @@ public class UiRenderer {
                 Vector4i rectangle = scissors.peek();
                 pass.setScissor(rectangle.x, rectangle.y, rectangle.z, rectangle.w);
             } else {
-                var window = MinecraftClient.getInstance().getWindow();
-                pass.setScissor(0, 0, window.getFramebufferWidth(), window.getFramebufferHeight());
+                var window = Minecraft.getInstance().getWindow();
+                pass.setScissor(0, 0, window.getWidth(), window.getHeight());
             }
         });
     }
@@ -356,10 +356,10 @@ public class UiRenderer {
             return;
         }
         resetFrame(Echo.commandEncoder);
-        Framebuffer framebuffer = MinecraftClient.getInstance().getFramebuffer();
+        RenderTarget framebuffer = Minecraft.getInstance().gameRenderer.mainRenderTarget();
         passFactory = () -> commands.beginExternalRenderPass(() -> new MinecraftRenderPass(
-                framebuffer.getColorAttachmentView(), OptionalInt.empty(),
-                framebuffer.getDepthAttachmentView(), OptionalDouble.of(clearDepth())));
+                framebuffer.getColorTextureView(), java.util.Optional.<org.joml.Vector4fc>empty(),
+                framebuffer.getDepthTextureView(), OptionalDouble.of(clearDepth())));
         frameActive = true;
     }
 
@@ -385,9 +385,9 @@ public class UiRenderer {
     }
 
     public void updateBackdrop(CommandEncoder commands, BackdropMode mode) {
-        Framebuffer framebuffer = MinecraftClient.getInstance().getFramebuffer();
-        float scale = Math.min(framebuffer.textureWidth / 1920.0F, framebuffer.textureHeight / 1080.0F);
-        TextureView source = GlTextureBridge.importColor(device, framebuffer.getColorAttachmentView());
+        RenderTarget framebuffer = Minecraft.getInstance().gameRenderer.mainRenderTarget();
+        float scale = Math.min(framebuffer.width / 1920.0F, framebuffer.height / 1080.0F);
+        TextureView source = GlTextureBridge.importColor(device, framebuffer.getColorTextureView());
         BackdropTextures result = backdrop.render(commands, source, source.yFlipped, scale, mode);
         halfResolutionBackdrop = result.halfResolution();
         fullResolutionBackdrop = result.fullResolution();

@@ -16,7 +16,7 @@ public class NoJumpDelayFeature extends Feature {
 
     @Subscribe
     public void onHandleInput(HandleInputEvent.Pre event) {
-        if (client.player == null || client.world == null) return;
+        if (client.player == null || client.level == null) return;
         ((LivingEntityAccessor) client.player).setJumpingCooldown(0);
     }
 

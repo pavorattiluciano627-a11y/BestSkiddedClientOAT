@@ -1,8 +1,8 @@
 package dev.echo.client.render.hand;
 
-import net.minecraft.client.util.math.MatrixStack;
-import net.minecraft.util.Arm;
-import net.minecraft.util.math.RotationAxis;
+import com.mojang.blaze3d.vertex.PoseStack;
+import com.mojang.math.Axis;
+import net.minecraft.world.entity.HumanoidArm;
 
 public class SpinHandAnimation extends HandAnimation {
     public SpinHandAnimation() {
@@ -10,8 +10,8 @@ public class SpinHandAnimation extends HandAnimation {
     }
 
     @Override
-    public void apply(float swingProgress, MatrixStack matrices, int direction, Arm arm) {
+    public void apply(float swingProgress, PoseStack matrices, int direction, HumanoidArm arm) {
         HandPoseTransform.translate(matrices, arm, 0.0F);
-        matrices.multiply(RotationAxis.POSITIVE_X.rotationDegrees(swingProgress * -360.0F));
+        matrices.mulPose(Axis.XP.rotationDegrees(swingProgress * -360.0F));
     }
 }

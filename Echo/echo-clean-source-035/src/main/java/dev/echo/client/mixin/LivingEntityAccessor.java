@@ -1,35 +1,35 @@
 package dev.echo.client.mixin;
 
-import net.minecraft.entity.LivingEntity;
+import net.minecraft.world.entity.LivingEntity;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Mutable;
 import org.spongepowered.asm.mixin.gen.Accessor;
 
 @Mixin(LivingEntity.class)
 public interface LivingEntityAccessor {
-    @Accessor("forwardSpeed")
+    @Accessor("zza")
     float getForwardSpeed();
 
     @Mutable
-    @Accessor("forwardSpeed")
+    @Accessor("zza")
     void setForwardSpeed(float speed);
 
-    @Accessor("sidewaysSpeed")
+    @Accessor("xxa")
     float getSidewaysSpeed();
 
     @Mutable
-    @Accessor("sidewaysSpeed")
+    @Accessor("xxa")
     void setSidewaysSpeed(float speed);
 
-    @Accessor("jumpingCooldown")
+    @Accessor("noJumpDelay")
     void setJumpingCooldown(int ticks);
 
-    @Accessor("ticksSinceHandEquipping")
+    @Accessor("itemSwapTicker")
     int getTicksSinceHandEquipping();
 
-    @Accessor("maxHurtTime")
+    @Accessor("hurtDuration")
     int getMaxHurtTime();
 
-    @Accessor("lastDamageTime")
+    @Accessor("lastDamageStamp")
     long getLastDamageTime();
 }

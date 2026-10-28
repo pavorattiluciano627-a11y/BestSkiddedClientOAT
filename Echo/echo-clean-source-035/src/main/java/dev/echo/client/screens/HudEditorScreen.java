@@ -18,11 +18,11 @@ import dev.echo.client.render.UiRenderer;
 import dev.echo.render.FontAsset;
 import java.util.ArrayList;
 import java.util.List;
-import net.minecraft.client.gui.Click;
-import net.minecraft.client.gui.DrawContext;
-import net.minecraft.client.input.KeyInput;
-import net.minecraft.text.Text;
-import net.minecraft.util.math.MathHelper;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.minecraft.client.input.KeyEvent;
+import net.minecraft.client.input.MouseButtonEvent;
+import net.minecraft.network.chat.Component;
+import net.minecraft.util.Mth;
 
 /**
  * Live HUD placement editor, rendered by the subscribed HUD event.
@@ -56,7 +56,7 @@ public final class HudEditorScreen extends EchoScreen {
 
     /** Creates the HUD editor with its original title and inactive alignment guides. */
     public HudEditorScreen() {
-        super(Text.literal(HUD_TITLE));
+        super(Component.literal(HUD_TITLE));
         snapGuideX = Float.NaN;
         snapGuideY = Float.NaN;
     }
@@ -83,7 +83,7 @@ public final class HudEditorScreen extends EchoScreen {
 
     /** Updates logical pointer coordinates; hover remains frozen during a drag. */
     @Override
-    public void render(DrawContext context, int mouseX, int mouseY, float tickDelta) {
+    public void extractRenderState(GuiGraphicsExtractor context, int mouseX, int mouseY, float tickDelta) {
         this.mouseX = toUiX(mouseX);
         this.mouseY = toUiY(mouseY);
         if (draggedElement != null) {
@@ -130,12 +130,12 @@ public final class HudEditorScreen extends EchoScreen {
 
     private void drawSnapGuides(UiRenderer renderer, float width, float height) {
         if (!Float.isNaN(snapGuideX)) {
-            renderer.drawRoundedRect(MathHelper.clamp(snapGuideX - 0.5F, 0.0F, width - 1.0F),
+            renderer.drawRoundedRect(Mth.clamp(snapGuideX - 0.5F, 0.0F, width - 1.0F),
                     0.0F, 1.0F, height, 0.0F, GUIDE_COLOR);
         }
         if (!Float.isNaN(snapGuideY)) {
             renderer.drawRoundedRect(0.0F,
-                    MathHelper.clamp(snapGuideY - 0.5F, 0.0F, height - 1.0F),
+                    Mth.clamp(snapGuideY - 0.5F, 0.0F, height - 1.0F),
                     width, 1.0F, 0.0F, GUIDE_COLOR);
         }
     }
@@ -155,13 +155,13 @@ public final class HudEditorScreen extends EchoScreen {
         }
         float centerX = width * 0.5F;
         float centerY = height * 0.5F;
-        for (int index = -MathHelper.floor(centerX / spacing);
+        for (int index = -Mth.floor(centerX / spacing);
                 centerX + index * spacing <= width; index++) {
             renderer.drawRoundedRect(centerX + index * spacing - 0.5F, 0.0F,
                     1.0F, height, 0.0F,
                     index % GRID_MAJOR_INTERVAL == 0 ? GRID_MAJOR_COLOR : GRID_COLOR);
         }
-        for (int index = -MathHelper.floor(centerY / spacing);
+        for (int index = -Mth.floor(centerY / spacing);
                 centerY + index * spacing <= height; index++) {
             renderer.drawRoundedRect(0.0F, centerY + index * spacing - 0.5F,
                     width, 1.0F, 0.0F,
@@ -195,7 +195,7 @@ public final class HudEditorScreen extends EchoScreen {
 
     /** Captures only left-button presses; an empty press also clears the selection. */
     @Override
-    public boolean mouseClicked(Click click, boolean doubled) {
+    public boolean mouseClicked(MouseButtonEvent click, boolean doubled) {
         if (!InputKey.MOUSE_LEFT.matches(click.button())) {
             return super.mouseClicked(click, doubled);
         }
@@ -213,7 +213,7 @@ public final class HudEditorScreen extends EchoScreen {
 
     /** Moves the captured element, with either Alt key bypassing alignment snapping. */
     @Override
-    public boolean mouseDragged(Click click, double deltaX, double deltaY) {
+    public boolean mouseDragged(MouseButtonEvent click, double deltaX, double deltaY) {
         if (draggedElement == null) {
             return super.mouseDragged(click, deltaX, deltaY);
         }
@@ -232,12 +232,12 @@ public final class HudEditorScreen extends EchoScreen {
 
     /** Nudges the selected or hovered element by half a pixel, or five with Shift. */
     @Override
-    public boolean keyPressed(KeyInput input) {
+    public boolean keyPressed(KeyEvent input) {
         HudFeature feature = selectedElement != null ? selectedElement : hoveredElement;
         if (feature == null || draggedElement != null) {
             return super.keyPressed(input);
         }
-        float step = (input.hasShift() ? 10.0F : 1.0F) / 2.0F;
+        float step = (input.hasShiftDown() ? 10.0F : 1.0F) / 2.0F;
         float dx = input.isLeft() ? -step : input.isRight() ? step : 0.0F;
         float dy = input.isUp() ? -step : input.isDown() ? step : 0.0F;
         if (dx == 0.0F && dy == 0.0F) {
@@ -250,7 +250,7 @@ public final class HudEditorScreen extends EchoScreen {
     private static void moveWithinViewport(HudFeature feature, float x, float y) {
         float maxX = Math.max(0.0F, GuiDimensions.width() - feature.getWidth());
         float maxY = Math.max(0.0F, GuiDimensions.height() - feature.getHeight());
-        feature.setPosition(MathHelper.clamp(x, 0.0F, maxX), MathHelper.clamp(y, 0.0F, maxY));
+        feature.setPosition(Mth.clamp(x, 0.0F, maxX), Mth.clamp(y, 0.0F, maxY));
     }
 
     private float snapAxis(float position, float size, boolean horizontal, float threshold) {
@@ -291,7 +291,7 @@ public final class HudEditorScreen extends EchoScreen {
 
     /** Ends an active drag on any release button while retaining keyboard selection. */
     @Override
-    public boolean mouseReleased(Click click) {
+    public boolean mouseReleased(MouseButtonEvent click) {
         if (draggedElement == null) {
             return super.mouseReleased(click);
         }
@@ -331,7 +331,7 @@ public final class HudEditorScreen extends EchoScreen {
 
     /** The original editor leaves the integrated game running. */
     @Override
-    public boolean shouldPause() {
+    public boolean isPauseScreen() {
         return false;
     }
 }

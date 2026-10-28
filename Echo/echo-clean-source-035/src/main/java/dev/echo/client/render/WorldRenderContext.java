@@ -1,5 +1,6 @@
 package dev.echo.client.render;
 
+import com.mojang.blaze3d.pipeline.RenderTarget;
 import com.mojang.blaze3d.textures.GpuTextureView;
 import dev.echo.client.Echo;
 import dev.echo.render.EffectBatch;
@@ -18,10 +19,9 @@ import dev.echo.render.texture.TextureLayout;
 import dev.echo.render.texture.TextureView;
 import java.util.OptionalDouble;
 import java.util.OptionalInt;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.gl.Framebuffer;
-import net.minecraft.client.render.Camera;
-import net.minecraft.util.math.Vec3d;
+import net.minecraft.client.Camera;
+import net.minecraft.client.Minecraft;
+import net.minecraft.world.phys.Vec3;
 import org.joml.Matrix4f;
 
 /**
@@ -36,7 +36,7 @@ public final class WorldRenderContext {
     private static final int COLOR_TEXTURE_USAGE = 9;
 
     /** Snapshot used by world batches; it is updated when setMatrices is called. */
-    public Vec3d cameraPosition = Vec3d.ZERO;
+    public Vec3 cameraPosition = Vec3.ZERO;
     /** Projection multiplied by view, retained independently of both input matrices. */
     public Matrix4f viewProjectionMatrix;
 
@@ -70,32 +70,32 @@ public final class WorldRenderContext {
     }
 
     private void allocateWorldColor() {
-        Framebuffer framebuffer = MinecraftRenderState.getFramebuffer(MinecraftClient.getInstance());
+        RenderTarget framebuffer = MinecraftRenderState.getFramebuffer(Minecraft.getInstance());
         worldColorTexture = device.createTexture(TextureInfo.builder()
-                .width(framebuffer.textureWidth).height(framebuffer.textureHeight)
+                .width(framebuffer.width).height(framebuffer.height)
                 .format(TextureFormat.BGRA8Unorm).usage(COLOR_TEXTURE_USAGE).build());
         worldColorTexture.views[0].yFlipped = GlTextureBridge.isYFlipped();
     }
 
     /** Writes the original 160-byte camera block in its shader-visible layout. */
     public void setMatrices(Matrix4f view, Matrix4f projection) {
-        Camera camera = MinecraftRenderState.getCamera(MinecraftClient.getInstance());
-        cameraPosition = camera.getCameraPos();
+        Camera camera = MinecraftRenderState.getCamera(Minecraft.getInstance());
+        cameraPosition = camera.position();
         viewProjectionMatrix = new Matrix4f(projection).mul(view);
         long address = cameraUniforms.mappedAddress();
         NativeMemoryWrites.putMatrix4f(address, view);
         NativeMemoryWrites.putMatrix4f(address + 64L, projection);
         NativeMemoryWrites.putFloat3(address + 128L,
                 (float) cameraPosition.x, (float) cameraPosition.y, (float) cameraPosition.z);
-        Framebuffer framebuffer = MinecraftRenderState.getFramebuffer(MinecraftClient.getInstance());
-        NativeMemoryWrites.putFloat2(address + 144L, framebuffer.textureWidth, framebuffer.textureHeight);
+        RenderTarget framebuffer = MinecraftRenderState.getFramebuffer(Minecraft.getInstance());
+        NativeMemoryWrites.putFloat2(address + 144L, framebuffer.width, framebuffer.height);
     }
 
     /** Resizes the offscreen target and resets batches before world-render subscribers run. */
     public void beginFrame() {
-        Framebuffer framebuffer = MinecraftRenderState.getFramebuffer(MinecraftClient.getInstance());
-        if (worldColorTexture.width != framebuffer.textureWidth
-                || worldColorTexture.height != framebuffer.textureHeight) {
+        RenderTarget framebuffer = MinecraftRenderState.getFramebuffer(Minecraft.getInstance());
+        if (worldColorTexture.width != framebuffer.width
+                || worldColorTexture.height != framebuffer.height) {
             device.release(worldColorTexture);
             allocateWorldColor();
         }
@@ -160,7 +160,7 @@ public final class WorldRenderContext {
 
     /** Imports the current Minecraft-owned color view once per source identity. */
     public TextureView mainColorTexture() {
-        GpuTextureView source = MinecraftRenderState.getFramebuffer(MinecraftClient.getInstance()).getColorAttachmentView();
+        GpuTextureView source = MinecraftRenderState.getFramebuffer(Minecraft.getInstance()).getColorTextureView();
         if (source != minecraftColorSource) {
             minecraftColorSource = source;
             minecraftColorView = GlTextureBridge.importColor(device, source);

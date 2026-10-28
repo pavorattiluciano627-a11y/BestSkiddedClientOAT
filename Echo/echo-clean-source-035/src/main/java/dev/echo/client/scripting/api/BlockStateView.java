@@ -1,7 +1,7 @@
 package dev.echo.client.scripting.api;
 
-import net.minecraft.block.BlockState;
-import net.minecraft.registry.Registries;
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.world.level.block.state.BlockState;
 
 public class BlockStateView {
     private final BlockState state;
@@ -15,6 +15,6 @@ public class BlockStateView {
     }
 
     public String getId() {
-        return Registries.BLOCK.getId(state.getBlock()).toString();
+        return BuiltInRegistries.BLOCK.getKey(state.getBlock()).toString();
     }
 }

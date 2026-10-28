@@ -1,7 +1,7 @@
 package dev.echo.client.scripting.api;
 
 import dev.echo.client.events.interaction.AttackAttemptEvent;
-import net.minecraft.entity.Entity;
+import net.minecraft.world.entity.Entity;
 
 /** Script-facing attacker, nullable target, and cancellation for an attack attempt. */
 public class AttackEventView extends EventView {

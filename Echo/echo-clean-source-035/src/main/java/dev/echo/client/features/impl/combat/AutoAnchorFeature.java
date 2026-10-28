@@ -45,27 +45,27 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.function.Predicate;
-import net.minecraft.block.BlockState;
-import net.minecraft.block.Blocks;
-import net.minecraft.block.RespawnAnchorBlock;
-import net.minecraft.predicate.entity.EntityPredicates;
-import net.minecraft.entity.LivingEntity;
-import net.minecraft.entity.projectile.ProjectileUtil;
-import net.minecraft.item.BlockItem;
-import net.minecraft.item.Items;
-import net.minecraft.network.packet.c2s.play.ClientTickEndC2SPacket;
-import net.minecraft.network.packet.c2s.play.PlayerMoveC2SPacket;
-import net.minecraft.network.packet.s2c.play.BlockUpdateS2CPacket;
-import net.minecraft.network.packet.s2c.play.ExplosionS2CPacket;
-import net.minecraft.util.ActionResult;
-import net.minecraft.util.Hand;
-import net.minecraft.util.hit.BlockHitResult;
-import net.minecraft.util.hit.HitResult;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.Box;
-import net.minecraft.util.math.MathHelper;
-import net.minecraft.util.math.Vec3d;
-import net.minecraft.util.shape.VoxelShapes;
+import net.minecraft.core.BlockPos;
+import net.minecraft.network.protocol.game.ClientboundBlockUpdatePacket;
+import net.minecraft.network.protocol.game.ClientboundExplodePacket;
+import net.minecraft.network.protocol.game.ServerboundClientTickEndPacket;
+import net.minecraft.network.protocol.game.ServerboundMovePlayerPacket;
+import net.minecraft.util.Mth;
+import net.minecraft.world.InteractionHand;
+import net.minecraft.world.InteractionResult;
+import net.minecraft.world.entity.EntitySelector;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.projectile.ProjectileUtil;
+import net.minecraft.world.item.BlockItem;
+import net.minecraft.world.item.Items;
+import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.RespawnAnchorBlock;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.phys.AABB;
+import net.minecraft.world.phys.BlockHitResult;
+import net.minecraft.world.phys.HitResult;
+import net.minecraft.world.phys.Vec3;
+import net.minecraft.world.phys.shapes.Shapes;
 
 /** Ordered placement, safety-block, charging and detonation state machine. */
 public class AutoAnchorFeature extends Feature {
@@ -111,11 +111,11 @@ public class AutoAnchorFeature extends Feature {
     private int chargesRemaining;
     private int nextActionTick;
     private boolean glowstoneStartActive;
-    private Vec3d anchorAimPoint;
+    private Vec3 anchorAimPoint;
     private long safetyStartMillis;
     private boolean interacting;
     private boolean suppressPacketFlush;
-    private Vec3d lastSentPosition;
+    private Vec3 lastSentPosition;
     private BlockPos recentlyExplodedAnchor;
     private int explodedAtTick;
     private int lastUseAttemptTick;
@@ -255,9 +255,9 @@ public class AutoAnchorFeature extends Feature {
             anchorController.onItemUse(event);
             return;
         }
-        if (event.getPlayer() != client.player || event.getHand() != Hand.MAIN_HAND) return;
+        if (event.getPlayer() != client.player || event.getHand() != InteractionHand.MAIN_HAND) return;
         if (MinecraftRenderState.getScreen() != null || activateKey.isListeningForKey()) return;
-        if (lastUseAttemptTick == client.player.age) {
+        if (lastUseAttemptTick == client.player.tickCount) {
             event.cancel();
             return;
         }
@@ -278,7 +278,7 @@ public class AutoAnchorFeature extends Feature {
             useCooldownTicks = USE_COOLDOWN_TICKS;
             return;
         }
-        boolean start = !hasSequence() && event.getStack().isOf(Items.RESPAWN_ANCHOR);
+        boolean start = !hasSequence() && event.getStack().is(Items.RESPAWN_ANCHOR);
         if (start && anchorFromHit(event.getHit()) == null && findGlowstoneSlot() == -1) {
             sequenceRequested = false;
             return;
@@ -301,7 +301,7 @@ public class AutoAnchorFeature extends Feature {
             anchorController.onItemUseComplete(event);
             return;
         }
-        if (client.player != null) lastUseCompletedTick = client.player.age;
+        if (client.player != null) lastUseCompletedTick = client.player.tickCount;
     }
 
     /** The original subscriber is exactly a RETURN instruction. */
@@ -318,7 +318,7 @@ public class AutoAnchorFeature extends Feature {
         BlockPos position = target.position();
         var geometry = event.getRenderContext().getDepthTestedGeometry();
         if (fill) geometry.drawBox(position.getX(), position.getY(), position.getZ(), 1.0, 1.0, 1.0, fillColor.getArgb());
-        if (outline) WorldProjection.drawBoxOutline(geometry, new Box(position), outlineColor.getArgb());
+        if (outline) WorldProjection.drawBoxOutline(geometry, new AABB(position), outlineColor.getArgb());
     }
 
     @Subscribe
@@ -384,7 +384,7 @@ public class AutoAnchorFeature extends Feature {
             activateWasPressed = pressed;
             return;
         }
-        if (glowstoneStart.getValue() && useKeyPressed() && (!sameUseKey || client.player.getMainHandStack().isOf(Items.GLOWSTONE))) {
+        if (glowstoneStart.getValue() && useKeyPressed() && (!sameUseKey || client.player.getMainHandItem().is(Items.GLOWSTONE))) {
             activateWasPressed = pressed;
             return;
         }
@@ -404,7 +404,7 @@ public class AutoAnchorFeature extends Feature {
             activateWasPressed = pressed;
             return;
         }
-        if (glowstoneStart.getValue() && client.player.getMainHandStack().isOf(Items.GLOWSTONE)) {
+        if (glowstoneStart.getValue() && client.player.getMainHandItem().is(Items.GLOWSTONE)) {
             activateWasPressed = pressed;
             return;
         }
@@ -440,7 +440,7 @@ public class AutoAnchorFeature extends Feature {
             return;
         }
         int slot = sameUseKey ? client.player.getInventory().getSelectedSlot()
-            : InventoryItems.findStackInHotbar(stack -> stack.isOf(Items.RESPAWN_ANCHOR));
+            : InventoryItems.findStackInHotbar(stack -> stack.is(Items.RESPAWN_ANCHOR));
         if (slot == -1) {
             sequenceRequested = false;
             cancelSequence();
@@ -448,7 +448,7 @@ public class AutoAnchorFeature extends Feature {
         }
         restorePending = false;
         if (!sameUseKey && !DeferredActionQueue.ensureSelected(this, slot, -1, false)) return;
-        if (useCooldownTicks > 0 || !client.player.getMainHandStack().isOf(Items.RESPAWN_ANCHOR)) return;
+        if (useCooldownTicks > 0 || !client.player.getMainHandItem().is(Items.RESPAWN_ANCHOR)) return;
         BlockHitResult hit;
         BlockPos position;
         if (aimed) {
@@ -467,12 +467,12 @@ public class AutoAnchorFeature extends Feature {
             if (!rotations().isRotationReady() || !sentRayHits(hit.getBlockPos())) return;
         }
         if (isRecentlyExploded(hit.getBlockPos()) || usedItemThisTick()) return;
-        ActionResult result = interact(hit);
+        InteractionResult result = interact(hit);
         useCooldownTicks = USE_COOLDOWN_TICKS;
-        if (result.isAccepted()) rotations().acknowledgeRotation();
-        if (result.isAccepted() && position != null) beginSequence(position, requestedCharges());
+        if (result.consumesAction()) rotations().acknowledgeRotation();
+        if (result.consumesAction() && position != null) beginSequence(position, requestedCharges());
         else if (!hold) finishSequence();
-        if (hold && !result.isAccepted()) useCooldownTicks = Math.max(useCooldownTicks, 1);
+        if (hold && !result.consumesAction()) useCooldownTicks = Math.max(useCooldownTicks, 1);
     }
 
     @Subscribe
@@ -483,7 +483,7 @@ public class AutoAnchorFeature extends Feature {
             releaseAim();
             return;
         }
-        Vec3d point = aimPoint();
+        Vec3 point = aimPoint();
         if (point == null) {
             releaseAim();
             return;
@@ -507,7 +507,7 @@ public class AutoAnchorFeature extends Feature {
             phase = Phase.CHARGE;
             delay = chargeDelay;
         }
-        nextActionTick = client.player.age + sampleDelay(delay);
+        nextActionTick = client.player.tickCount + sampleDelay(delay);
         restorePending = false;
         anchorAimPoint = BlockFaceSamples.findClearAimPoint(position, 1.0f);
         safetyStartMillis = System.currentTimeMillis();
@@ -518,8 +518,8 @@ public class AutoAnchorFeature extends Feature {
             finishSequence();
             return;
         }
-        if (client.player.age < nextActionTick) return;
-        if (phase != Phase.PLACE_SAFETY && client.player.age - nextActionTick > PHASE_TIMEOUT_TICKS) {
+        if (client.player.tickCount < nextActionTick) return;
+        if (phase != Phase.PLACE_SAFETY && client.player.tickCount - nextActionTick > PHASE_TIMEOUT_TICKS) {
             finishSequence();
             return;
         }
@@ -568,7 +568,7 @@ public class AutoAnchorFeature extends Feature {
 
     private void enterChargePhase() {
         phase = Phase.CHARGE;
-        nextActionTick = client.player.age + sampleDelay(chargeDelay);
+        nextActionTick = client.player.tickCount + sampleDelay(chargeDelay);
     }
 
     private void enterExplodePhase() {
@@ -577,7 +577,7 @@ public class AutoAnchorFeature extends Feature {
             return;
         }
         phase = Phase.EXPLODE;
-        nextActionTick = client.player.age + sampleDelay(explodeDelay);
+        nextActionTick = client.player.tickCount + sampleDelay(explodeDelay);
     }
 
     private void placeSafety() {
@@ -603,7 +603,7 @@ public class AutoAnchorFeature extends Feature {
         if (support.equals(anchorPosition)) return null;
         if (!BlockRaycasts.intersectsBlock(effectiveYaw(), effectivePitch(), support)) return null;
         if (!rotations().isRotationReady() || !sentRayHits(support)) return null;
-        BlockPos position = support.offset(hit.getSide());
+        BlockPos position = support.relative(hit.getDirection());
         if (position.equals(anchorPosition) || !BlockPlacement.isReplaceable(position)
                 || BlockPlacement.intersectsPlayer(position) || BlockPlacement.hasBlockingEntity(position)) return null;
         return new PlacementTarget(position, hit);
@@ -622,17 +622,17 @@ public class AutoAnchorFeature extends Feature {
         }
         if (!DeferredActionQueue.ensureSelected(this, slot, -1, false)) return;
         if (USE_COOLDOWN_TICKS - useCooldownTicks < 1) return;
-        if (!(client.player.getMainHandStack().getItem() instanceof BlockItem) || usedItemThisTick()) return;
-        ActionResult result = interact(placement.hitResult());
+        if (!(client.player.getMainHandItem().getItem() instanceof BlockItem) || usedItemThisTick()) return;
+        InteractionResult result = interact(placement.hitResult());
         useCooldownTicks = USE_COOLDOWN_TICKS;
-        if (result.isAccepted()) {
+        if (result.consumesAction()) {
             rotations().acknowledgeRotation();
             if (isSolidSafetyBlock(placement.position())) enterChargePhase();
         }
     }
 
     private boolean needsSafety(List<BlockPos> candidates) {
-        if (!safeAnchor.getValue() || client.player == null || client.world == null || anchorPosition == null) return false;
+        if (!safeAnchor.getValue() || client.player == null || client.level == null || anchorPosition == null) return false;
         float minimum = minDamage.getValue();
         if (minimum > 0.0f && ExplosionDamage.anchorDamage(client.player, anchorPosition, null) < minimum) return false;
         BlockPos best = candidates.isEmpty() ? null : candidates.get(0);
@@ -641,18 +641,18 @@ public class AutoAnchorFeature extends Feature {
 
     private List<BlockPos> rankedSafetyCandidates() {
         if (client.player == null || anchorPosition == null) return List.of();
-        BlockPos playerBlock = BlockPos.ofFloored(client.player.getLerpedPos(tickDelta()));
-        Vec3d anchorCenter = Vec3d.ofCenter(anchorPosition);
-        Vec3d playerCenter = client.player.getBoundingBox().getCenter();
-        Vec3d towardAnchor = anchorCenter.subtract(playerCenter);
+        BlockPos playerBlock = BlockPos.containing(client.player.getPosition(tickDelta()));
+        Vec3 anchorCenter = Vec3.atCenterOf(anchorPosition);
+        Vec3 playerCenter = client.player.getBoundingBox().getCenter();
+        Vec3 towardAnchor = anchorCenter.subtract(playerCenter);
         LinkedHashSet<BlockPos> candidates = new LinkedHashSet<>(20);
         addSafetyRayCandidates(candidates, playerBlock, playerCenter, anchorCenter, towardAnchor);
-        int bottom = client.player.isOnGround() ? 0 : -1;
+        int bottom = client.player.onGround() ? 0 : -1;
         for (int y = 0; y >= bottom; y--) {
             for (int x = -1; x <= 1; x++) {
                 for (int z = -1; z <= 1; z++) {
                     if (x == 0 && z == 0) continue;
-                    BlockPos position = playerBlock.add(x, y, z);
+                    BlockPos position = playerBlock.offset(x, y, z);
                     if (towardAnchor(position, playerCenter, towardAnchor)) candidates.add(position);
                 }
             }
@@ -662,23 +662,23 @@ public class AutoAnchorFeature extends Feature {
         return ranked;
     }
 
-    private void addSafetyRayCandidates(Set<BlockPos> candidates, BlockPos playerBlock, Vec3d playerCenter,
-            Vec3d anchorCenter, Vec3d towardAnchor) {
-        Vec3d displacement = anchorCenter.subtract(playerCenter);
+    private void addSafetyRayCandidates(Set<BlockPos> candidates, BlockPos playerBlock, Vec3 playerCenter,
+            Vec3 anchorCenter, Vec3 towardAnchor) {
+        Vec3 displacement = anchorCenter.subtract(playerCenter);
         double length = displacement.length();
         if (length < 1.0E-4) return;
-        Vec3d direction = displacement.multiply(1.0 / length);
-        int steps = Math.min(MathHelper.ceil(length), 3);
+        Vec3 direction = displacement.scale(1.0 / length);
+        int steps = Math.min(Mth.ceil(length), 3);
         for (int step = 1; step <= steps; step++) {
-            BlockPos position = BlockPos.ofFloored(playerCenter.add(direction.multiply(step * 0.95)));
+            BlockPos position = BlockPos.containing(playerCenter.add(direction.scale(step * 0.95)));
             if (position.equals(playerBlock) || position.equals(anchorPosition)
                     || Math.abs(position.getY() - playerBlock.getY()) > 1) continue;
             if (towardAnchor(position, playerCenter, towardAnchor)) candidates.add(position);
         }
     }
 
-    private static boolean towardAnchor(BlockPos position, Vec3d playerCenter, Vec3d direction) {
-        Vec3d displacement = Vec3d.ofCenter(position).subtract(playerCenter);
+    private static boolean towardAnchor(BlockPos position, Vec3 playerCenter, Vec3 direction) {
+        Vec3 displacement = Vec3.atCenterOf(position).subtract(playerCenter);
         return displacement.x * direction.x + displacement.z * direction.z > 0.0;
     }
 
@@ -691,34 +691,34 @@ public class AutoAnchorFeature extends Feature {
     }
 
     private PlacementTarget findSafetyPlacement(BlockPos position) {
-        if (position == null || client.world == null || client.player == null || position.equals(anchorPosition)) return null;
+        if (position == null || client.level == null || client.player == null || position.equals(anchorPosition)) return null;
         if (!BlockPlacement.isReplaceable(position) || !BlockPlacement.hasSupport(position)
                 || BlockPlacement.intersectsPlayer(position) || BlockPlacement.hasBlockingEntity(position)) return null;
         PlacementTarget placement = BlockPlacement.find(position, canPlaceLegit.getValue());
         if (placement == null || placement.hitResult().getBlockPos().equals(anchorPosition)
                 || isRecentlyExploded(placement.hitResult().getBlockPos())) return null;
-        Vec3d eye = client.player.getCameraPosVec(1.0f);
-        double reach = client.player.getBlockInteractionRange();
-        if (eye.squaredDistanceTo(placement.hitResult().getPos()) > reach * reach) return null;
+        Vec3 eye = client.player.getEyePosition(1.0f);
+        double reach = client.player.blockInteractionRange();
+        if (eye.distanceToSqr(placement.hitResult().getLocation()) > reach * reach) return null;
         return placement;
     }
 
     private boolean isSolidSafetyBlock(BlockPos position) {
-        if (client.world == null || position == null) return false;
-        BlockState state = client.world.getBlockState(position);
-        return !state.isAir() && !state.isReplaceable();
+        if (client.level == null || position == null) return false;
+        BlockState state = client.level.getBlockState(position);
+        return !state.isAir() && !state.canBeReplaced();
     }
 
     private static int findGlowstoneSlot() {
-        return InventoryItems.findStackInHotbar(stack -> stack.isOf(Items.GLOWSTONE));
+        return InventoryItems.findStackInHotbar(stack -> stack.is(Items.GLOWSTONE));
     }
 
     private int findSafetyBlockSlot() {
-        int glowstone = InventoryItems.findStackInHotbar(stack -> stack.isOf(Items.GLOWSTONE));
+        int glowstone = InventoryItems.findStackInHotbar(stack -> stack.is(Items.GLOWSTONE));
         if (glowstone != -1) return glowstone;
         return InventoryItems.findStackInHotbar(new Predicate<>() {
-            @Override public boolean test(net.minecraft.item.ItemStack stack) {
-                return stack.getItem() instanceof BlockItem && !stack.isOf(Items.RESPAWN_ANCHOR);
+            @Override public boolean test(net.minecraft.world.item.ItemStack stack) {
+                return stack.getItem() instanceof BlockItem && !stack.is(Items.RESPAWN_ANCHOR);
             }
         });
     }
@@ -736,19 +736,19 @@ public class AutoAnchorFeature extends Feature {
             return;
         }
         if (!DeferredActionQueue.ensureSelected(this, slot, -1, false)) return;
-        if (!client.player.getMainHandStack().isOf(Items.GLOWSTONE)) return;
+        if (!client.player.getMainHandItem().is(Items.GLOWSTONE)) return;
         BlockHitResult hit = anchorHit(anchorPosition);
         if (hit == null || usedItemThisTick()) return;
-        ActionResult result = interact(hit);
-        if (!result.isAccepted()) return;
+        InteractionResult result = interact(hit);
+        if (!result.consumesAction()) return;
         rotations().acknowledgeRotation();
         chargesRemaining--;
         if (chargesRemaining <= 0) {
             phase = Phase.EXPLODE;
-            nextActionTick = client.player.age + sampleDelay(explodeDelay);
+            nextActionTick = client.player.tickCount + sampleDelay(explodeDelay);
             return;
         }
-        nextActionTick = client.player.age + sampleDelay(chargeDelay);
+        nextActionTick = client.player.tickCount + sampleDelay(chargeDelay);
     }
 
     private void explodeAnchor() {
@@ -760,51 +760,51 @@ public class AutoAnchorFeature extends Feature {
         }
         int slot = explodeSlot.getValue() - 1;
         if (!DeferredActionQueue.ensureSelected(this, slot, -1, false)) return;
-        if (client.player.getInventory().getStack(slot).isOf(Items.GLOWSTONE) && existingCharges < MAX_CHARGES) {
+        if (client.player.getInventory().getItem(slot).is(Items.GLOWSTONE) && existingCharges < MAX_CHARGES) {
             finishSequence();
             return;
         }
         BlockHitResult hit = anchorHit(anchorPosition);
         if (hit == null || usedItemThisTick()) return;
-        ActionResult result = interact(hit);
-        if (!result.isAccepted()) return;
+        InteractionResult result = interact(hit);
+        if (!result.consumesAction()) return;
         rotations().acknowledgeRotation();
         useCooldownTicks = USE_COOLDOWN_TICKS;
         recentlyExplodedAnchor = anchorPosition;
-        explodedAtTick = client.player.age;
+        explodedAtTick = client.player.tickCount;
         finishSequence();
     }
 
-    private Vec3d aimPoint() {
+    private Vec3 aimPoint() {
         if (hasSequence()) {
             if (phase == Phase.PLACE_SAFETY) {
                 List<BlockPos> candidates = rankedSafetyCandidates();
                 if (needsSafety(candidates)) {
                     PlacementTarget placement = firstSafetyPlacement(candidates);
-                    if (placement != null) return placement.hitResult().getPos();
+                    if (placement != null) return placement.hitResult().getLocation();
                 }
             }
             return anchorAimPoint(anchorPosition);
         }
         BlockHitResult hit = crosshairBlock();
-        if (hit != null && isAnchor(hit.getBlockPos())) return hit.getPos();
+        if (hit != null && isAnchor(hit.getBlockPos())) return hit.getLocation();
         PlacementTarget placement = findAnchorPlacement(tickDelta());
-        if (placement != null) return placement.hitResult().getPos();
+        if (placement != null) return placement.hitResult().getLocation();
         hit = crosshairBlock();
-        return hit != null ? hit.getPos() : null;
+        return hit != null ? hit.getLocation() : null;
     }
 
-    private Vec3d anchorAimPoint(BlockPos position) {
+    private Vec3 anchorAimPoint(BlockPos position) {
         if (position == null) return null;
-        if (client.player == null) return Vec3d.ofCenter(position);
+        if (client.player == null) return Vec3.atCenterOf(position);
         if (anchorAimPoint != null && position.equals(anchorPosition)) {
-            Vec3d eye = client.player.getCameraPosVec(1.0f);
+            Vec3 eye = client.player.getEyePosition(1.0f);
             if (BlockFaceSamples.rayHitsBlock(eye, anchorAimPoint, position)) return anchorAimPoint;
             anchorAimPoint = BlockFaceSamples.findClearAimPoint(position, 1.0f);
-            return anchorAimPoint != null ? anchorAimPoint : Vec3d.ofCenter(position);
+            return anchorAimPoint != null ? anchorAimPoint : Vec3.atCenterOf(position);
         }
-        Vec3d point = BlockFaceSamples.findClearAimPoint(position, 1.0f);
-        return point != null ? point : Vec3d.ofCenter(position);
+        Vec3 point = BlockFaceSamples.findClearAimPoint(position, 1.0f);
+        return point != null ? point : Vec3.atCenterOf(position);
     }
 
     private boolean canUsePlacement(PlacementTarget placement) {
@@ -813,14 +813,14 @@ public class AutoAnchorFeature extends Feature {
         if (!rotations().isRotationReady() || !sentRayHits(placement.hitResult().getBlockPos())) return false;
         if (!canPlaceLegit.getValue()) {
             BlockHitResult hit = placement.hitResult();
-            if (!BlockPlacement.facesEye(hit, client.player.getCameraPosVec(1.0f))) return false;
+            if (!BlockPlacement.facesEye(hit, client.player.getEyePosition(1.0f))) return false;
             return BlockRaycasts.intersectsBlock(yaw, pitch, hit.getBlockPos());
         }
         BlockHitResult hit = BlockRaycasts.raycast(yaw, pitch);
         if (hit == null || hit.getType() != HitResult.Type.BLOCK) return false;
         if (!hit.getBlockPos().equals(placement.hitResult().getBlockPos())) return false;
-        if (hit.getSide() != placement.hitResult().getSide()) return false;
-        return !rayHitsEntity(hit.getPos());
+        if (hit.getDirection() != placement.hitResult().getDirection()) return false;
+        return !rayHitsEntity(hit.getLocation());
     }
 
     private BlockHitResult anchorHit(BlockPos position) {
@@ -828,27 +828,27 @@ public class AutoAnchorFeature extends Feature {
         float yaw = effectiveYaw();
         float pitch = effectivePitch();
         if (!canPlaceLegit.getValue()) {
-            Vec3d eye = client.player.getCameraPosVec(1.0f);
-            Vec3d end = eye.add(client.player.getRotationVector(pitch, yaw).multiply(client.player.getBlockInteractionRange() + 1.0));
-            return VoxelShapes.fullCube().raycast(eye, end, position);
+            Vec3 eye = client.player.getEyePosition(1.0f);
+            Vec3 end = eye.add(client.player.calculateViewVector(pitch, yaw).scale(client.player.blockInteractionRange() + 1.0));
+            return Shapes.block().clip(eye, end, position);
         }
         BlockHitResult hit = BlockRaycasts.raycast(yaw, pitch);
         if (hit == null || hit.getType() != HitResult.Type.BLOCK || !hit.getBlockPos().equals(position)) return null;
-        return rayHitsEntity(hit.getPos()) ? null : hit;
+        return rayHitsEntity(hit.getLocation()) ? null : hit;
     }
 
     private PlacementTarget findAnchorPlacement(float partialTick) {
-        Vec3d eye = client.player.getCameraPosVec(partialTick);
+        Vec3 eye = client.player.getEyePosition(partialTick);
         LivingEntity target = TargetSelection.findNearestTarget(eye, partialTick);
         if (target == null) return null;
-        Vec3d currentEye = client.player.getCameraPosVec(1.0f);
-        double reach = client.player.getBlockInteractionRange();
+        Vec3 currentEye = client.player.getEyePosition(1.0f);
+        double reach = client.player.blockInteractionRange();
         double reachSquared = reach * reach;
-        Vec3d targetPosition = target.getLerpedPos(partialTick);
-        Vec3d displacement = targetPosition.subtract(target.getEntityPos());
-        Box targetBox = target.getBoundingBox().offset(displacement);
-        Vec3d feet = new Vec3d(targetPosition.x, targetBox.minY, targetPosition.z);
-        int x = MathHelper.floor(feet.x), y = MathHelper.floor(feet.y), z = MathHelper.floor(feet.z);
+        Vec3 targetPosition = target.getPosition(partialTick);
+        Vec3 displacement = targetPosition.subtract(target.position());
+        AABB targetBox = target.getBoundingBox().move(displacement);
+        Vec3 feet = new Vec3(targetPosition.x, targetBox.minY, targetPosition.z);
+        int x = Mth.floor(feet.x), y = Mth.floor(feet.y), z = Mth.floor(feet.z);
         PlacementTarget best = null;
         double bestScore = Double.MAX_VALUE;
         for (int dx = -2; dx <= 2; dx++) {
@@ -858,11 +858,11 @@ public class AutoAnchorFeature extends Feature {
                     if (!BlockPlacement.isReplaceable(position) || !BlockPlacement.hasSupport(position)) continue;
                     PlacementTarget placement = BlockPlacement.find(position, canPlaceLegit.getValue());
                     if (placement == null || isRecentlyExploded(placement.hitResult().getBlockPos())) continue;
-                    if (BlockPlacement.intersectsPlayer(position) || BlockPlacement.hasBlockingEntity(new Box(position))) continue;
-                    if (currentEye.squaredDistanceTo(placement.hitResult().getPos()) > reachSquared) continue;
-                    Vec3d center = Vec3d.ofCenter(position);
+                    if (BlockPlacement.intersectsPlayer(position) || BlockPlacement.hasBlockingEntity(new AABB(position))) continue;
+                    if (currentEye.distanceToSqr(placement.hitResult().getLocation()) > reachSquared) continue;
+                    Vec3 center = Vec3.atCenterOf(position);
                     float exposure = ExplosionDamage.exposure(center, targetBox, target, null, null);
-                    double distanceSquared = feet.squaredDistanceTo(center);
+                    double distanceSquared = feet.distanceToSqr(center);
                     double score = (1.0 - (double) exposure) * 100.0 + distanceSquared * 0.01;
                     if (!(score < bestScore)) continue;
                     bestScore = score;
@@ -875,17 +875,17 @@ public class AutoAnchorFeature extends Feature {
 
     private boolean sentRayHits(BlockPos position) {
         if (lastSentPosition == null) return true;
-        Box block = new Box(position);
-        Vec3d eye = lastSentPosition.add(0.0, client.player.getStandingEyeHeight(), 0.0);
+        AABB block = new AABB(position);
+        Vec3 eye = lastSentPosition.add(0.0, client.player.getEyeHeight(), 0.0);
         if (block.contains(eye)) return true;
-        Vec3d end = eye.add(client.player.getRotationVector(effectivePitch(), effectiveYaw()).multiply(client.player.getBlockInteractionRange()));
-        return block.raycast(eye, end).isPresent();
+        Vec3 end = eye.add(client.player.calculateViewVector(effectivePitch(), effectiveYaw()).scale(client.player.blockInteractionRange()));
+        return block.clip(eye, end).isPresent();
     }
 
-    private boolean usedItemThisTick() { return lastUseCompletedTick == client.player.age; }
+    private boolean usedItemThisTick() { return lastUseCompletedTick == client.player.tickCount; }
 
-    private ActionResult interact(BlockHitResult hit) {
-        lastUseAttemptTick = client.player.age;
+    private InteractionResult interact(BlockHitResult hit) {
+        lastUseAttemptTick = client.player.tickCount;
         interacting = true;
         try {
             return BlockPlacement.interactMainHand(hit, true);
@@ -896,16 +896,16 @@ public class AutoAnchorFeature extends Feature {
 
     @Subscribe
     private void onPacketReceive(PacketReceiveEvent event) {
-        if (!isEchoStyle() && event.getPacket() instanceof BlockUpdateS2CPacket update) anchorController.onBlockUpdate(update);
-        if (!isEchoStyle() && event.getPacket() instanceof ExplosionS2CPacket explosion) anchorController.onExplosion(explosion.center());
+        if (!isEchoStyle() && event.getPacket() instanceof ClientboundBlockUpdatePacket update) anchorController.onBlockUpdate(update);
+        if (!isEchoStyle() && event.getPacket() instanceof ClientboundExplodePacket explosion) anchorController.onExplosion(explosion.center());
     }
 
     @Subscribe
     private void onPacketSend(PacketSendEvent event) {
-        if (event.getPacket() instanceof PlayerMoveC2SPacket movement && movement.changesPosition()) {
-            lastSentPosition = new Vec3d(movement.getX(0.0), movement.getY(0.0), movement.getZ(0.0));
+        if (event.getPacket() instanceof ServerboundMovePlayerPacket movement && movement.hasPosition()) {
+            lastSentPosition = new Vec3(movement.getX(0.0), movement.getY(0.0), movement.getZ(0.0));
         }
-        if (event.getPacket() instanceof PlayerMoveC2SPacket || event.getPacket() instanceof ClientTickEndC2SPacket) {
+        if (event.getPacket() instanceof ServerboundMovePlayerPacket || event.getPacket() instanceof ServerboundClientTickEndPacket) {
             suppressPacketFlush = false;
             return;
         }
@@ -913,13 +913,13 @@ public class AutoAnchorFeature extends Feature {
         if (suppressPacketFlush) event.setFlush(false);
     }
 
-    private boolean rayHitsEntity(Vec3d end) {
-        Vec3d eye = client.player.getCameraPosVec(1.0f);
-        return ProjectileUtil.raycast(client.player, eye, end, new Box(eye, end).expand(1.0),
-            EntityPredicates.CAN_HIT, eye.squaredDistanceTo(end)) != null;
+    private boolean rayHitsEntity(Vec3 end) {
+        Vec3 eye = client.player.getEyePosition(1.0f);
+        return ProjectileUtil.getEntityHitResult(client.player, eye, end, new AABB(eye, end).inflate(1.0),
+            EntitySelector.CAN_BE_PICKED, eye.distanceToSqr(end)) != null;
     }
 
-    private float tickDelta() { return client.getRenderTickCounter().getTickProgress(false); }
+    private float tickDelta() { return client.getDeltaTracker().getGameTimeDeltaPartialTick(false); }
     private float effectiveYaw() { return rotations().effectiveRotation().yaw(); }
     private float effectivePitch() { return rotations().effectiveRotation().pitch(); }
 
@@ -932,23 +932,23 @@ public class AutoAnchorFeature extends Feature {
     }
 
     private boolean activationUsesUseKey() {
-        if (client == null || client.options == null || client.options.useKey == null) return false;
+        if (client == null || client.options == null || client.options.keyUse == null) return false;
         if (activateKey.getKey() == InputKey.NONE) return false;
-        return activateKey.getKey() == KeybindingCache.getKey(client.options.useKey);
+        return activateKey.getKey() == KeybindingCache.getKey(client.options.keyUse);
     }
 
     private boolean useKeyPressed() {
-        return client.options != null && client.options.useKey != null && KeybindingCache.isPressed(client.options.useKey);
+        return client.options != null && client.options.keyUse != null && KeybindingCache.isPressed(client.options.keyUse);
     }
 
     private boolean isManualChargedAnchorUse(ItemUseEvent.Pre event) {
-        if (hasSequence() || !event.getStack().isOf(Items.RESPAWN_ANCHOR)) return false;
+        if (hasSequence() || !event.getStack().is(Items.RESPAWN_ANCHOR)) return false;
         BlockPos position = anchorFromHit(event.getHit());
         return position != null && chargeCount(position) > 0 && canReach(position);
     }
 
     private boolean handleGlowstoneStart(ItemUseEvent.Pre event) {
-        if (!glowstoneStart.getValue() || !event.getStack().isOf(Items.GLOWSTONE) || !activateKey.getKey().isPressed()) return false;
+        if (!glowstoneStart.getValue() || !event.getStack().is(Items.GLOWSTONE) || !activateKey.getKey().isPressed()) return false;
         BlockPos position = anchorFromHit(event.getHit());
         if (position == null || !canReach(position)) return false;
         if (!hasSequence()) {
@@ -957,7 +957,7 @@ public class AutoAnchorFeature extends Feature {
             chargesRemaining = 0;
             glowstoneStartActive = true;
             restorePending = false;
-            nextActionTick = client.player.age;
+            nextActionTick = client.player.tickCount;
             anchorAimPoint = BlockFaceSamples.findClearAimPoint(position, 1.0f);
             advanceSequence();
         }
@@ -965,10 +965,10 @@ public class AutoAnchorFeature extends Feature {
         return true;
     }
 
-    private boolean holdingAnchor() { return client.player != null && client.player.getMainHandStack().isOf(Items.RESPAWN_ANCHOR); }
+    private boolean holdingAnchor() { return client.player != null && client.player.getMainHandItem().is(Items.RESPAWN_ANCHOR); }
 
     private BlockHitResult crosshairBlock() {
-        if (!(client.crosshairTarget instanceof BlockHitResult hit) || hit.getType() != HitResult.Type.BLOCK) return null;
+        if (!(client.hitResult instanceof BlockHitResult hit) || hit.getType() != HitResult.Type.BLOCK) return null;
         return hit;
     }
 
@@ -990,13 +990,13 @@ public class AutoAnchorFeature extends Feature {
     }
 
     private boolean isAnchor(BlockPos position) {
-        return position != null && client.world != null && BlockPlacement.isBlock(position, Blocks.RESPAWN_ANCHOR)
+        return position != null && client.level != null && BlockPlacement.isBlock(position, Blocks.RESPAWN_ANCHOR)
             && !isRecentlyExploded(position);
     }
 
     private boolean isRecentlyExploded(BlockPos position) {
         if (recentlyExplodedAnchor == null || client.player == null || !recentlyExplodedAnchor.equals(position)) return false;
-        if (client.player.age - explodedAtTick > EXPLODED_ANCHOR_TIMEOUT_TICKS || !BlockPlacement.isBlock(position, Blocks.RESPAWN_ANCHOR)) {
+        if (client.player.tickCount - explodedAtTick > EXPLODED_ANCHOR_TIMEOUT_TICKS || !BlockPlacement.isBlock(position, Blocks.RESPAWN_ANCHOR)) {
             recentlyExplodedAnchor = null;
             return false;
         }
@@ -1005,11 +1005,11 @@ public class AutoAnchorFeature extends Feature {
 
     private int chargeCount(BlockPos position) {
         if (!isAnchor(position)) return 0;
-        return client.world.getBlockState(position).get(RespawnAnchorBlock.CHARGES);
+        return client.level.getBlockState(position).getValue(RespawnAnchorBlock.CHARGE);
     }
 
     private boolean canReach(BlockPos position) {
-        return client.player != null && position != null && client.player.canInteractWithBlockAt(position, 0.0);
+        return client.player != null && position != null && client.player.isWithinBlockInteractionRange(position, 0.0);
     }
 
     private void cancelSequence() {
@@ -1044,7 +1044,7 @@ public class AutoAnchorFeature extends Feature {
     }
 
     private static float rotationSpeed() { return rotationSpeed.getValue() * 20.0f; }
-    private int requestedCharges() { return MathHelper.clamp(Math.round(charges.sampleUniform()), 1, MAX_CHARGES); }
+    private int requestedCharges() { return Mth.clamp(Math.round(charges.sampleUniform()), 1, MAX_CHARGES); }
     private int sampleDelay(FloatRangeSetting delay) { return Math.max(0, Math.round(delay.sampleGaussian())); }
 
     private static void initializeAnchorControllerType() {
@@ -1068,7 +1068,7 @@ public class AutoAnchorFeature extends Feature {
     }
 
     private static void initializeVectorType() {
-        try { Class.forName(Vec3d.class.getName(), true, Vec3d.class.getClassLoader()); }
+        try { Class.forName(Vec3.class.getName(), true, Vec3.class.getClassLoader()); }
         catch (ClassNotFoundException failure) { throw new IllegalStateException("Resolved class initialization failed", failure); }
     }
 

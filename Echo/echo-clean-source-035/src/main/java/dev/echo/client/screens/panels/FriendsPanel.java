@@ -15,10 +15,11 @@ import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.input.CharInput;
-import net.minecraft.client.input.KeyInput;
-import net.minecraft.client.network.PlayerListEntry;
+import net.minecraft.client.Minecraft;
+import dev.echo.client.input.CharacterInputModifiers;
+import net.minecraft.client.input.CharacterEvent;
+import net.minecraft.client.input.KeyEvent;
+import net.minecraft.client.multiplayer.PlayerInfo;
 import org.lwjgl.glfw.GLFW;
 
 /** Original TaskController panel; binding/cache/guard conditions are in the delivery receipt. */
@@ -161,7 +162,7 @@ public class FriendsPanel {
         return captured;
     }
 
-    public boolean charTyped(CharInput input) {
+    public boolean charTyped(CharacterEvent input) {
         char character = (char) input.codepoint();
         if (Character.isISOControl(character)) return false;
         if (addFriendPopupOpen && addFriendFieldFocused) {
@@ -175,7 +176,7 @@ public class FriendsPanel {
         return true;
     }
 
-    public boolean keyPressed(KeyInput input) {
+    public boolean keyPressed(KeyEvent input) {
         if (addFriendPopupOpen) {
             if (input.key() == InputKey.ESCAPE.code()) {
                 addFriendPopupOpen = false;
@@ -367,7 +368,7 @@ public class FriendsPanel {
     }
 
     // Reused UI02 friend-editing fragment, reconciled with the actual input provider.
-    private boolean handleTextKey(KeyInput input, boolean addFriendField) {
+    private boolean handleTextKey(KeyEvent input, boolean addFriendField) {
         String text = addFriendField ? addFriendName : searchQuery;
         int cursor = addFriendField ? addFriendCursor : searchCursor;
         switch (InputKey.fromCode(input.key())) {
@@ -425,11 +426,11 @@ public class FriendsPanel {
 
     private List<FriendRow> getRows() {
         LinkedHashMap<String, FriendRow> rows = new LinkedHashMap<>();
-        if (MinecraftClient.getInstance().getNetworkHandler() != null) {
-            for (PlayerListEntry entry : MinecraftClient.getInstance().getNetworkHandler().getPlayerList()) {
+        if (Minecraft.getInstance().getConnection() != null) {
+            for (PlayerInfo entry : Minecraft.getInstance().getConnection().getOnlinePlayers()) {
                 String name = entry.getProfile().name();
-                if (name == null || name.isBlank() || MinecraftClient.getInstance().player != null
-                        && name.equalsIgnoreCase(MinecraftClient.getInstance().player.getName().getString())) continue;
+                if (name == null || name.isBlank() || Minecraft.getInstance().player != null
+                        && name.equalsIgnoreCase(Minecraft.getInstance().player.getName().getString())) continue;
                 rows.put(normalizedPlayerName(name), new FriendRow(name, entry, EntityInteractions.isFriend(name)));
             }
         }
@@ -449,14 +450,14 @@ public class FriendsPanel {
         return result;
     }
 
-    private PlayerListEntry findPlayerEntry(String name) {
-        if (MinecraftClient.getInstance().getNetworkHandler() == null) return null;
-        return MinecraftClient.getInstance().getNetworkHandler().getPlayerListEntry(name);
+    private PlayerInfo findPlayerEntry(String name) {
+        if (Minecraft.getInstance().getConnection() == null) return null;
+        return Minecraft.getInstance().getConnection().getPlayerInfo(name);
     }
 
     private TextureView addFriendHead() {
         if (addFriendName.isBlank()) return null;
-        PlayerListEntry entry = findPlayerEntry(addFriendName.trim());
+        PlayerInfo entry = findPlayerEntry(addFriendName.trim());
         return entry == null ? null : TextureResources.playerHead(entry);
     }
 

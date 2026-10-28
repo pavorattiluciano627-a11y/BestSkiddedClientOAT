@@ -2,7 +2,7 @@ package dev.echo.client.mixin;
 
 import dev.echo.client.Echo;
 import dev.echo.client.input.KeyStateOverrides;
-import net.minecraft.client.option.KeyBinding;
+import net.minecraft.client.KeyMapping;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Pseudo;
 import org.spongepowered.asm.mixin.injection.At;
@@ -17,9 +17,9 @@ public class TipTapShowKeyStateMixin {
             "com/spyxar/tiptapshow/components/RenderableButton";
 
     @Redirect(method = "render",
-            at = @At(value = "INVOKE", target = "Lnet/minecraft/client/option/KeyBinding;isPressed()Z", remap = true),
+            at = @At(value = "INVOKE", target = "Lnet/minecraft/client/KeyMapping;isDown()Z", remap = true),
             remap = false, require = 0)
-    private boolean redirectDisplayedKeyState(KeyBinding binding) {
-        return Echo.eventsDisabled ? binding.isPressed() : KeyStateOverrides.isPressed(binding);
+    private boolean redirectDisplayedKeyState(KeyMapping binding) {
+        return Echo.eventsDisabled ? binding.isDown() : KeyStateOverrides.isPressed(binding);
     }
 }

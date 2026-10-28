@@ -14,17 +14,17 @@ import dev.echo.client.setting.ItemListSetting;
 import dev.echo.client.setting.list.RegistryEntryGroup;
 import dev.echo.client.utils.items.InventoryItems;
 import dev.echo.client.utils.items.ItemGroups;
-import net.minecraft.block.Blocks;
-import net.minecraft.block.RespawnAnchorBlock;
-import net.minecraft.item.BlockItem;
-import net.minecraft.item.Item;
-import net.minecraft.item.ItemStack;
-import net.minecraft.item.Items;
-import net.minecraft.registry.Registries;
-import net.minecraft.util.Hand;
-import net.minecraft.util.hit.BlockHitResult;
-import net.minecraft.util.hit.HitResult;
-import net.minecraft.util.math.BlockPos;
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.world.InteractionHand;
+import net.minecraft.world.item.BlockItem;
+import net.minecraft.world.item.Item;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
+import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.RespawnAnchorBlock;
+import net.minecraft.world.phys.BlockHitResult;
+import net.minecraft.world.phys.HitResult;
 
 /** Configurable prevention rules for attacks, mining, interaction and totem removal. */
 public class PreventFeature extends Feature {
@@ -82,16 +82,16 @@ public class PreventFeature extends Feature {
 
     @Subscribe
     private void preventAirAttack(AttackAttemptEvent event) {
-        if (isOutsideWorld() || client.crosshairTarget == null) return;
-        if (client.crosshairTarget.getType() != HitResult.Type.MISS) return;
+        if (isOutsideWorld() || client.hitResult == null) return;
+        if (client.hitResult.getType() != HitResult.Type.MISS) return;
         if (!noAirHits.getValue() || isAllowedItemContext(preventWithItemList)) return;
         event.cancel();
     }
 
     @Subscribe
     private void preventBlockAttack(AttackAttemptEvent event) {
-        if (isOutsideWorld() || client.crosshairTarget == null) return;
-        if (client.crosshairTarget.getType() != HitResult.Type.BLOCK) return;
+        if (isOutsideWorld() || client.hitResult == null) return;
+        if (client.hitResult.getType() != HitResult.Type.BLOCK) return;
         if (!noMining.getValue() || isAllowedItemContext(preventWithItemList2)) return;
         event.cancel();
     }
@@ -100,18 +100,18 @@ public class PreventFeature extends Feature {
     private void preventBlockBreaking(BlockBreakingEvent.Pre event) {
         if (isOutsideWorld() || !noMining.getValue()) return;
         if (isAllowedItemContext(preventWithItemList2)) return;
-        if (client.crosshairTarget == null || client.crosshairTarget.getType() != HitResult.Type.BLOCK) return;
+        if (client.hitResult == null || client.hitResult.getType() != HitResult.Type.BLOCK) return;
         event.cancel();
     }
 
     @Subscribe
     private void preventExtraAnchorCharge(ItemUseEvent.Pre event) {
         if (isOutsideWorld() || !anchorCharge.getValue()) return;
-        if (client.crosshairTarget == null || client.crosshairTarget.getType() != HitResult.Type.BLOCK) return;
-        if (client.crosshairTarget instanceof BlockHitResult hit) {
+        if (client.hitResult == null || client.hitResult.getType() != HitResult.Type.BLOCK) return;
+        if (client.hitResult instanceof BlockHitResult hit) {
             BlockPos position = hit.getBlockPos();
-            if (client.world.getBlockState(position).getBlock() == Blocks.RESPAWN_ANCHOR
-                    && client.world.getBlockState(position).get(RespawnAnchorBlock.CHARGES) != 0
+            if (client.level.getBlockState(position).getBlock() == Blocks.RESPAWN_ANCHOR
+                    && client.level.getBlockState(position).getValue(RespawnAnchorBlock.CHARGE) != 0
                     && InventoryItems.holdsInMainHand(Items.GLOWSTONE)) {
                 event.cancel();
             }
@@ -121,12 +121,12 @@ public class PreventFeature extends Feature {
     @Subscribe
     private void preventEnderChestOpen(ItemUseEvent.Pre event) {
         if (isOutsideWorld() || !eChestOpen.getValue()) return;
-        if (client.crosshairTarget == null || client.crosshairTarget.getType() != HitResult.Type.BLOCK) return;
-        if (client.crosshairTarget instanceof BlockHitResult hit) {
+        if (client.hitResult == null || client.hitResult.getType() != HitResult.Type.BLOCK) return;
+        if (client.hitResult instanceof BlockHitResult hit) {
             BlockPos position = hit.getBlockPos();
-            if (client.world.getBlockState(position).getBlock() != Blocks.ENDER_CHEST) return;
+            if (client.level.getBlockState(position).getBlock() != Blocks.ENDER_CHEST) return;
             if (onObsidian.getValue()) {
-                if (client.world.getBlockState(position.down()).getBlock() == Blocks.OBSIDIAN) event.cancel();
+                if (client.level.getBlockState(position.below()).getBlock() == Blocks.OBSIDIAN) event.cancel();
             } else {
                 event.cancel();
             }
@@ -136,10 +136,10 @@ public class PreventFeature extends Feature {
     @Subscribe
     private void preventShieldUseWithBlocks(HandInteractEvent.Pre event) {
         if (isOutsideWorld() || !noShieldWithBlocks.getValue()) return;
-        if (event.getHand() != Hand.OFF_HAND) return;
-        if (!client.player.getOffHandStack().isOf(Items.SHIELD)) return;
-        if (!(client.player.getMainHandStack().getItem() instanceof BlockItem)) return;
-        if (client.crosshairTarget == null || client.crosshairTarget.getType() != HitResult.Type.BLOCK) return;
+        if (event.getHand() != InteractionHand.OFF_HAND) return;
+        if (!client.player.getOffhandItem().is(Items.SHIELD)) return;
+        if (!(client.player.getMainHandItem().getItem() instanceof BlockItem)) return;
+        if (client.hitResult == null || client.hitResult.getType() != HitResult.Type.BLOCK) return;
         event.cancel();
     }
 
@@ -148,7 +148,7 @@ public class PreventFeature extends Feature {
         if (isOutsideWorld() || !untotem.getValue() || !inHotbar.getValue()) return;
         AutoTotemFeature autoTotem = (AutoTotemFeature) Echo.featureManager.findFeature(AutoTotemFeature.class);
         if (autoTotem != null && autoTotem.shouldAllowTotemRemoval()) return;
-        if (client.player.getOffHandStack().getItem() == Items.TOTEM_OF_UNDYING) event.cancel();
+        if (client.player.getOffhandItem().getItem() == Items.TOTEM_OF_UNDYING) event.cancel();
     }
 
     private boolean isAllowedItemContext(ItemListSetting preventedItems) {
@@ -164,7 +164,7 @@ public class PreventFeature extends Feature {
     }
 
     private boolean hasSelectedItemInGroup(ItemListSetting selectedItems, RegistryEntryGroup<Item> group) {
-        for (Item item : Registries.ITEM) {
+        for (Item item : BuiltInRegistries.ITEM) {
             if (group.matches(item) && selectedItems.isEntrySelected(item)) return true;
         }
         return false;

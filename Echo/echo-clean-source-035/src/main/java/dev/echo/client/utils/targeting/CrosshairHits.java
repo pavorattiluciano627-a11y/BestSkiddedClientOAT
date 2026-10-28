@@ -2,13 +2,13 @@ package dev.echo.client.utils.targeting;
 
 import static dev.echo.client.MinecraftAccess.CLIENT;
 
-import net.minecraft.entity.Entity;
-import net.minecraft.util.hit.BlockHitResult;
-import net.minecraft.util.hit.EntityHitResult;
-import net.minecraft.util.hit.HitResult;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.Direction;
-import net.minecraft.util.math.Vec3d;
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.phys.BlockHitResult;
+import net.minecraft.world.phys.EntityHitResult;
+import net.minecraft.world.phys.HitResult;
+import net.minecraft.world.phys.Vec3;
 
 /**
  * Crosshair hit extraction and the original entity-hit suppression scope for item use.
@@ -23,14 +23,14 @@ public final class CrosshairHits {
         if (CLIENT.player == null) {
             return null;
         }
-        return createMiss(CLIENT.player.getEyePos(), CLIENT.player.getHorizontalFacing());
+        return createMiss(CLIENT.player.getEyePosition(), CLIENT.player.getDirection());
     }
 
-    public static HitResult createMiss(Vec3d position, Direction side) {
+    public static HitResult createMiss(Vec3 position, Direction side) {
         if (position == null || side == null) {
             return null;
         }
-        return BlockHitResult.createMissed(position, side, BlockPos.ofFloored(position));
+        return BlockHitResult.miss(position, side, BlockPos.containing(position));
     }
 
     public static boolean isBlock(HitResult hit) {
@@ -55,32 +55,32 @@ public final class CrosshairHits {
         return ((BlockHitResult) hit).getBlockPos();
     }
 
-    public static Vec3d getPosition(HitResult hit) {
-        return hit == null ? null : hit.getPos();
+    public static Vec3 getPosition(HitResult hit) {
+        return hit == null ? null : hit.getLocation();
     }
 
     public static Direction getSide(HitResult hit) {
         if (!isBlock(hit)) {
             return null;
         }
-        return ((BlockHitResult) hit).getSide();
+        return ((BlockHitResult) hit).getDirection();
     }
 
     /** Replaces only an entity hit and returns the previous crosshair object. */
     public static HitResult retargetForItemUse() {
-        if (CLIENT.crosshairTarget == null || !isEntity(CLIENT.crosshairTarget)) {
-            return CLIENT.crosshairTarget;
+        if (CLIENT.hitResult == null || !isEntity(CLIENT.hitResult)) {
+            return CLIENT.hitResult;
         }
-        HitResult previous = CLIENT.crosshairTarget;
+        HitResult previous = CLIENT.hitResult;
         HitResult replacement = createMissFromPlayer();
         if (replacement != null) {
-            CLIENT.crosshairTarget = replacement;
+            CLIENT.hitResult = replacement;
         }
         return previous;
     }
 
     public static void setCrosshairTarget(HitResult hit) {
-        CLIENT.crosshairTarget = hit;
+        CLIENT.hitResult = hit;
     }
 
     /**

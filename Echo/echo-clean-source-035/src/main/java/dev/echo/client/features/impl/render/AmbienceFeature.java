@@ -13,9 +13,9 @@ import dev.echo.client.setting.ColorSetting;
 import dev.echo.client.setting.IntSetting;
 import dev.echo.client.utils.ClientWorldUpdates;
 import java.util.Objects;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.network.packet.Packet;
-import net.minecraft.network.packet.s2c.play.WorldTimeUpdateS2CPacket;
+import net.minecraft.client.Minecraft;
+import net.minecraft.network.protocol.Packet;
+import net.minecraft.network.protocol.game.ClientboundSetTimePacket;
 
 /** World time, weather and fog controls, including the original hidden Snow option. */
 public class AmbienceFeature extends Feature {
@@ -78,13 +78,13 @@ public class AmbienceFeature extends Feature {
         boolean controlState = FreecamFeature.isPerspectiveRefreshBypassed();
         if (isOutsideWorld()) return;
         Packet<?> packet = event.getPacket();
-        if (!controlState && !(packet instanceof WorldTimeUpdateS2CPacket)) return;
+        if (!controlState && !(packet instanceof ClientboundSetTimePacket)) return;
         // The original CHECKCAST is retained even though the packet payload is unused.
-        WorldTimeUpdateS2CPacket timeUpdate = (WorldTimeUpdateS2CPacket) packet;
+        ClientboundSetTimePacket timeUpdate = (ClientboundSetTimePacket) packet;
         BooleanSetting weatherGate = customTime;
         if (!controlState) {
             if (weatherGate.getValue()) {
-                ClientWorldUpdates.setFixedTime(client.world, getConfiguredTime());
+                ClientWorldUpdates.setFixedTime(client.level, getConfiguredTime());
                 event.cancel();
             }
             weatherGate = modifyWeather;
@@ -92,39 +92,39 @@ public class AmbienceFeature extends Feature {
         boolean clearWeather = weatherGate.getValue();
         if (controlState) {
             if (clearWeather) {
-                client.world.setRainGradient(0.0f);
-                client.world.setThunderGradient(0.0f);
+                client.level.setRainLevel(0.0f);
+                client.level.setThunderLevel(0.0f);
             }
             // In this branch the Rain operand reaches the original Thunder body.
             if (weather.isSelected(RAIN)) {
-                client.world.setRainGradient(1.0f);
-                client.world.setThunderGradient(1.0f);
+                client.level.setRainLevel(1.0f);
+                client.level.setThunderLevel(1.0f);
             }
             if (weather.isSelected(SNOW)) {
-                client.world.setRainGradient(0.7f);
-                client.world.setThunderGradient(0.0f);
+                client.level.setRainLevel(0.7f);
+                client.level.setThunderLevel(0.0f);
             }
             event.cancel();
-            client.world.setRainGradient(0.0f);
-            client.world.setThunderGradient(0.0f);
+            client.level.setRainLevel(0.0f);
+            client.level.setThunderLevel(0.0f);
         } else if (clearWeather) {
             if (weather.isSelected(CLEAR)) {
-                client.world.setRainGradient(0.0f);
-                client.world.setThunderGradient(0.0f);
+                client.level.setRainLevel(0.0f);
+                client.level.setThunderLevel(0.0f);
             } else if (weather.isSelected(RAIN)) {
-                client.world.setRainGradient(1.0f);
-                client.world.setThunderGradient(0.0f);
+                client.level.setRainLevel(1.0f);
+                client.level.setThunderLevel(0.0f);
             } else if (weather.isSelected(THUNDER)) {
-                client.world.setRainGradient(1.0f);
-                client.world.setThunderGradient(1.0f);
+                client.level.setRainLevel(1.0f);
+                client.level.setThunderLevel(1.0f);
             } else if (weather.isSelected(SNOW)) {
-                client.world.setRainGradient(0.7f);
-                client.world.setThunderGradient(0.0f);
+                client.level.setRainLevel(0.7f);
+                client.level.setThunderLevel(0.0f);
             }
             event.cancel();
         } else {
-            client.world.setRainGradient(0.0f);
-            client.world.setThunderGradient(0.0f);
+            client.level.setRainLevel(0.0f);
+            client.level.setThunderLevel(0.0f);
         }
     }
 
@@ -133,30 +133,30 @@ public class AmbienceFeature extends Feature {
         boolean resetRain = FreecamFeature.isPerspectiveRefreshEnabled();
         super.onDisable();
         try {
-            Class.forName(MinecraftClient.class.getName(), true, MinecraftClient.class.getClassLoader());
+            Class.forName(Minecraft.class.getName(), true, Minecraft.class.getClassLoader());
         } catch (ClassNotFoundException failure) {
             throw new IllegalStateException("Resolved class initialization failed", failure);
         }
-        MinecraftClient observedClient = client;
-        if (resetRain && Objects.requireNonNull(observedClient, "object reference is null").world == null) return;
+        Minecraft observedClient = client;
+        if (resetRain && Objects.requireNonNull(observedClient, "object reference is null").level == null) return;
         if (resetRain) {
             try {
-                Class.forName(MinecraftClient.class.getName(), true, MinecraftClient.class.getClassLoader());
+                Class.forName(Minecraft.class.getName(), true, Minecraft.class.getClassLoader());
             } catch (ClassNotFoundException failure) {
                 throw new IllegalStateException("Resolved class initialization failed", failure);
             }
-            MinecraftClient rainClient = client;
-            Objects.requireNonNull(Objects.requireNonNull(rainClient, "object reference is null").world,
-                    "object reference is null").setRainGradient(0.0f);
+            Minecraft rainClient = client;
+            Objects.requireNonNull(Objects.requireNonNull(rainClient, "object reference is null").level,
+                    "object reference is null").setRainLevel(0.0f);
             try {
-                Class.forName(MinecraftClient.class.getName(), true, MinecraftClient.class.getClassLoader());
+                Class.forName(Minecraft.class.getName(), true, Minecraft.class.getClassLoader());
             } catch (ClassNotFoundException failure) {
                 throw new IllegalStateException("Resolved class initialization failed", failure);
             }
             observedClient = client;
         }
-        Objects.requireNonNull(Objects.requireNonNull(observedClient, "object reference is null").world,
-                "object reference is null").setThunderGradient(0.0f);
+        Objects.requireNonNull(Objects.requireNonNull(observedClient, "object reference is null").level,
+                "object reference is null").setThunderLevel(0.0f);
     }
 
     public static void appendBootstrapSettings(AmbienceFeature feature) {

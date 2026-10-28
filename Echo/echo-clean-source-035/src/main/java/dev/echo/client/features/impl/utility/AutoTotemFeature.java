@@ -14,10 +14,10 @@ import dev.echo.client.setting.IntSetting;
 import dev.echo.client.utils.OwnerSet;
 import dev.echo.client.utils.inventory.InventoryActionScheduler;
 import dev.echo.client.utils.inventory.TemporaryItemUse;
-import net.minecraft.item.Item;
-import net.minecraft.item.ItemStack;
-import net.minecraft.item.Items;
-import net.minecraft.util.Hand;
+import net.minecraft.world.InteractionHand;
+import net.minecraft.world.item.Item;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
 
 /** Offhand health hysteresis and hotbar refill through the original two inventory state machines. */
 public class AutoTotemFeature extends Feature {
@@ -100,8 +100,8 @@ public class AutoTotemFeature extends Feature {
 
     @Subscribe
     private void onTick(ClientTickEvent event) {
-        if (isOutsideWorld() || client.interactionManager == null) return;
-        if (client.player.isDead()) {
+        if (isOutsideWorld() || client.gameMode == null) return;
+        if (client.player.isDeadOrDying()) {
             resetState();
             return;
         }
@@ -123,7 +123,7 @@ public class AutoTotemFeature extends Feature {
         if (desired != null) return shouldUseInventory(desired) ? OFFHAND_SLOT : -1;
         if (!refillHotbar.getValue()) return -1;
         int slot = slotToRefillTotem.getValue() - 1;
-        return client.player.getInventory().getStack(slot).isOf(TOTEM) ? -1 : slot;
+        return client.player.getInventory().getItem(slot).is(TOTEM) ? -1 : slot;
     }
 
     private boolean shouldUseInventory(Item item) {
@@ -142,8 +142,8 @@ public class AutoTotemFeature extends Feature {
     }
 
     private Item getDesiredOffhandItem() {
-        if (desiredItemTick == client.player.age) return cachedDesiredItem;
-        desiredItemTick = client.player.age;
+        if (desiredItemTick == client.player.tickCount) return cachedDesiredItem;
+        desiredItemTick = client.player.tickCount;
         cachedDesiredItem = chooseOffhandItem();
         return cachedDesiredItem;
     }
@@ -162,15 +162,15 @@ public class AutoTotemFeature extends Feature {
             FeatureNameAssignments.postNotification(this, CatalogText.literal("Swapped a totem into your offhand"));
             return;
         }
-        String name = new ItemStack(item).getName().getString();
+        String name = new ItemStack(item).getHoverName().getString();
         FeatureNameAssignments.postNotification(this, new StringBuilder("Put your ").append(name).append(" back"));
     }
 
     private Item chooseOffhandItem() {
-        ItemStack offhand = client.player.getOffHandStack();
-        if (!healthSwap.getValue()) return offhand.isOf(TOTEM) ? null : TOTEM;
+        ItemStack offhand = client.player.getOffhandItem();
+        if (!healthSwap.getValue()) return offhand.is(TOTEM) ? null : TOTEM;
         if (shouldEquipForHealth()) return chooseEmergencyTotem(offhand);
-        if (shouldRestoreForHealth() && replacedOffhandItem != null && offhand.isOf(replacedOffhandItem)) {
+        if (shouldRestoreForHealth() && replacedOffhandItem != null && offhand.is(replacedOffhandItem)) {
             replacedOffhandItem = null;
         }
         Item restore = chooseRestoreItem(offhand);
@@ -179,38 +179,38 @@ public class AutoTotemFeature extends Feature {
     }
 
     private Item chooseEmergencyTotem(ItemStack offhand) {
-        if (offhand.isOf(TOTEM) || !hasUnselectedTotem()) return null;
+        if (offhand.is(TOTEM) || !hasUnselectedTotem()) return null;
         if (!offhand.isEmpty()) replacedOffhandItem = offhand.getItem();
         return TOTEM;
     }
 
     private Item chooseRestoreItem(ItemStack offhand) {
         if (!shouldRestoreForHealth()) return null;
-        if (!offhand.isEmpty() && !offhand.isOf(TOTEM)) return null;
+        if (!offhand.isEmpty() && !offhand.is(TOTEM)) return null;
         Item item = restoreItem.isSelected(restoreItemOption2) ? Items.SHIELD : replacedOffhandItem;
         if (item == null || !containsItem(item)) return null;
         return isTotemHandThreatPresent() ? null : item;
     }
 
     private boolean shouldFillOffhand(ItemStack offhand) {
-        if (offhand.isOf(TOTEM)) return false;
+        if (offhand.is(TOTEM)) return false;
         return shouldEquipForHealth() || offhand.isEmpty() && chooseRestoreItem(offhand) == null;
     }
 
     private boolean isSwapStillNeeded(Item desired) {
         if (!healthSwap.getValue() || OwnerSet.hasOwners()) return false;
-        ItemStack offhand = client.player.getOffHandStack();
+        ItemStack offhand = client.player.getOffhandItem();
         if (desired == TOTEM) return shouldFillOffhand(offhand);
         return chooseRestoreItem(offhand) == desired;
     }
 
     private int findSwapSlot(Item item) {
-        if (!healthSwap.getValue() || client.currentScreen != null) return -1;
+        if (!healthSwap.getValue() || client.gui.screen() != null) return -1;
         if (isUsingMainHand() || isTotemHandProtecting()) return -1;
-        if (item != TOTEM && client.player.getMainHandStack().isOf(item)) return selectedSlot();
+        if (item != TOTEM && client.player.getMainHandItem().is(item)) return selectedSlot();
         for (int slot = 0; slot < 9; ++slot) {
             if (slot == selectedSlot()) continue;
-            if (client.player.getInventory().getStack(slot).isOf(item)) return slot;
+            if (client.player.getInventory().getItem(slot).is(item)) return slot;
         }
         return -1;
     }
@@ -226,20 +226,20 @@ public class AutoTotemFeature extends Feature {
     private boolean hasUnselectedTotem() {
         for (int slot = 0; slot < 36; ++slot) {
             if (slot == selectedSlot()) continue;
-            if (client.player.getInventory().getStack(slot).isOf(TOTEM)) return true;
+            if (client.player.getInventory().getItem(slot).is(TOTEM)) return true;
         }
         return false;
     }
 
     private boolean containsItem(Item item) {
         for (int slot = 0; slot < 36; ++slot) {
-            if (client.player.getInventory().getStack(slot).isOf(item)) return true;
+            if (client.player.getInventory().getItem(slot).is(item)) return true;
         }
         return false;
     }
 
     private boolean isUsingMainHand() {
-        return client.player.isUsingItem() && client.player.getActiveHand() == Hand.MAIN_HAND;
+        return client.player.isUsingItem() && client.player.getUsedItemHand() == InteractionHand.MAIN_HAND;
     }
 
     private boolean isTotemHandProtecting() {

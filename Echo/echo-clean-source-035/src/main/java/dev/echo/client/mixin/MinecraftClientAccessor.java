@@ -1,16 +1,16 @@
 package dev.echo.client.mixin;
 
-import net.minecraft.client.MinecraftClient;
+import net.minecraft.client.Minecraft;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.gen.Accessor;
 import org.spongepowered.asm.mixin.gen.Invoker;
 
 /** Access to item-use operations on the client. */
-@Mixin(MinecraftClient.class)
+@Mixin(Minecraft.class)
 public interface MinecraftClientAccessor {
-    @Invoker("doItemUse")
+    @Invoker("startUseItem")
     void invokeDoItemUse();
 
-    @Accessor("itemUseCooldown")
+    @Accessor("rightClickDelay")
     void setItemUseCooldown(int ticks);
 }

@@ -1,6 +1,7 @@
 package dev.echo.client.render;
 
 import com.mojang.blaze3d.opengl.GlConst;
+import com.mojang.blaze3d.opengl.GlTexture;
 import com.mojang.blaze3d.textures.GpuTextureView;
 import dev.echo.render.device.RenderDevice;
 import dev.echo.render.opengl.OpenGlDevice;
@@ -8,7 +9,6 @@ import dev.echo.render.texture.TextureAccess;
 import dev.echo.render.texture.TextureFormat;
 import dev.echo.render.texture.TextureLayout;
 import dev.echo.render.texture.TextureView;
-import net.minecraft.client.texture.GlTexture;
 
 /** Conditional source recovery for Minecraft-owned texture import and synchronization state. */
 public final class GlTextureBridge {
@@ -39,7 +39,7 @@ public final class GlTextureBridge {
         int height = source.getHeight(0);
         if (device instanceof OpenGlDevice openGl) {
             GlTexture texture = (GlTexture) source.texture();
-            return openGl.importTextureView(texture.getGlId(), width, height, format,
+            return openGl.importTextureView(texture.glId(), width, height, format,
                     GlConst.toGlInternalId(texture.getFormat()));
         }
         throw new IllegalStateException("Vulkan is only supported on 26.2+");

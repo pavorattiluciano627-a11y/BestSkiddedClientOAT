@@ -1,8 +1,8 @@
 package dev.echo.client.utils.network;
 
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.network.PlayerListEntry;
 import dev.echo.client.MinecraftAccess;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.multiplayer.PlayerInfo;
 
 /** Queries the local player's server-reported latency. */
 public final class PlayerLatency {
@@ -14,11 +14,11 @@ public final class PlayerLatency {
      * @return latency in milliseconds
      */
     public static int milliseconds() {
-        MinecraftClient client = MinecraftAccess.CLIENT;
-        if (client.player == null || client.getNetworkHandler() == null) {
+        Minecraft client = MinecraftAccess.CLIENT;
+        if (client.player == null || client.getConnection() == null) {
             return 0;
         }
-        PlayerListEntry entry = client.getNetworkHandler().getPlayerListEntry(client.player.getUuid());
+        PlayerInfo entry = client.getConnection().getPlayerInfo(client.player.getUUID());
         return entry == null ? 0 : entry.getLatency();
     }
 

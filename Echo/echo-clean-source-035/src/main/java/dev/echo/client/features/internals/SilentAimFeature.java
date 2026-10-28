@@ -14,7 +14,7 @@ import dev.echo.client.features.FeatureInfo;
 import dev.echo.client.handlers.AimState;
 import dev.echo.client.setting.BooleanSetting;
 import dev.echo.client.setting.ChoiceSetting;
-import net.minecraft.util.math.MathHelper;
+import net.minecraft.util.Mth;
 
 /** Applies the configured movement correction independently of toggle state. */
 public class SilentAimFeature extends Feature {
@@ -106,8 +106,8 @@ public class SilentAimFeature extends Feature {
         if (forward == 0 && strafe == 0) {
             return;
         }
-        int steps = Math.round(MathHelper.wrapDegrees(
-                rotations().effectiveRotation().yaw() - client.player.getYaw()) / 45.0F);
+        int steps = Math.round(Mth.wrapDegrees(
+                rotations().effectiveRotation().yaw() - client.player.getYRot()) / 45.0F);
         for (int index = 0; index < DIRECTIONS.length; index++) {
             if (DIRECTIONS[index][0] != forward || DIRECTIONS[index][1] != strafe) {
                 continue;

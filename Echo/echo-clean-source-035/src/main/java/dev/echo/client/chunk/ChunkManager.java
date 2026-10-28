@@ -7,7 +7,7 @@ import dev.echo.client.events.lifecycle.ClientTickEvent;
 import dev.echo.client.utils.ChunkCoordinates;
 import it.unimi.dsi.fastutil.longs.Long2IntOpenHashMap;
 import java.util.Arrays;
-import net.minecraft.util.math.ChunkPos;
+import net.minecraft.world.level.ChunkPos;
 
 /**
  * Dense, indexed block-highlight sections and their renderer notifications.
@@ -133,10 +133,10 @@ public class ChunkManager {
     }
 
     public synchronized void removeChunk(ChunkPos chunk) {
-        assert MinecraftAccess.CLIENT.world != null;
+        assert MinecraftAccess.CLIENT.level != null;
         // Preserve the original strict comparison against getTopYInclusive() >> 4.
-        for (int sectionY = MinecraftAccess.CLIENT.world.getBottomY() >> 4;
-                sectionY < (MinecraftAccess.CLIENT.world.getTopYInclusive() >> 4); sectionY++) {
+        for (int sectionY = MinecraftAccess.CLIENT.level.getMinY() >> 4;
+                sectionY < (MinecraftAccess.CLIENT.level.getMaxY() >> 4); sectionY++) {
             removeSection(ChunkCoordinates.getX(chunk), sectionY, ChunkCoordinates.getZ(chunk));
         }
     }

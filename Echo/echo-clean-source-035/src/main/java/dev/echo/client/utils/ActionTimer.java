@@ -1,7 +1,7 @@
 package dev.echo.client.utils;
 
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.network.ClientPlayerEntity;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.player.LocalPlayer;
 
 /** Tracks elapsed monotonic milliseconds and player-age ticks independently. */
 public class ActionTimer {
@@ -13,8 +13,8 @@ public class ActionTimer {
     }
 
     private long currentPlayerAge() {
-        ClientPlayerEntity player = MinecraftClient.getInstance().player;
-        return player == null ? 0L : player.age;
+        LocalPlayer player = Minecraft.getInstance().player;
+        return player == null ? 0L : player.tickCount;
     }
 
     public void reset() {

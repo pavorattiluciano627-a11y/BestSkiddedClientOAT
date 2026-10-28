@@ -6,34 +6,34 @@ import dev.echo.client.MinecraftAccess;
 import dev.echo.client.events.movement.RotationContext;
 import dev.echo.client.events.movement.RotationEvent;
 import dev.echo.client.features.impl.movement.KeepSprintFeature;
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.util.math.Vec3d;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.phys.Vec3;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Redirect;
 
-@Mixin(PlayerEntity.class)
+@Mixin(Player.class)
 public abstract class PlayerRotationMixin {
-    @ModifyExpressionValue(method = "tickMovement", at = @At(
-        value = "INVOKE", target = "Lnet/minecraft/entity/player/PlayerEntity;getYaw()F", ordinal = 0))
+    @ModifyExpressionValue(method = "aiStep", at = @At(
+        value = "INVOKE", target = "Lnet/minecraft/world/entity/player/Player;getYRot()F", ordinal = 0))
     private float modifyTickMovementAtGetYawAtOrdinal0(float yaw) {
         if ((Object) this != MinecraftAccess.CLIENT.player) {
             return yaw;
         }
         return RotationEvent.dispatch(RotationContext.HEAD, yaw,
-            MinecraftAccess.CLIENT.player.getPitch()).getYaw();
+            MinecraftAccess.CLIENT.player.getXRot()).getYaw();
     }
 
-    @Redirect(method = {"knockbackTarget", "doSweepingAttack"}, at = @At(
-        value = "INVOKE", target = "Lnet/minecraft/entity/player/PlayerEntity;getYaw()F"))
-    private float redirectKnockbackTargetAtGetYaw(PlayerEntity player) {
-        return player != MinecraftAccess.CLIENT.player ? player.getYaw()
-            : RotationEvent.dispatch(RotationContext.ATTACK, player.getYaw(), player.getPitch()).getYaw();
+    @Redirect(method = {"causeExtraKnockback", "doSweepAttack"}, at = @At(
+        value = "INVOKE", target = "Lnet/minecraft/world/entity/player/Player;getYRot()F"))
+    private float redirectKnockbackTargetAtGetYaw(Player player) {
+        return player != MinecraftAccess.CLIENT.player ? player.getYRot()
+            : RotationEvent.dispatch(RotationContext.ATTACK, player.getYRot(), player.getXRot()).getYaw();
     }
 
-    @Redirect(method = "knockbackTarget", at = @At(value = "INVOKE",
-        target = "Lnet/minecraft/util/math/Vec3d;multiply(DDD)Lnet/minecraft/util/math/Vec3d;"))
-    private Vec3d redirectKnockbackTargetAtMultiply(Vec3d velocity, double x, double y, double z) {
+    @Redirect(method = "causeExtraKnockback", at = @At(value = "INVOKE",
+        target = "Lnet/minecraft/world/phys/Vec3;multiply(DDD)Lnet/minecraft/world/phys/Vec3;"))
+    private Vec3 redirectKnockbackTargetAtMultiply(Vec3 velocity, double x, double y, double z) {
         if (!Echo.eventsDisabled && (Object) this == MinecraftAccess.CLIENT.player
                 && Echo.featureManager != null) {
             KeepSprintFeature keepSprint = (KeepSprintFeature) Echo.featureManager.findFeature(KeepSprintFeature.class);
@@ -45,9 +45,9 @@ public abstract class PlayerRotationMixin {
         return velocity.multiply(x, y, z);
     }
 
-    @Redirect(method = "knockbackTarget", at = @At(
-        value = "INVOKE", target = "Lnet/minecraft/entity/player/PlayerEntity;setSprinting(Z)V"))
-    private void redirectKnockbackTargetAtSetSprinting(PlayerEntity player, boolean sprinting) {
+    @Redirect(method = "causeExtraKnockback", at = @At(
+        value = "INVOKE", target = "Lnet/minecraft/world/entity/player/Player;setSprinting(Z)V"))
+    private void redirectKnockbackTargetAtSetSprinting(Player player, boolean sprinting) {
         if (!Echo.eventsDisabled && Echo.featureManager != null) {
             KeepSprintFeature keepSprint = (KeepSprintFeature) Echo.featureManager.findFeature(KeepSprintFeature.class);
             // The original hook does not restrict this predicate to the local player.

@@ -1,24 +1,25 @@
 package dev.echo.client.feature.utility;
 
 import java.util.function.Predicate;
-import net.minecraft.block.Block;
-import net.minecraft.block.BlockState;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.network.ClientPlayerEntity;
-import net.minecraft.client.world.ClientWorld;
-import net.minecraft.entity.Entity;
-import net.minecraft.entity.EntityType;
-import net.minecraft.entity.projectile.ProjectileUtil;
-import net.minecraft.predicate.entity.EntityPredicates;
-import net.minecraft.registry.tag.BlockTags;
-import net.minecraft.util.hit.BlockHitResult;
-import net.minecraft.util.hit.EntityHitResult;
-import net.minecraft.util.hit.HitResult;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.Box;
-import net.minecraft.util.math.Direction;
-import net.minecraft.util.math.Vec3d;
-import net.minecraft.world.RaycastContext;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.multiplayer.ClientLevel;
+import net.minecraft.client.player.LocalPlayer;
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
+import net.minecraft.tags.BlockTags;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.EntitySelector;
+import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.EntityTypes;
+import net.minecraft.world.entity.projectile.ProjectileUtil;
+import net.minecraft.world.level.ClipContext;
+import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.phys.AABB;
+import net.minecraft.world.phys.BlockHitResult;
+import net.minecraft.world.phys.EntityHitResult;
+import net.minecraft.world.phys.HitResult;
+import net.minecraft.world.phys.Vec3;
 
 /** Anti Trap's block/entity interaction policy and crosshair repicking algorithm.
  * The feature's live settings are supplied at the event boundary; this class does
@@ -40,11 +41,11 @@ public final class AntiTrapTargeting {
         if (state == null || state.isAir()) {
             return false;
         }
-        if (signs && (state.isIn(BlockTags.STANDING_SIGNS) || state.isIn(BlockTags.WALL_SIGNS))) {
+        if (signs && (state.is(BlockTags.STANDING_SIGNS) || state.is(BlockTags.WALL_SIGNS))) {
             return true;
         }
-        if (hangingSigns && (state.isIn(BlockTags.CEILING_HANGING_SIGNS)
-                || state.isIn(BlockTags.WALL_HANGING_SIGNS))) {
+        if (hangingSigns && (state.is(BlockTags.CEILING_HANGING_SIGNS)
+                || state.is(BlockTags.WALL_HANGING_SIGNS))) {
             return true;
         }
         return selectedBlocks.test(state.getBlock());
@@ -64,11 +65,11 @@ public final class AntiTrapTargeting {
         if (type == null) {
             return false;
         }
-        return (armorStands && type == EntityType.ARMOR_STAND)
-                || (itemFrames && type == EntityType.ITEM_FRAME)
-                || (glowFrames && type == EntityType.GLOW_ITEM_FRAME)
-                || (paintings && type == EntityType.PAINTING)
-                || (chestMinecarts && type == EntityType.CHEST_MINECART);
+        return (armorStands && type == EntityTypes.ARMOR_STAND)
+                || (itemFrames && type == EntityTypes.ITEM_FRAME)
+                || (glowFrames && type == EntityTypes.GLOW_ITEM_FRAME)
+                || (paintings && type == EntityTypes.PAINTING)
+                || (chestMinecarts && type == EntityTypes.CHEST_MINECART);
     }
 
     /** Determines whether a block-interaction event should be cancelled.
@@ -78,11 +79,11 @@ public final class AntiTrapTargeting {
      * @param blockedBlocks block policy
      * @return whether the event should be cancelled
      */
-    public static boolean shouldCancelBlockInteraction(MinecraftClient client, boolean noInteract,
+    public static boolean shouldCancelBlockInteraction(Minecraft client, boolean noInteract,
                                                        BlockHitResult hit, Predicate<BlockState> blockedBlocks) {
-        return noInteract && client.player != null && client.world != null && hit != null
+        return noInteract && client.player != null && client.level != null && hit != null
                 && hit.getType() == HitResult.Type.BLOCK
-                && blockedBlocks.test(client.world.getBlockState(hit.getBlockPos()));
+                && blockedBlocks.test(client.level.getBlockState(hit.getBlockPos()));
     }
 
     /** Determines whether an entity-interaction event should be cancelled.
@@ -102,17 +103,17 @@ public final class AntiTrapTargeting {
      * @param blockedBlocks block policy
      * @param blockedTypes entity policy
      */
-    public static void updateCrosshair(MinecraftClient client, boolean noInteract,
+    public static void updateCrosshair(Minecraft client, boolean noInteract,
                                       Predicate<BlockState> blockedBlocks,
                                       Predicate<EntityType<?>> blockedTypes) {
-        if (!noInteract || client.player == null || client.world == null
-                || !(client.crosshairTarget instanceof BlockHitResult blockHit)
-                || !blockedBlocks.test(client.world.getBlockState(blockHit.getBlockPos()))) {
+        if (!noInteract || client.player == null || client.level == null
+                || !(client.hitResult instanceof BlockHitResult blockHit)
+                || !blockedBlocks.test(client.level.getBlockState(blockHit.getBlockPos()))) {
             return;
         }
         HitResult replacement = pickPastBlockedBlocks(client, blockedBlocks, blockedTypes);
-        client.crosshairTarget = replacement;
-        client.targetedEntity = replacement instanceof EntityHitResult entityHit ? entityHit.getEntity() : null;
+        client.hitResult = replacement;
+        client.crosshairPickEntity = replacement instanceof EntityHitResult entityHit ? entityHit.getEntity() : null;
     }
 
     /** Picks the nearest permitted block or entity, respecting their distinct reaches.
@@ -121,30 +122,30 @@ public final class AntiTrapTargeting {
      * @param blockedTypes entity policy
      * @return replacement hit, including a miss when the selected hit is out of reach
      */
-    public static HitResult pickPastBlockedBlocks(MinecraftClient client,
+    public static HitResult pickPastBlockedBlocks(Minecraft client,
                                                   Predicate<BlockState> blockedBlocks,
                                                   Predicate<EntityType<?>> blockedTypes) {
-        ClientPlayerEntity player = client.player;
-        float tickProgress = client.getRenderTickCounter().getTickProgress(false);
-        Vec3d eye = player.getCameraPosVec(1.0F);
-        Vec3d look = player.getRotationVec(tickProgress);
-        double blockReach = player.getBlockInteractionRange();
-        double entityReach = player.getEntityInteractionRange();
+        LocalPlayer player = client.player;
+        float tickProgress = client.getDeltaTracker().getGameTimeDeltaPartialTick(false);
+        Vec3 eye = player.getEyePosition(1.0F);
+        Vec3 look = player.getViewVector(tickProgress);
+        double blockReach = player.blockInteractionRange();
+        double entityReach = player.entityInteractionRange();
         double reach = Math.max(blockReach, entityReach);
-        Vec3d end = eye.add(look.multiply(reach));
-        BlockHitResult blockHit = raycastPastBlockedBlocks(client.world, eye, end, player, blockedBlocks);
+        Vec3 end = eye.add(look.scale(reach));
+        BlockHitResult blockHit = raycastPastBlockedBlocks(client.level, eye, end, player, blockedBlocks);
         double maximumDistanceSquared = reach * reach;
         double entityRayLength = reach;
         if (blockHit.getType() != HitResult.Type.MISS) {
-            maximumDistanceSquared = eye.squaredDistanceTo(blockHit.getPos());
+            maximumDistanceSquared = eye.distanceToSqr(blockHit.getLocation());
             entityRayLength = Math.sqrt(maximumDistanceSquared);
         }
-        Vec3d entityRayEnd = eye.add(look.multiply(entityRayLength));
-        Box searchBox = player.getBoundingBox().stretch(look.multiply(entityRayLength)).expand(1.0, 1.0, 1.0);
-        EntityHitResult entityHit = ProjectileUtil.raycast(player, eye, entityRayEnd, searchBox,
-                entity -> EntityPredicates.CAN_HIT.test(entity) && !blockedTypes.test(entity.getType()),
+        Vec3 entityRayEnd = eye.add(look.scale(entityRayLength));
+        AABB searchBox = player.getBoundingBox().expandTowards(look.scale(entityRayLength)).inflate(1.0, 1.0, 1.0);
+        EntityHitResult entityHit = ProjectileUtil.getEntityHitResult(player, eye, entityRayEnd, searchBox,
+                entity -> EntitySelector.CAN_BE_PICKED.test(entity) && !blockedTypes.test(entity.getType()),
                 maximumDistanceSquared);
-        if (entityHit != null && entityHit.getPos().squaredDistanceTo(eye) < maximumDistanceSquared) {
+        if (entityHit != null && entityHit.getLocation().distanceToSqr(eye) < maximumDistanceSquared) {
             return limitToReach(entityHit, eye, entityReach);
         }
         if (blockHit.getType() != HitResult.Type.MISS) {
@@ -161,20 +162,20 @@ public final class AntiTrapTargeting {
      * @param blockedBlocks blocks to skip
      * @return first permitted hit, or a miss at the original endpoint
      */
-    public static BlockHitResult raycastPastBlockedBlocks(ClientWorld world, Vec3d start, Vec3d end,
-                                                          ClientPlayerEntity player,
+    public static BlockHitResult raycastPastBlockedBlocks(ClientLevel world, Vec3 start, Vec3 end,
+                                                          LocalPlayer player,
                                                           Predicate<BlockState> blockedBlocks) {
-        Vec3d cursor = start;
+        Vec3 cursor = start;
         for (int attempt = 0; attempt < 16; attempt++) {
-            BlockHitResult hit = world.raycast(new RaycastContext(cursor, end,
-                    RaycastContext.ShapeType.OUTLINE, RaycastContext.FluidHandling.NONE, player));
+            BlockHitResult hit = world.clip(new ClipContext(cursor, end,
+                    ClipContext.Block.OUTLINE, ClipContext.Fluid.NONE, player));
             if (hit.getType() == HitResult.Type.MISS) {
                 return miss(end, end.subtract(start));
             }
             if (!blockedBlocks.test(world.getBlockState(hit.getBlockPos()))) {
                 return hit;
             }
-            cursor = advancePastHit(hit.getPos(), start, end);
+            cursor = advancePastHit(hit.getLocation(), start, end);
         }
         return miss(end, end.subtract(start));
     }
@@ -185,12 +186,12 @@ public final class AntiTrapTargeting {
      * @param end original ray end
      * @return advanced hit, or the same object for a zero-length ray
      */
-    public static Vec3d advancePastHit(Vec3d hit, Vec3d start, Vec3d end) {
-        Vec3d direction = end.subtract(start);
-        if (direction.lengthSquared() == 0.0) {
+    public static Vec3 advancePastHit(Vec3 hit, Vec3 start, Vec3 end) {
+        Vec3 direction = end.subtract(start);
+        if (direction.lengthSqr() == 0.0) {
             return hit;
         }
-        return hit.add(direction.normalize().multiply(0.001));
+        return hit.add(direction.normalize().scale(0.001));
     }
 
     /** Converts an out-of-range result to a miss at that result's position.
@@ -199,9 +200,9 @@ public final class AntiTrapTargeting {
      * @param reach range for this result kind
      * @return the original result when in range; otherwise a miss
      */
-    public static HitResult limitToReach(HitResult hit, Vec3d eye, double reach) {
-        Vec3d position = hit.getPos();
-        if (position.isInRange(eye, reach)) {
+    public static HitResult limitToReach(HitResult hit, Vec3 eye, double reach) {
+        Vec3 position = hit.getLocation();
+        if (position.closerThan(eye, reach)) {
             return hit;
         }
         return miss(position, position.subtract(eye));
@@ -212,8 +213,8 @@ public final class AntiTrapTargeting {
      * @param direction look direction
      * @return a Minecraft block miss
      */
-    public static BlockHitResult miss(Vec3d position, Vec3d direction) {
-        return BlockHitResult.createMissed(position,
-                Direction.getFacing(direction.x, direction.y, direction.z), BlockPos.ofFloored(position));
+    public static BlockHitResult miss(Vec3 position, Vec3 direction) {
+        return BlockHitResult.miss(position,
+                Direction.getApproximateNearest(direction.x, direction.y, direction.z), BlockPos.containing(position));
     }
 }

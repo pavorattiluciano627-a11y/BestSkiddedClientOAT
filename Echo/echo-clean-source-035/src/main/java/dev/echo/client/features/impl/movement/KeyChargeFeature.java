@@ -20,9 +20,9 @@ import dev.echo.client.setting.BooleanSetting;
 import dev.echo.client.setting.KeybindSetting;
 import dev.echo.client.utils.ActionTimer;
 import dev.echo.client.utils.items.InventoryItems;
-import net.minecraft.item.ItemStack;
-import net.minecraft.item.Items;
-import net.minecraft.util.math.Vec3d;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
+import net.minecraft.world.phys.Vec3;
 
 /** Activates a wind charge with optional downward aim, jump and hotbar restoration. */
 public class KeyChargeFeature extends Feature {
@@ -98,8 +98,8 @@ public class KeyChargeFeature extends Feature {
         // The original hotbar search precedes the world guard.
         if (!hasWindCharge()) return;
         if (isOutsideWorld()) return;
-        if (client.currentScreen != null) return;
-        event.jump = KeybindingCache.isPressed(client.options.jumpKey);
+        if (client.gui.screen() != null) return;
+        event.jump = KeybindingCache.isPressed(client.options.keyJump);
         boolean activationPressed = activateKey.getKey().isPressed();
         if (activationPressed && !previousActivationPressed) {
             if (rotations().snapshot().target() != null && !rotations().canRequest(this, RotationPriority.CRITICAL)) return;
@@ -107,10 +107,10 @@ public class KeyChargeFeature extends Feature {
         }
         previousActivationPressed = activationPressed;
         if (!activationPending) return;
-        if (client.player.getItemCooldownManager().isCoolingDown(new ItemStack(Items.WIND_CHARGE))) return;
+        if (client.player.getCooldowns().isOnCooldown(new ItemStack(Items.WIND_CHARGE))) return;
         if (autoAim.getValue()) {
             if (!rotations().isAiming()) return;
-            float pitch = silentAim.getValue() ? rotations().effectiveRotation().pitch() : client.player.getPitch();
+            float pitch = silentAim.getValue() ? rotations().effectiveRotation().pitch() : client.player.getXRot();
             if (pitch < 88.0F) return;
         }
         int slot = InventoryItems.findStackInHotbar(stack -> stack.getItem() == Items.WIND_CHARGE);
@@ -123,8 +123,8 @@ public class KeyChargeFeature extends Feature {
             DeferredActionQueue.finish(this, false);
         }
         chargeTimer.reset();
-        if (autoJump.getValue() && client.player.isOnGround()
-                && (autoAim.getValue() || !(client.player.getPitch() < 80.0F))) {
+        if (autoJump.getValue() && client.player.onGround()
+                && (autoAim.getValue() || !(client.player.getXRot() < 80.0F))) {
             event.jump = true;
         }
         activationPending = false;
@@ -133,7 +133,7 @@ public class KeyChargeFeature extends Feature {
     @Subscribe
     public void onMouseMovement(MouseMovementEvent.Post event) {
         if (isOutsideWorld()) return;
-        if (client.currentScreen != null) return;
+        if (client.gui.screen() != null) return;
         if (!hasWindCharge() && chargeRotationActive) {
             if (!chargeTimer.hasElapsedTicks(1)) return;
             finishChargeRotation();
@@ -146,9 +146,9 @@ public class KeyChargeFeature extends Feature {
             if (rotations().isAiming() && rotations().isSilentRotationActive()) {
                 yaw = rotations().effectiveRotation().yaw();
             } else {
-                yaw = silentAim.getValue() ? rotations().effectiveRotation().yaw() : client.player.getYaw();
+                yaw = silentAim.getValue() ? rotations().effectiveRotation().yaw() : client.player.getYRot();
             }
-            Vec3d aimPoint = client.player.getEyePos().add(Vec3d.fromPolar(89.9F, yaw));
+            Vec3 aimPoint = client.player.getEyePosition().add(Vec3.directionFromRotation(89.9F, yaw));
             rotations().aim(this, RotationPriority.CRITICAL, aimPoint,
                     RotationSettings.uniform(silentAim.getValue() ? RotationVisibility.SILENT : RotationVisibility.VISIBLE,
                             AimTransition.EASED, 450.0F));
@@ -162,7 +162,7 @@ public class KeyChargeFeature extends Feature {
     @Subscribe
     public void beforeInput(HandleInputEvent.Pre event) {
         if (isOutsideWorld()) return;
-        if (client.currentScreen != null) return;
+        if (client.gui.screen() != null) return;
         if (!switchback.getValue() || silentSwap.getValue()) return;
         if (!DeferredActionQueue.contains(this)) return;
         if (chargeTimer.hasElapsedTicks(1)) DeferredActionQueue.finish(this);

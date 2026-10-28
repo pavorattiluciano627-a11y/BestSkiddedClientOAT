@@ -19,8 +19,8 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.network.ServerInfo;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.multiplayer.ServerData;
 
 /**
  * Captures and applies the feature-profile format and coordinates profile actions.
@@ -49,7 +49,7 @@ public final class FeatureConfig implements AutoCloseable {
         /** Returns the current friend manager, which may be absent during startup. */
         FriendManager friends();
         /** Returns the current server entry, or null for singleplayer/no connection. */
-        ServerInfo server();
+        ServerData server();
         /** Returns the client's lifecycle write gate. */
         boolean writesDisabled();
         /** Performs the original Click GUI feature subtype check. */
@@ -403,7 +403,7 @@ public final class FeatureConfig implements AutoCloseable {
 
     private void captureServer(JsonObject snapshot) {
         JsonObject metadata = new JsonObject();
-        ServerInfo server = clientState.server();
+        ServerData server = clientState.server();
         if (server == null) {
             metadata.addProperty("name", "singleplayer");
             metadata.addProperty("ip", "");
@@ -411,8 +411,8 @@ public final class FeatureConfig implements AutoCloseable {
             return;
         }
         metadata.addProperty("name", server.name == null ? "" : server.name);
-        metadata.addProperty("ip", server.address == null ? "" : server.address);
-        byte[] icon = server.getFavicon();
+        metadata.addProperty("ip", server.ip == null ? "" : server.ip);
+        byte[] icon = server.getIconBytes();
         if (icon != null && icon.length > 0) {
             metadata.addProperty("icon", Base64.getEncoder().encodeToString(icon));
         }
@@ -454,7 +454,7 @@ public final class FeatureConfig implements AutoCloseable {
     private static final class LiveClientState implements ClientState {
         @Override public FeatureManager features() { return Echo.featureManager; }
         @Override public FriendManager friends() { return Echo.friendManager; }
-        @Override public ServerInfo server() { return MinecraftClient.getInstance().getCurrentServerEntry(); }
+        @Override public ServerData server() { return Minecraft.getInstance().getCurrentServer(); }
         @Override public boolean writesDisabled() { return Echo.eventsDisabled; }
         @Override public boolean isClickGui(Feature feature) { return feature instanceof ClickGUIFeature; }
     }

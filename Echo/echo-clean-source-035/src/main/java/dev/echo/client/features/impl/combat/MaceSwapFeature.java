@@ -2,6 +2,7 @@ package dev.echo.client.features.impl.combat;
 
 import static dev.echo.client.bootstrap.CatalogText.literal;
 
+import com.mojang.blaze3d.platform.InputConstants;
 import dev.echo.client.bootstrap.CatalogSettings;
 import dev.echo.client.events.EventPriority;
 import dev.echo.client.events.Subscribe;
@@ -34,21 +35,20 @@ import dev.echo.client.utils.items.ItemGroups;
 import dev.echo.client.utils.targeting.AttackEvaluation;
 import dev.echo.client.utils.targeting.EntityPredicates;
 import dev.echo.client.utils.targeting.TargetSelection;
-import net.minecraft.client.util.InputUtil;
-import net.minecraft.enchantment.Enchantment;
-import net.minecraft.enchantment.Enchantments;
-import net.minecraft.entity.LivingEntity;
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.item.Item;
-import net.minecraft.item.ItemStack;
-import net.minecraft.item.Items;
-import net.minecraft.item.MaceItem;
-import net.minecraft.network.packet.Packet;
-import net.minecraft.network.packet.s2c.play.PlayerPositionLookS2CPacket;
-import net.minecraft.network.packet.s2c.play.PlayerRespawnS2CPacket;
-import net.minecraft.registry.Registries;
-import net.minecraft.registry.RegistryKey;
-import net.minecraft.util.hit.EntityHitResult;
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.network.protocol.Packet;
+import net.minecraft.network.protocol.game.ClientboundPlayerPositionPacket;
+import net.minecraft.network.protocol.game.ClientboundRespawnPacket;
+import net.minecraft.resources.ResourceKey;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.Item;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
+import net.minecraft.world.item.MaceItem;
+import net.minecraft.world.item.enchantment.Enchantment;
+import net.minecraft.world.item.enchantment.Enchantments;
+import net.minecraft.world.phys.EntityHitResult;
 
 /** Ordered mace selection, delayed shield-stun follow-up and spear double-tap attacks. */
 public class MaceSwapFeature extends Feature {
@@ -167,7 +167,7 @@ public class MaceSwapFeature extends Feature {
     @Subscribe
     private void onHotbarKey(HotbarKeyEvent event) {
         if (pendingMaceSlot == -1 || event.slot != pendingMaceSlot) return;
-        if (client.player == null || (long) client.player.age - lastSwapTick > 2L) {
+        if (client.player == null || (long) client.player.tickCount - lastSwapTick > 2L) {
             resetPendingAttack();
             return;
         }
@@ -187,7 +187,7 @@ public class MaceSwapFeature extends Feature {
     private void onAttackKey(AttackKeyEvent event) {
         if (isOutsideWorld() || MinecraftRenderState.getScreen() != null) return;
         if (attackPending) {
-            boolean recent = (long) client.player.age - lastSwapTick <= 2L;
+            boolean recent = (long) client.player.tickCount - lastSwapTick <= 2L;
             int targetId = pendingTargetId;
             boolean checkTarget = requireSameTarget;
             resetPendingAttack();
@@ -197,7 +197,7 @@ public class MaceSwapFeature extends Feature {
             return;
         }
         if (!event.hasClicks()) return;
-        if (!(client.crosshairTarget instanceof EntityHitResult hit)
+        if (!(client.hitResult instanceof EntityHitResult hit)
                 || !(hit.getEntity() instanceof LivingEntity target)) return;
         int slot = findEligibleMace(target);
         if (slot == -1) return;
@@ -209,8 +209,8 @@ public class MaceSwapFeature extends Feature {
     @Subscribe
     private void beforeInput(HandleInputEvent.Pre event) {
         if (isOutsideWorld() || MinecraftRenderState.getScreen() != null) return;
-        if (client.options.attackKey == null || ((KeyBindingAccessor) client.options.attackKey).getTimesPressed() <= 0) return;
-        if (client.crosshairTarget instanceof EntityHitResult hit && hit.getEntity() instanceof LivingEntity target) {
+        if (client.options.keyAttack == null || ((KeyBindingAccessor) client.options.keyAttack).getTimesPressed() <= 0) return;
+        if (client.hitResult instanceof EntityHitResult hit && hit.getEntity() instanceof LivingEntity target) {
             requestMaceSwap(target);
         }
     }
@@ -224,7 +224,7 @@ public class MaceSwapFeature extends Feature {
         pendingTargetId = target.getId();
         requireSameTarget = true;
         attackPending = true;
-        lastSwapTick = client.player.age;
+        lastSwapTick = client.player.tickCount;
         return true;
     }
 
@@ -234,7 +234,7 @@ public class MaceSwapFeature extends Feature {
                 || !hotbarWhitelist.permitsCurrentSlot()) return -1;
         if (DeferredActionQueue.hasPendingActions() && !DeferredActionQueue.contains(this)) return -1;
         if (!TargetSelection.isValidTarget(target)) return -1;
-        if (target instanceof PlayerEntity player && EntityPredicates.isBlocking(player)
+        if (target instanceof Player player && EntityPredicates.isBlocking(player)
                 && !EntityPredicates.isOutsideBlockingArc(player)) return -1;
         int slot = findPriorityMace();
         if (slot == -1 || DeferredActionQueue.contains(this)
@@ -251,7 +251,7 @@ public class MaceSwapFeature extends Feature {
             return;
         }
         TargetsFeature.currentTarget = null;
-        if (scheduledMaceSlot == -1 || (long) client.player.age < scheduledSwapTick) return;
+        if (scheduledMaceSlot == -1 || (long) client.player.tickCount < scheduledSwapTick) return;
         if (DeferredActionQueue.hasPendingActions() && !DeferredActionQueue.contains(this)
                 && !DeferredActionQueue.contains(ShieldBreakerFeature.class)) {
             clearScheduledSwap();
@@ -276,7 +276,7 @@ public class MaceSwapFeature extends Feature {
         int ticks = Math.max(1, Math.round(stunSwitchDelay.sampleGaussian()));
         scheduledMaceSlot = slot;
         scheduledTargetId = target.getId();
-        scheduledSwapTick = client.player.age + ticks;
+        scheduledSwapTick = client.player.tickCount + ticks;
         TargetsFeature.shieldBreakActive = true;
     }
 
@@ -286,7 +286,7 @@ public class MaceSwapFeature extends Feature {
         pendingTargetId = targetId;
         requireSameTarget = false;
         attackPending = true;
-        lastSwapTick = client.player.age;
+        lastSwapTick = client.player.tickCount;
         TargetsFeature.shieldBreakActive = true;
     }
 
@@ -300,11 +300,11 @@ public class MaceSwapFeature extends Feature {
         return -1;
     }
 
-    private static int findBestMace(RegistryKey<Enchantment> enchantment) {
+    private static int findBestMace(ResourceKey<Enchantment> enchantment) {
         int bestSlot = -1;
         int bestLevel = 0;
         for (int slot = 0; slot < 9; slot++) {
-            ItemStack stack = client.player.getInventory().getStack(slot);
+            ItemStack stack = client.player.getInventory().getItem(slot);
             if (!(stack.getItem() instanceof MaceItem) || hasDisabledEnchantment(stack)) continue;
             int level = enchantment == null ? (hasNoConfiguredEnchantment(stack) ? 1 : 0)
                 : InventoryItems.getEnchantmentLevel(stack, enchantment);
@@ -315,7 +315,7 @@ public class MaceSwapFeature extends Feature {
 
     private static boolean hasDisabledEnchantment(ItemStack stack) {
         for (NamedRange range : maceSwapRanges.getRanges()) {
-            RegistryKey<Enchantment> enchantment = enchantmentFor(range);
+            ResourceKey<Enchantment> enchantment = enchantmentFor(range);
             if (enchantment != null && !range.isEnabled()
                     && InventoryItems.getEnchantmentLevel(stack, enchantment) > 0) return true;
         }
@@ -324,13 +324,13 @@ public class MaceSwapFeature extends Feature {
 
     private static boolean hasNoConfiguredEnchantment(ItemStack stack) {
         for (NamedRange range : maceSwapRanges.getRanges()) {
-            RegistryKey<Enchantment> enchantment = enchantmentFor(range);
+            ResourceKey<Enchantment> enchantment = enchantmentFor(range);
             if (enchantment != null && InventoryItems.getEnchantmentLevel(stack, enchantment) > 0) return false;
         }
         return true;
     }
 
-    private static RegistryKey<Enchantment> enchantmentFor(NamedRange range) {
+    private static ResourceKey<Enchantment> enchantmentFor(NamedRange range) {
         if (range == densityRange) return Enchantments.DENSITY;
         if (range == breachRange) return Enchantments.BREACH;
         if (range == windBurstRange) return Enchantments.WIND_BURST;
@@ -338,14 +338,14 @@ public class MaceSwapFeature extends Feature {
     }
 
     public int getStunDelayTicks(LivingEntity target) {
-        if (!isEnabled() || !stunSlam.getValue() || !(target instanceof PlayerEntity player)) return 0;
+        if (!isEnabled() || !stunSlam.getValue() || !(target instanceof Player player)) return 0;
         if (!EntityPredicates.isBlocking(player) || EntityPredicates.isOutsideBlockingArc(player)) return 0;
         return Math.max(1, Math.round(stunSwitchDelay.getUpper()));
     }
 
     public static boolean allowsAxes() {
         if (itemWhitelist.getSelectedCount() == 0) return true;
-        for (Item item : Registries.ITEM) {
+        for (Item item : BuiltInRegistries.ITEM) {
             if (ItemGroups.axes().matches(item) && itemWhitelist.isEntrySelected(item)) return true;
         }
         return false;
@@ -370,7 +370,7 @@ public class MaceSwapFeature extends Feature {
     private void onPacketReceived(PacketReceiveEvent event) {
         if (isOutsideWorld()) return;
         Packet<?> packet = event.getPacket();
-        if (packet instanceof PlayerRespawnS2CPacket || packet instanceof PlayerPositionLookS2CPacket) {
+        if (packet instanceof ClientboundRespawnPacket || packet instanceof ClientboundPlayerPositionPacket) {
             resetSharedState();
             resetPendingAttack();
             TargetsFeature.currentTarget = null;
@@ -388,17 +388,17 @@ public class MaceSwapFeature extends Feature {
     }
 
     private boolean isCrosshairTargetValid(int targetId) {
-        if (targetId < 0 || !(client.crosshairTarget instanceof EntityHitResult hit)) return false;
+        if (targetId < 0 || !(client.hitResult instanceof EntityHitResult hit)) return false;
         return hit.getEntity().getId() == targetId && hit.getEntity() instanceof LivingEntity target
             && target.isAlive() && !target.isRemoved() && TargetSelection.isValidTarget(target);
     }
 
     private void suspendItemUse() {
-        if (client.player != null && (client.player.isUsingItem() || client.options.useKey.isPressed())) {
-            client.options.useKey.setPressed(false);
+        if (client.player != null && (client.player.isUsingItem() || client.options.keyUse.isDown())) {
+            client.options.keyUse.setDown(false);
             EntityInteractions.stopUsingItem();
         }
-        if (!restoreUseKey && KeybindingCache.isPressed(client.options.useKey)) restoreUseKey = true;
+        if (!restoreUseKey && KeybindingCache.isPressed(client.options.keyUse)) restoreUseKey = true;
     }
 
     private void onSwapEnded() {
@@ -413,12 +413,12 @@ public class MaceSwapFeature extends Feature {
     private void restoreItemUse() {
         if (!restoreUseKey) return;
         restoreUseKey = false;
-        if (client.options.useKey == null) return;
-        InputUtil.Key key = ((KeyBindingAccessor) client.options.useKey).getBoundKey();
+        if (client.options.keyUse == null) return;
+        InputConstants.Key key = ((KeyBindingAccessor) client.options.keyUse).getBoundKey();
         if (key == null) return;
-        InputKey input = key.getCategory() == InputUtil.Type.MOUSE
-            ? InputKey.fromMouseCode(key.getCode()) : InputKey.fromCode(key.getCode());
-        if (input.isPressed()) client.options.useKey.setPressed(true);
+        InputKey input = key.getType() == InputConstants.Type.MOUSE
+            ? InputKey.fromMouseCode(key.getValue()) : InputKey.fromCode(key.getValue());
+        if (input.isPressed()) client.options.keyUse.setDown(true);
     }
 
     public static void appendBootstrapSettings(MaceSwapFeature feature) {

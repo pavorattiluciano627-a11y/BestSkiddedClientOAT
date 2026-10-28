@@ -16,7 +16,7 @@ import dev.echo.render.pipeline.GraphicsPipelineInfo;
 import dev.echo.render.vertex.VertexFormat;
 import java.util.ArrayDeque;
 import java.util.Arrays;
-import net.minecraft.util.math.Vec3d;
+import net.minecraft.world.phys.Vec3;
 import org.joml.FrustumIntersection;
 import org.lwjgl.system.MemoryUtil;
 
@@ -206,7 +206,7 @@ public final class VoxelBatch implements RenderBatch, ChunkUpdateListener {
             return;
         }
         frustum.set(context.viewProjectionMatrix);
-        Vec3d camera = context.cameraPosition;
+        Vec3 camera = context.cameraPosition;
         pass.setPipeline(pipeline);
         pass.setBuffer(0, cameraUniforms.wholeSlice());
         pass.setBuffer(1, paletteUniforms.wholeSlice());

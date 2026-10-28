@@ -4,8 +4,8 @@ import dev.echo.client.render.SvgColorMode;
 import dev.echo.client.render.UiRenderer;
 import dev.echo.render.FontAsset;
 import dev.echo.render.texture.TextureView;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.item.ItemStack;
+import net.minecraft.client.Minecraft;
+import net.minecraft.world.item.ItemStack;
 
 /**
  * Per-element HUD placement and drawing through the live client render context.
@@ -197,15 +197,15 @@ public final class HudElementLayout {
         float drawSize = placement.size();
         renderer.drawItem(stack, hud.inventoryPlayer(), seed, drawX, drawY, drawSize, alpha);
         float itemScale = drawSize / 16.0f;
-        if (stack.isItemBarVisible()) {
+        if (stack.isBarVisible()) {
             renderer.drawRoundedRect(drawX + 2.0f * itemScale, drawY + 13.0f * itemScale,
                     13.0f * itemScale, 2.0f * itemScale, 0.0f, HudRenderer.multiplyAlpha(0xff000000, alpha));
             renderer.drawRoundedRect(drawX + 2.0f * itemScale, drawY + 13.0f * itemScale,
-                    stack.getItemBarStep() * itemScale, itemScale, 0.0f,
-                    HudRenderer.multiplyAlpha(0xff000000 | stack.getItemBarColor(), alpha));
+                    stack.getBarWidth() * itemScale, itemScale, 0.0f,
+                    HudRenderer.multiplyAlpha(0xff000000 | stack.getBarColor(), alpha));
         }
-        float cooldown = hud.inventoryPlayer().getItemCooldownManager().getCooldownProgress(stack,
-                MinecraftClient.getInstance().getRenderTickCounter().getTickProgress(true));
+        float cooldown = hud.inventoryPlayer().getCooldowns().getCooldownPercent(stack,
+                Minecraft.getInstance().getDeltaTracker().getGameTimeDeltaPartialTick(true));
         if (cooldown > 0.0f) {
             renderer.drawRoundedRect(drawX, drawY + (1.0f - cooldown) * drawSize,
                     drawSize, cooldown * drawSize, 0.0f, HudRenderer.multiplyAlpha(Integer.MAX_VALUE, alpha));

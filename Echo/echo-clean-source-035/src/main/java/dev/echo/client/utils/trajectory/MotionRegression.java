@@ -1,6 +1,6 @@
 package dev.echo.client.utils.trajectory;
 
-import net.minecraft.util.math.MathHelper;
+import net.minecraft.util.Mth;
 
 /**
  * Structured regression body, pending the exact key/branch invariants listed
@@ -28,7 +28,7 @@ public final class MotionRegression {
         double intercept = (sumValue - slope * sumTime) / count;
         double squaredError = 0.0;
         for (int index = 0; index < count; index++) {
-            squaredError += MathHelper.square(intercept + slope * times[index] - values[index]);
+            squaredError += Mth.square(intercept + slope * times[index] - values[index]);
         }
         return new LinearFit(intercept, slope, squaredError / count);
     }

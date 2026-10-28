@@ -1,12 +1,12 @@
 package dev.echo.render;
 
+import com.mojang.blaze3d.pipeline.RenderTarget;
 import com.mojang.blaze3d.systems.CommandEncoder;
 import com.mojang.blaze3d.systems.RenderSystem;
 import dev.echo.client.Echo;
 import dev.echo.client.features.impl.render.HandChamsFeature;
 import dev.echo.client.render.TexturePasses;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.gl.Framebuffer;
+import net.minecraft.client.Minecraft;
 
 /**
  * Captures uncolored hand outlines into an owned framebuffer, applies the active
@@ -21,7 +21,7 @@ public class HandChamsRenderer {
     private static boolean capturing;
     private static boolean flushingOutlines;
     private static boolean hasCapturedOutlines;
-    private static Framebuffer framebuffer;
+    private static RenderTarget framebuffer;
 
     /** The original public constructor only invokes Object's constructor. */
     public HandChamsRenderer() {
@@ -40,7 +40,7 @@ public class HandChamsRenderer {
         return flushingOutlines;
     }
 
-    public static Framebuffer getFramebuffer() {
+    public static RenderTarget getFramebuffer() {
         return framebuffer;
     }
 
@@ -57,15 +57,15 @@ public class HandChamsRenderer {
             return;
         }
         hasCapturedOutlines = false;
-        MinecraftClient client = MinecraftClient.getInstance();
-        Framebuffer mainFramebuffer = client.getFramebuffer();
-        ensureFramebuffer(mainFramebuffer.textureWidth, mainFramebuffer.textureHeight);
+        Minecraft client = Minecraft.getInstance();
+        RenderTarget mainFramebuffer = client.gameRenderer.mainRenderTarget();
+        ensureFramebuffer(mainFramebuffer.width, mainFramebuffer.height);
 
         CommandEncoder encoder = RenderSystem.getDevice().createCommandEncoder();
         FramebufferOperations.clear(encoder, framebuffer);
         flushingOutlines = true;
         try {
-            client.getBufferBuilders().getOutlineVertexConsumers().draw();
+            client.gameRenderer.renderBuffers().stagedVertexBuffer().endFrame();
         } finally {
             flushingOutlines = false;
         }
@@ -74,14 +74,14 @@ public class HandChamsRenderer {
         if (material != null) {
             TexturePasses.applyMaterial(material, framebuffer);
         }
-        FramebufferOperations.blitColor(framebuffer, MinecraftClient.getInstance().getFramebuffer());
+        FramebufferOperations.blitColor(framebuffer, Minecraft.getInstance().gameRenderer.mainRenderTarget());
     }
 
     public static void reset() {
         capturing = false;
         hasCapturedOutlines = false;
         if (framebuffer != null) {
-            framebuffer.delete();
+            framebuffer.destroyBuffers();
             framebuffer = null;
         }
         TexturePasses.releaseResources();
@@ -90,7 +90,7 @@ public class HandChamsRenderer {
     private static void ensureFramebuffer(int width, int height) {
         if (framebuffer == null) {
             framebuffer = FramebufferOperations.create(FRAMEBUFFER_NAME, width, height, true);
-        } else if (framebuffer.textureWidth != width || framebuffer.textureHeight != height) {
+        } else if (framebuffer.width != width || framebuffer.height != height) {
             framebuffer.resize(width, height);
         }
     }

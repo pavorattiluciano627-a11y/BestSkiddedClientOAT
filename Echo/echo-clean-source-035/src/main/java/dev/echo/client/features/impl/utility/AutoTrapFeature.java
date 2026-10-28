@@ -37,24 +37,24 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
-import net.minecraft.block.Block;
-import net.minecraft.block.Blocks;
-import net.minecraft.entity.LivingEntity;
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.item.BlockItem;
-import net.minecraft.item.ItemStack;
-import net.minecraft.registry.Registries;
-import net.minecraft.util.ActionResult;
-import net.minecraft.util.Hand;
-import net.minecraft.util.hit.BlockHitResult;
-import net.minecraft.util.hit.HitResult;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.Box;
-import net.minecraft.util.math.Direction;
-import net.minecraft.util.math.MathHelper;
-import net.minecraft.util.math.Vec3d;
-import net.minecraft.world.EmptyBlockView;
-import net.minecraft.world.RaycastContext;
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.util.Mth;
+import net.minecraft.world.InteractionHand;
+import net.minecraft.world.InteractionResult;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.BlockItem;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.ClipContext;
+import net.minecraft.world.level.EmptyBlockGetter;
+import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.phys.AABB;
+import net.minecraft.world.phys.BlockHitResult;
+import net.minecraft.world.phys.HitResult;
+import net.minecraft.world.phys.Vec3;
 
 /** Plans, aims and places trap blocks around a selected target. */
 public class AutoTrapFeature extends Feature {
@@ -74,7 +74,7 @@ public class AutoTrapFeature extends Feature {
     private static final CharSequence modeOption = CatalogText.literal("Walls");
     private static ChoiceSetting mode;
     private static RegistryListSetting<Block> blocks = new AutoTrapBlockSelectionSetting(
-            CatalogText.literal("Blocks"), () -> Registries.BLOCK, () -> mode, () -> modeOption2);
+            CatalogText.literal("Blocks"), () -> BuiltInRegistries.BLOCK, () -> mode, () -> modeOption2);
     private static BooleanSetting silentRotations;
     private static BooleanSetting onlyStationary;
     private static IntSetting placeDelay;
@@ -117,7 +117,7 @@ public class AutoTrapFeature extends Feature {
             return false;
         }
         Block block = item.getBlock();
-        if (!block.getDefaultState().isFullCube(EmptyBlockView.INSTANCE, BlockPos.ORIGIN)) {
+        if (!block.defaultBlockState().isCollisionShapeFullBlock(EmptyBlockGetter.INSTANCE, BlockPos.ZERO)) {
             return false;
         }
         return blocks.getSelectedCount() == 0 || blocks.isEntrySelected(block);
@@ -186,7 +186,7 @@ public class AutoTrapFeature extends Feature {
             trapComplete = false;
             return;
         }
-        trapComplete = placementSearch().plan(target, Vec3d.ZERO).isEmpty();
+        trapComplete = placementSearch().plan(target, Vec3.ZERO).isEmpty();
         if (trapComplete) {
             primaryPlacement = null;
             return;
@@ -196,10 +196,10 @@ public class AutoTrapFeature extends Feature {
             secondaryPlacement = null;
             return;
         }
-        Vec3d displacement = predictHorizontalOffset(target, TARGET_PREDICTION_EXTRA_TICKS);
-        List<PlacementFilter> plan = displacement.horizontalLengthSquared() > MINIMUM_PREDICTED_MOVEMENT_SQUARED
+        Vec3 displacement = predictHorizontalOffset(target, TARGET_PREDICTION_EXTRA_TICKS);
+        List<PlacementFilter> plan = displacement.horizontalDistanceSqr() > MINIMUM_PREDICTED_MOVEMENT_SQUARED
                 ? placementSearch().planPredicted(target, displacement)
-                : placementSearch().plan(target, Vec3d.ZERO);
+                : placementSearch().plan(target, Vec3.ZERO);
         primaryPlacement = choosePlacement(plan, null);
         candidatePositions = plan.stream().map(PlacementFilter::position).collect(Collectors.toSet());
         secondaryPlacement = primaryPlacement == null ? null : choosePlacement(plan, primaryPlacement.target().position());
@@ -212,7 +212,7 @@ public class AutoTrapFeature extends Feature {
 
     @Subscribe
     private void onPlayerInput(PlayerInputEvent event) {
-        if (jumpRequested && !isOutsideWorld() && client.player.isOnGround()) {
+        if (jumpRequested && !isOutsideWorld() && client.player.onGround()) {
             event.jump = true;
         }
     }
@@ -238,7 +238,7 @@ public class AutoTrapFeature extends Feature {
             return;
         }
         pendingPlacement = secondaryPlacement != null && samePosition(first, lastPlacement) ? secondaryPlacement : first;
-        Vec3d point = pendingPlacement.target().hitResult().getPos().subtract(predictionVelocity());
+        Vec3 point = pendingPlacement.target().hitResult().getLocation().subtract(predictionVelocity());
         if (!rotations().aim(this, RotationPriority.HIGH, point, RotationSettings.uniform(
                 silentRotations.getValue() ? RotationVisibility.SILENT : RotationVisibility.VISIBLE,
                 AimTransition.SNAP, ROTATION_SPEED))) {
@@ -278,7 +278,7 @@ public class AutoTrapFeature extends Feature {
         if (placementCooldownTicks > 0 || event.hasClicks()) {
             return;
         }
-        if (!plan.itemFilter().test(client.player.getMainHandStack()) || !isStillValid(plan)) {
+        if (!plan.itemFilter().test(client.player.getMainHandItem()) || !isStillValid(plan)) {
             return;
         }
         if (!rotations().isRotationReady()) {
@@ -301,21 +301,21 @@ public class AutoTrapFeature extends Feature {
         if (hit == null || isOutsideWorld()) {
             return;
         }
-        ActionResult result = client.interactionManager.interactBlock(client.player, Hand.MAIN_HAND, hit);
-        if (result instanceof ActionResult.Success success && success.swingSource() == ActionResult.SwingSource.CLIENT) {
-            client.player.swingHand(Hand.MAIN_HAND);
+        InteractionResult result = client.gameMode.useItemOn(client.player, InteractionHand.MAIN_HAND, hit);
+        if (result instanceof InteractionResult.Success success && success.swingSource() == InteractionResult.SwingSource.CLIENT) {
+            client.player.swing(InteractionHand.MAIN_HAND);
         }
     }
 
     private TrapPlacementPlan placementAbove(TrapPlacementPlan first, Set<BlockPos> positions) {
         BlockPos base = first.target().position();
-        BlockPos above = base.up();
+        BlockPos above = base.above();
         if (!positions.contains(above) || !PlacementWorldQueries.isReplaceable(above)) {
             return null;
         }
-        Vec3d point = Vec3d.ofCenter(base).add(0.0, 0.5, 0.0);
-        Vec3d eye = client.player.getEyePos();
-        if (eye.y < point.y || eye.squaredDistanceTo(point) > MathHelper.square(client.player.getBlockInteractionRange())) {
+        Vec3 point = Vec3.atCenterOf(base).add(0.0, 0.5, 0.0);
+        Vec3 eye = client.player.getEyePosition();
+        if (eye.y < point.y || eye.distanceToSqr(point) > Mth.square(client.player.blockInteractionRange())) {
             return null;
         }
         BlockHitResult hit = new BlockHitResult(point, Direction.UP, base, false);
@@ -327,7 +327,7 @@ public class AutoTrapFeature extends Feature {
         if (!candidatePositions.contains(position) || !PlacementWorldQueries.isReplaceable(position)) {
             return false;
         }
-        return PlacementWorldQueries.canPlaceStack(client.player.getMainHandStack(), plan.target().hitResult())
+        return PlacementWorldQueries.canPlaceStack(client.player.getMainHandItem(), plan.target().hitResult())
                 || isClearOnArrival(position);
     }
 
@@ -341,15 +341,15 @@ public class AutoTrapFeature extends Feature {
             return null;
         }
         BlockHitResult expected = plan.target().hitResult();
-        Vec3d eye = client.player.getCameraPosVec(1.0F);
-        Vec3d end = eye.add(rotationVector(rotation.yaw(), rotation.pitch()).multiply(client.player.getBlockInteractionRange()));
+        Vec3 eye = client.player.getEyePosition(1.0F);
+        Vec3 end = eye.add(rotationVector(rotation.yaw(), rotation.pitch()).scale(client.player.blockInteractionRange()));
         if (plan.ignoreInterveningBlocks()) {
-            return new Box(expected.getBlockPos()).expand(1.0E-4).raycast(eye, end).isPresent() ? expected : null;
+            return new AABB(expected.getBlockPos()).inflate(1.0E-4).clip(eye, end).isPresent() ? expected : null;
         }
-        BlockHitResult actual = client.world.raycast(new RaycastContext(eye, end, RaycastContext.ShapeType.OUTLINE,
-                RaycastContext.FluidHandling.NONE, client.player));
+        BlockHitResult actual = client.level.clip(new ClipContext(eye, end, ClipContext.Block.OUTLINE,
+                ClipContext.Fluid.NONE, client.player));
         if (actual == null || actual.getType() != HitResult.Type.BLOCK
-                || !actual.getBlockPos().equals(expected.getBlockPos()) || actual.getSide() != expected.getSide()) {
+                || !actual.getBlockPos().equals(expected.getBlockPos()) || actual.getDirection() != expected.getDirection()) {
             return null;
         }
         return actual;
@@ -361,8 +361,8 @@ public class AutoTrapFeature extends Feature {
     }
 
     private TrapPlacementPlan choosePlacement(List<PlacementFilter> candidates, BlockPos excluded, boolean requireVisible) {
-        Vec3d eye = client.player.getEyePos();
-        double reachSquared = MathHelper.square(client.player.getBlockInteractionRange());
+        Vec3 eye = client.player.getEyePosition();
+        double reachSquared = Mth.square(client.player.blockInteractionRange());
         for (PlacementFilter candidate : candidates) {
             if (candidate.position().equals(excluded)) {
                 continue;
@@ -373,10 +373,10 @@ public class AutoTrapFeature extends Feature {
             }
             PlacementTarget placement = PlacementTargets.find(candidate.position(), requireVisible,
                     placementSearch().allowsPartialSupport(), true);
-            if (placement == null || eye.squaredDistanceTo(placement.hitResult().getPos()) > reachSquared) {
+            if (placement == null || eye.distanceToSqr(placement.hitResult().getLocation()) > reachSquared) {
                 continue;
             }
-            if (!PlacementWorldQueries.canPlaceStack(client.player.getInventory().getStack(slot), placement.hitResult())
+            if (!PlacementWorldQueries.canPlaceStack(client.player.getInventory().getItem(slot), placement.hitResult())
                     && !isClearOnArrival(candidate.position())) {
                 continue;
             }
@@ -386,18 +386,18 @@ public class AutoTrapFeature extends Feature {
     }
 
     private boolean isClearOnArrival(BlockPos position) {
-        Box block = new Box(position);
+        AABB block = new AABB(position);
         if (target.getBoundingBox().intersects(block) || predictedVerticalBounds(target).intersects(block)) {
             return false;
         }
-        return client.world.getOtherEntities(target, block, entity -> entity.intersectionChecked).isEmpty();
+        return client.level.getEntities(target, block, entity -> entity.blocksBuilding).isEmpty();
     }
 
-    private static Box predictedVerticalBounds(LivingEntity entity) {
+    private static AABB predictedVerticalBounds(LivingEntity entity) {
         int ticks = (int) Math.round(PREDICTION_BASE_TICKS + LatencyTracker.milliseconds() / 50.0);
-        double floor = PlacementBounds.around(entity, Vec3d.ZERO, PlacementWorldQueries::isReplaceable).minY();
+        double floor = PlacementBounds.around(entity, Vec3.ZERO, PlacementWorldQueries::isReplaceable).minY();
         double y = entity.getY();
-        double velocityY = entity.getY() - entity.lastY;
+        double velocityY = entity.getY() - entity.yo;
         for (int tick = 0; tick < ticks; tick++) {
             velocityY = (velocityY - GRAVITY) * VERTICAL_DRAG;
             y += velocityY;
@@ -406,23 +406,23 @@ public class AutoTrapFeature extends Feature {
                 velocityY = 0.0;
             }
         }
-        return entity.getBoundingBox().offset(0.0, y - entity.getY(), 0.0);
+        return entity.getBoundingBox().move(0.0, y - entity.getY(), 0.0);
     }
 
-    private static Vec3d predictHorizontalOffset(LivingEntity entity, double extraTicks) {
+    private static Vec3 predictHorizontalOffset(LivingEntity entity, double extraTicks) {
         int ticks = (int) Math.round(PREDICTION_BASE_TICKS + extraTicks + LatencyTracker.milliseconds() / 50.0);
-        Vec3d displacement = predictBounds(entity, ticks, !entity.isOnGround()).getCenter()
+        Vec3 displacement = predictBounds(entity, ticks, !entity.onGround()).getCenter()
                 .subtract(entity.getBoundingBox().getCenter());
-        return new Vec3d(displacement.x, 0.0, displacement.z);
+        return new Vec3(displacement.x, 0.0, displacement.z);
     }
 
-    private static Box predictBounds(LivingEntity entity, int ticks, boolean jump) {
-        Vec3d velocity = entity.getEntityPos().subtract(entity.lastX, entity.lastY, entity.lastZ);
-        if (entity instanceof PlayerEntity player && client.world != null) {
+    private static AABB predictBounds(LivingEntity entity, int ticks, boolean jump) {
+        Vec3 velocity = entity.position().subtract(entity.xo, entity.yo, entity.zo);
+        if (entity instanceof Player player && client.level != null) {
             try {
-                SimulatedPlayer simulation = PlayerPrediction.forWorld(client.world);
-                boolean moving = velocity.horizontalLengthSquared() > STATIONARY_DISTANCE_SQUARED;
-                float yaw = moving ? (float) Math.toDegrees(Math.atan2(-velocity.x, velocity.z)) : player.getYaw();
+                SimulatedPlayer simulation = PlayerPrediction.forWorld(client.level);
+                boolean moving = velocity.horizontalDistanceSqr() > STATIONARY_DISTANCE_SQUARED;
+                float yaw = moving ? (float) Math.toDegrees(Math.atan2(-velocity.x, velocity.z)) : player.getYRot();
                 simulation.copyFrom(player, velocity, yaw, 0.0F, moving ? 1.0F : 0.0F, 0.0F, jump);
                 for (int tick = 0; tick < ticks; tick++) {
                     simulation.tickPrediction();
@@ -432,13 +432,13 @@ public class AutoTrapFeature extends Feature {
                 // The artifact falls back to horizontal extrapolation when simulation fails.
             }
         }
-        return entity.getBoundingBox().offset(velocity.x * ticks, 0.0, velocity.z * ticks);
+        return entity.getBoundingBox().move(velocity.x * ticks, 0.0, velocity.z * ticks);
     }
 
-    private Vec3d predictionVelocity() {
-        Vec3d velocity = client.player.getVelocity();
-        double y = client.player.isOnGround() ? (jumpRequested ? JUMP_VELOCITY : 0.0) : velocity.y;
-        return new Vec3d(velocity.x, y, velocity.z);
+    private Vec3 predictionVelocity() {
+        Vec3 velocity = client.player.getDeltaMovement();
+        double y = client.player.onGround() ? (jumpRequested ? JUMP_VELOCITY : 0.0) : velocity.y;
+        return new Vec3(velocity.x, y, velocity.z);
     }
 
     private boolean hasPlacementAboveEye(List<PlacementFilter> positions) {
@@ -452,11 +452,11 @@ public class AutoTrapFeature extends Feature {
     }
 
     private LivingEntity findTarget() {
-        List<LivingEntity> candidates = client.world.getEntitiesByClass(LivingEntity.class,
-                client.player.getBoundingBox().expand(targetRange()),
+        List<LivingEntity> candidates = client.level.getEntitiesOfClass(LivingEntity.class,
+                client.player.getBoundingBox().inflate(targetRange()),
                 entity -> entity != client.player && entity.isAlive() && TargetSelection.isValidTarget(entity)
                         && isStationaryTarget(entity));
-        LivingEntity closest = candidates.stream().min(Comparator.comparingDouble(client.player::squaredDistanceTo)).orElse(null);
+        LivingEntity closest = candidates.stream().min(Comparator.comparingDouble(client.player::distanceToSqr)).orElse(null);
         return TargetSelection.resolveTarget(closest);
     }
 
@@ -464,21 +464,21 @@ public class AutoTrapFeature extends Feature {
         if (!onlyStationary.getValue()) {
             return true;
         }
-        double distance = MathHelper.square(entity.getX() - entity.lastX) + MathHelper.square(entity.getZ() - entity.lastZ);
+        double distance = Mth.square(entity.getX() - entity.xo) + Mth.square(entity.getZ() - entity.zo);
         return distance < STATIONARY_DISTANCE_SQUARED || isWebbed(entity);
     }
 
     private static boolean isWebbed(LivingEntity entity) {
-        return BlockPos.stream(entity.getBoundingBox().contract(1.0E-4))
-                .anyMatch(position -> client.world.getBlockState(position).isOf(Blocks.COBWEB));
+        return BlockPos.betweenClosedStream(entity.getBoundingBox().deflate(1.0E-4))
+                .anyMatch(position -> client.level.getBlockState(position).is(Blocks.COBWEB));
     }
 
     private boolean isCurrentTargetValid(LivingEntity entity) {
-        return entity != null && entity.isAlive() && client.player.squaredDistanceTo(entity) <= MathHelper.square(targetRange());
+        return entity != null && entity.isAlive() && client.player.distanceToSqr(entity) <= Mth.square(targetRange());
     }
 
     private double targetRange() {
-        return client.player.getBlockInteractionRange() + TARGET_RANGE_PADDING;
+        return client.player.blockInteractionRange() + TARGET_RANGE_PADDING;
     }
 
     private void finishDeferredDisable() {
@@ -490,14 +490,14 @@ public class AutoTrapFeature extends Feature {
     }
 
     /** Preserves Entity.getRotationVector's float intermediates and trig call order. */
-    private static Vec3d rotationVector(float yaw, float pitch) {
+    private static Vec3 rotationVector(float yaw, float pitch) {
         float pitchRadians = pitch * 0.017453292F;
         float yawRadians = -yaw * 0.017453292F;
-        float cosineYaw = MathHelper.cos(yawRadians);
-        float sineYaw = MathHelper.sin(yawRadians);
-        float cosinePitch = MathHelper.cos(pitchRadians);
-        float sinePitch = MathHelper.sin(pitchRadians);
-        return new Vec3d(sineYaw * cosinePitch, -sinePitch, cosineYaw * cosinePitch);
+        float cosineYaw = Mth.cos(yawRadians);
+        float sineYaw = Mth.sin(yawRadians);
+        float cosinePitch = Mth.cos(pitchRadians);
+        float sinePitch = Mth.sin(pitchRadians);
+        return new Vec3(sineYaw * cosinePitch, -sinePitch, cosineYaw * cosinePitch);
     }
 
     /** Appends this declaring class's settings in the recorded classfile order. */

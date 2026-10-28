@@ -1,9 +1,9 @@
 package dev.echo.client.render.hand;
 
-import net.minecraft.client.util.math.MatrixStack;
-import net.minecraft.util.Arm;
-import net.minecraft.util.math.MathHelper;
-import net.minecraft.util.math.RotationAxis;
+import com.mojang.blaze3d.vertex.PoseStack;
+import com.mojang.math.Axis;
+import net.minecraft.util.Mth;
+import net.minecraft.world.entity.HumanoidArm;
 
 public class SwipeHandAnimation extends HandAnimation {
     public SwipeHandAnimation() {
@@ -11,10 +11,10 @@ public class SwipeHandAnimation extends HandAnimation {
     }
 
     @Override
-    public void apply(float swingProgress, MatrixStack matrices, int direction, Arm arm) {
+    public void apply(float swingProgress, PoseStack matrices, int direction, HumanoidArm arm) {
         HandPoseTransform.translate(matrices, arm, 0.0F);
-        int side = arm == Arm.RIGHT ? 1 : -1;
-        float wave = MathHelper.sin(MathHelper.sqrt(swingProgress) * (float) Math.PI);
-        matrices.multiply(RotationAxis.POSITIVE_Z.rotationDegrees(side * wave * -20.0F));
+        int side = arm == HumanoidArm.RIGHT ? 1 : -1;
+        float wave = Mth.sin(Mth.sqrt(swingProgress) * (float) Math.PI);
+        matrices.mulPose(Axis.ZP.rotationDegrees(side * wave * -20.0F));
     }
 }

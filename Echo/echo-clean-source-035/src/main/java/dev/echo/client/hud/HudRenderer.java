@@ -44,17 +44,17 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.option.AttackIndicator;
-import net.minecraft.entity.EquipmentSlot;
-import net.minecraft.entity.LivingEntity;
-import net.minecraft.entity.effect.StatusEffect;
-import net.minecraft.entity.effect.StatusEffectInstance;
-import net.minecraft.entity.effect.StatusEffects;
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.item.ItemStack;
-import net.minecraft.registry.entry.RegistryEntry;
-import net.minecraft.util.math.BlockPos;
+import net.minecraft.client.AttackIndicatorStatus;
+import net.minecraft.client.Minecraft;
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.Holder;
+import net.minecraft.world.effect.MobEffect;
+import net.minecraft.world.effect.MobEffectInstance;
+import net.minecraft.world.effect.MobEffects;
+import net.minecraft.world.entity.EquipmentSlot;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.ItemStack;
 
 /**
  * Original HUD renderer, measurements, animations and frame state with direct calls.
@@ -119,7 +119,7 @@ public final class HudRenderer {
     private ItemStack offhand;
     private int selectedHotbarSlot;
     private float attackCooldown;
-    private PlayerEntity inventoryPlayer;
+    private Player inventoryPlayer;
     private float selectedSlotAnimation;
     private boolean hotbarReplacement;
     private LivingEntity target;
@@ -207,7 +207,7 @@ public final class HudRenderer {
     /** Original render-event binding; preparation precedes the screen/hidden-HUD checks. */
     @Subscribe
     public void onHudRender(HudRenderEvent event) {
-        if (Echo.eventsDisabled || MinecraftClient.getInstance().player == null || !isInitialized()) return;
+        if (Echo.eventsDisabled || Minecraft.getInstance().player == null || !isInitialized()) return;
         prepareHudFrame(event.getRenderer());
         if (MinecraftRenderState.getScreen() != null || MinecraftRenderState.isHudHidden()) return;
         for (Feature feature : FeatureManager.allFeatures()) {
@@ -254,15 +254,15 @@ public final class HudRenderer {
 
     public boolean isInitialized() { return svgTextures != null; }
     SvgTextureCache svgTextures() { return svgTextures; }
-    PlayerEntity inventoryPlayer() { return inventoryPlayer; }
+    Player inventoryPlayer() { return inventoryPlayer; }
     boolean replacesVanillaHotbar() { return hotbarReplacement; }
     public boolean animationsEnabled() { return animationsEnabled; }
     public HudElementLayout createLayout(UiRenderer renderer, TextureView backdrop, float scale, float opacity) {
         return new HudElementLayout(this, renderer, backdrop, getCanvasScale() * scale, opacity);
     }
     public float getCanvasScale() {
-        int width = (int) Math.ceil(MinecraftClient.getInstance().getWindow().getFramebufferWidth() / 2.0);
-        int height = (int) Math.ceil(MinecraftClient.getInstance().getWindow().getFramebufferHeight() / 2.0);
+        int width = (int) Math.ceil(Minecraft.getInstance().getWindow().getWidth() / 2.0);
+        int height = (int) Math.ceil(Minecraft.getInstance().getWindow().getHeight() / 2.0);
         return Math.min((float) width / 1920.0f, (float) height / 1080.0f);
     }
     private static boolean isFeatureEnabled(Class<?> type) {
@@ -542,48 +542,48 @@ public final class HudRenderer {
     public static float armorItemX(float left, int slot) { return armorSlotLeft(left, slot) + 8.0f; }
     public static float targetEquipmentX(int slot) { return 932.0f + 18.0f * slotIndex(slot, 5); }
 
-    private void captureInventory(PlayerEntity player) {
+    private void captureInventory(Player player) {
         inventoryPlayer = player;
         if (player == null) { clearInventory(); return; }
-        for (int slot = 0; slot < 9; slot++) hotbar[slot] = player.getInventory().getStack(slot);
+        for (int slot = 0; slot < 9; slot++) hotbar[slot] = player.getInventory().getItem(slot);
         selectedHotbarSlot = Math.max(0, Math.min(8, player.getInventory().getSelectedSlot()));
-        for (int slot = 0; slot < 4; slot++) armor[slot] = player.getEquippedStack(ARMOR_ORDER[slot]);
-        offhand = player.getOffHandStack();
+        for (int slot = 0; slot < 4; slot++) armor[slot] = player.getItemBySlot(ARMOR_ORDER[slot]);
+        offhand = player.getOffhandItem();
     }
 
     private void updatePlayerState() {
-        MinecraftClient client = MinecraftClient.getInstance();
-        framesPerSecond = Math.max(0, client.getCurrentFps());
-        String username = client.getSession().getUsername();
+        Minecraft client = Minecraft.getInstance();
+        framesPerSecond = Math.max(0, client.getFps());
+        String username = client.getUser().getName();
         usernameFallback = username == null || username.isBlank() ? "Player" : username;
-        PlayerEntity player = client.player != null && !client.player.isSpectator()
-                && client.getCameraEntity() instanceof PlayerEntity cameraPlayer ? cameraPlayer : null;
+        Player player = client.player != null && !client.player.isSpectator()
+                && client.getCameraEntity() instanceof Player cameraPlayer ? cameraPlayer : null;
         captureInventory(player);
-        attackCooldown = player != null && client.options.getAttackIndicator().getValue() == AttackIndicator.HOTBAR
-                ? clampFraction(player.getAttackCooldownProgress(0.0f)) : 1.0f;
+        attackCooldown = player != null && client.options.attackIndicator().get() == AttackIndicatorStatus.HOTBAR
+                ? clampFraction(player.getAttackStrengthScale(0.0f)) : 1.0f;
         updateTargetState(client);
-        if (client.world == null || client.player == null) {
+        if (client.level == null || client.player == null) {
             coordinateX = coordinateY = coordinateZ = "—";
             return;
         }
-        BlockPos position = client.player.getBlockPos();
+        BlockPos position = client.player.blockPosition();
         coordinateX = formatGroupedInteger(position.getX());
         coordinateY = formatGroupedInteger(position.getY());
         coordinateZ = formatGroupedInteger(position.getZ());
     }
 
-    private void updateTargetState(MinecraftClient client) {
+    private void updateTargetState(Minecraft client) {
         long now = System.nanoTime();
         LivingEntity recent = TargetSelection.recentlyAttacked(20);
         if (recent != null && recent != client.player) {
             target = recent;
             targetChangedAtNanos = now;
-        } else if (client.targetedEntity instanceof PlayerEntity hovered
+        } else if (client.crosshairPickEntity instanceof Player hovered
                 && hovered != client.player && TargetSelection.isValidTarget(hovered)) {
             target = hovered;
             targetChangedAtNanos = now;
         }
-        boolean retained = target != null && target.isAlive() && target.getEntityWorld() == client.world
+        boolean retained = target != null && target.isAlive() && target.level() == client.level
                 && now - targetChangedAtNanos <= 2_000_000_000L;
         if (!retained) {
             target = null;
@@ -598,8 +598,8 @@ public final class HudRenderer {
         targetName = name == null || name.isBlank() ? "Player" : name;
         targetHealth = Math.max(0.0f, target.getHealth());
         targetMaximumHealth = Math.max(1.0f, target.getMaxHealth());
-        for (int slot = 0; slot < 4; slot++) targetArmor[slot] = target.getEquippedStack(ARMOR_ORDER[slot]);
-        targetMainHand = target.getMainHandStack();
+        for (int slot = 0; slot < 4; slot++) targetArmor[slot] = target.getItemBySlot(ARMOR_ORDER[slot]);
+        targetMainHand = target.getMainHandItem();
     }
 
     private void clearTargetData() {
@@ -618,7 +618,7 @@ public final class HudRenderer {
     public ItemStack getTargetMainHand() { return targetMainHand; }
     public LivingEntity getTarget() { return target; }
     public TextureView getTargetSkin() {
-        if (!(previousTarget instanceof PlayerEntity player)) return null;
+        if (!(previousTarget instanceof Player player)) return null;
         GpuTextureView skin = MinecraftRenderState.playerSkin(player);
         if (skin == null) return null;
         return importedTextures.computeIfAbsent(skin, view -> GlTextureBridge.importColor(renderDevice, view));
@@ -638,17 +638,17 @@ public final class HudRenderer {
     }
 
     public List<StatusEffectRow> getEffectRows() {
-        var player = MinecraftClient.getInstance().player;
+        var player = Minecraft.getInstance().player;
         if (player == null) return List.of();
         List<StatusEffectRow> result = new ArrayList<>();
-        for (StatusEffectInstance effect : player.getStatusEffects()) {
-            String name = effect.getEffectType().value().getName().getString();
+        for (MobEffectInstance effect : player.getActiveEffects()) {
+            String name = effect.getEffect().value().getDisplayName().getString();
             int amplifier = effect.getAmplifier();
             String suffix = amplifier > 0 ? effectLevel(amplifier + 1) : "";
             int seconds = effect.getDuration() / 20;
             String duration = seconds / 60 + ":" + String.format(Locale.ROOT, "%02d", seconds % 60);
             float remaining = Math.min(1.0f, effect.getDuration() / 1200.0f);
-            result.add(new StatusEffectRow(name, suffix, duration, remaining, iconForEffect(effect.getEffectType())));
+            result.add(new StatusEffectRow(name, suffix, duration, remaining, iconForEffect(effect.getEffect())));
         }
         return result;
     }
@@ -663,16 +663,16 @@ public final class HudRenderer {
         };
     }
 
-    private static HudIcon iconForEffect(RegistryEntry<StatusEffect> effect) {
-        if (effect.matches(StatusEffects.SPEED) || effect.matches(StatusEffects.HASTE)
-                || effect.matches(StatusEffects.JUMP_BOOST)) return HudIcon.FLASH;
-        if (effect.matches(StatusEffects.SLOWNESS) || effect.matches(StatusEffects.MINING_FATIGUE)) return HudIcon.FLASH_SLASH;
-        if (effect.matches(StatusEffects.INVISIBILITY)) return HudIcon.EYE_SLASH;
-        if (effect.matches(StatusEffects.NIGHT_VISION) || effect.matches(StatusEffects.GLOWING)) return HudIcon.EYE;
-        if (effect.matches(StatusEffects.REGENERATION) || effect.matches(StatusEffects.HEALTH_BOOST)
-                || effect.matches(StatusEffects.ABSORPTION)) return HudIcon.HEART;
-        if (effect.matches(StatusEffects.RESISTANCE) || effect.matches(StatusEffects.FIRE_RESISTANCE)) return HudIcon.SHIELD_TICK;
-        if (effect.matches(StatusEffects.STRENGTH)) return HudIcon.DANGER;
+    private static HudIcon iconForEffect(Holder<MobEffect> effect) {
+        if (effect.is(MobEffects.SPEED) || effect.is(MobEffects.HASTE)
+                || effect.is(MobEffects.JUMP_BOOST)) return HudIcon.FLASH;
+        if (effect.is(MobEffects.SLOWNESS) || effect.is(MobEffects.MINING_FATIGUE)) return HudIcon.FLASH_SLASH;
+        if (effect.is(MobEffects.INVISIBILITY)) return HudIcon.EYE_SLASH;
+        if (effect.is(MobEffects.NIGHT_VISION) || effect.is(MobEffects.GLOWING)) return HudIcon.EYE;
+        if (effect.is(MobEffects.REGENERATION) || effect.is(MobEffects.HEALTH_BOOST)
+                || effect.is(MobEffects.ABSORPTION)) return HudIcon.HEART;
+        if (effect.is(MobEffects.RESISTANCE) || effect.is(MobEffects.FIRE_RESISTANCE)) return HudIcon.SHIELD_TICK;
+        if (effect.is(MobEffects.STRENGTH)) return HudIcon.DANGER;
         return switch (effect.value().getCategory()) {
             case HARMFUL -> HudIcon.DANGER;
             case BENEFICIAL -> HudIcon.SHIELD_SECURITY;

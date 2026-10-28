@@ -13,9 +13,9 @@ import dev.echo.client.setting.MultiChoiceSetting;
 import dev.echo.client.utils.interaction.EntityInteractions;
 import dev.echo.client.utils.network.VelocityPackets;
 import java.util.Optional;
-import net.minecraft.network.packet.s2c.play.EntityVelocityUpdateS2CPacket;
-import net.minecraft.network.packet.s2c.play.ExplosionS2CPacket;
-import net.minecraft.util.math.Vec3d;
+import net.minecraft.network.protocol.game.ClientboundExplodePacket;
+import net.minecraft.network.protocol.game.ClientboundSetEntityMotionPacket;
+import net.minecraft.world.phys.Vec3;
 
 /** Source-selective knockback scaling and the original hurt-tick movement adjustment. */
 public class VelocityFeature extends Feature {
@@ -55,7 +55,7 @@ public class VelocityFeature extends Feature {
     @Subscribe
     public void onVelocityPacket(PacketReceiveEvent event) {
         if (isOutsideWorld()) return;
-        if (!(event.getPacket() instanceof EntityVelocityUpdateS2CPacket velocity)) return;
+        if (!(event.getPacket() instanceof ClientboundSetEntityMotionPacket velocity)) return;
         if (client.player == null || VelocityPackets.entityId(velocity) != client.player.getId()) return;
 
         boolean followsExplosion = explosionKnockbackPending && sources.isSelected(EXPLOSION_SOURCE);
@@ -71,26 +71,26 @@ public class VelocityFeature extends Feature {
             if (scale == 0.0F) {
                 event.cancel();
             } else {
-                Vec3d motion = VelocityPackets.velocity(velocity);
+                Vec3 motion = VelocityPackets.velocity(velocity);
                 event.cancel();
-                client.player.setVelocity(motion.x * scale, motion.y * scale, motion.z * scale);
+                client.player.setDeltaMovement(motion.x * scale, motion.y * scale, motion.z * scale);
             }
         } else if (mode.isSelected(MINEMEN_CLUB_MODE) && client.player.hurtTime == 7) {
-            EntityInteractions.setVelocityX(client.player.getVelocity().getX() * 0.25);
+            EntityInteractions.setVelocityX(client.player.getDeltaMovement().x() * 0.25);
             EntityInteractions.setVelocityY(-0.05350000038743019);
-            EntityInteractions.setVelocityZ(client.player.getVelocity().getZ() * 0.25);
+            EntityInteractions.setVelocityZ(client.player.getDeltaMovement().z() * 0.25);
         }
     }
 
     @Subscribe
     public void onExplosionPacket(PacketReceiveEvent event) {
         if (isOutsideWorld()) return;
-        if (!(event.getPacket() instanceof ExplosionS2CPacket explosion)) return;
+        if (!(event.getPacket() instanceof ClientboundExplodePacket explosion)) return;
         if (client.player == null) return;
         if (!sources.isSelected(EXPLOSION_SOURCE)) return;
         if (!mode.isSelected(CANCEL_MODE)) return;
         if (amount.getValue() == 1.0F) return;
-        Optional<Vec3d> knockback = explosion.playerKnockback();
+        Optional<Vec3> knockback = explosion.playerKnockback();
         if (knockback.isEmpty()) return;
         float scale = amount.getValue();
         event.cancel();
@@ -98,9 +98,9 @@ public class VelocityFeature extends Feature {
             explosionKnockbackPending = true;
             return;
         }
-        Vec3d motion = knockback.get();
-        Vec3d scaledMotion = new Vec3d(motion.x * scale, motion.y * scale, motion.z * scale);
-        client.player.addVelocityInternal(scaledMotion);
+        Vec3 motion = knockback.get();
+        Vec3 scaledMotion = new Vec3(motion.x * scale, motion.y * scale, motion.z * scale);
+        client.player.addDeltaMovement(scaledMotion);
         explosionKnockbackPending = true;
     }
 

@@ -11,7 +11,7 @@ import dev.echo.render.FontAsset;
 import dev.echo.client.bootstrap.CatalogText;
 import dev.echo.client.ui.UiSize;
 import dev.echo.render.texture.TextureView;
-import net.minecraft.item.ItemStack;
+import net.minecraft.world.item.ItemStack;
 
 /** Animated target portrait, health, armor and main-hand item. */
 public class TargetFeature extends EchoHudElement {
@@ -28,7 +28,7 @@ public class TargetFeature extends EchoHudElement {
     @Override
     protected void renderContents(HudElementLayout layout) {
         HudRenderer hud = HudRenderer.INSTANCE;
-        boolean inGame = client.currentScreen == null;
+        boolean inGame = client.gui.screen() == null;
         float visibility = inGame ? hud.getTargetVisibility() : 1.0f;
         float textOpacity = inGame ? hud.getTargetTextOpacity() : 1.0f;
         layout.setAnimation(0.92f + 0.08f * visibility, visibility);

@@ -3,21 +3,21 @@ package dev.echo.client.events.interaction;
 import dev.echo.client.events.Event;
 import dev.echo.client.events.EventPhase;
 import dev.echo.client.events.input.KeybindingEvent;
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.item.ItemStack;
-import net.minecraft.util.Hand;
-import net.minecraft.util.hit.BlockHitResult;
-import net.minecraft.util.hit.EntityHitResult;
-import net.minecraft.util.hit.HitResult;
+import net.minecraft.world.InteractionHand;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.phys.BlockHitResult;
+import net.minecraft.world.phys.EntityHitResult;
+import net.minecraft.world.phys.HitResult;
 
 /** The player, hand, stack and target captured for an item-use hook. */
 public abstract class ItemUseEvent extends Event {
-    private final PlayerEntity player;
-    private final Hand hand;
+    private final Player player;
+    private final InteractionHand hand;
     private final ItemStack stack;
     private final HitResult hit;
 
-    public ItemUseEvent(EventPhase phase, PlayerEntity player, Hand hand,
+    public ItemUseEvent(EventPhase phase, Player player, InteractionHand hand,
                         ItemStack stack, HitResult hit) {
         super(phase);
         this.player = player;
@@ -26,11 +26,11 @@ public abstract class ItemUseEvent extends Event {
         this.hit = hit;
     }
 
-    public PlayerEntity getPlayer() {
+    public Player getPlayer() {
         return player;
     }
 
-    public Hand getHand() {
+    public InteractionHand getHand() {
         return hand;
     }
 
@@ -64,14 +64,14 @@ public abstract class ItemUseEvent extends Event {
 
     /** Marker produced by the item-use entry hook. */
     public static class Pre extends ItemUseEvent {
-        public Pre(PlayerEntity player, Hand hand, ItemStack stack, HitResult hit) {
+        public Pre(Player player, InteractionHand hand, ItemStack stack, HitResult hit) {
             super(EventPhase.PRE, player, hand, stack, hit);
         }
     }
 
     /** Marker produced by the item-use return hook. */
     public static class Post extends ItemUseEvent {
-        public Post(PlayerEntity player, Hand hand, ItemStack stack, HitResult hit) {
+        public Post(Player player, InteractionHand hand, ItemStack stack, HitResult hit) {
             super(EventPhase.POST, player, hand, stack, hit);
         }
     }

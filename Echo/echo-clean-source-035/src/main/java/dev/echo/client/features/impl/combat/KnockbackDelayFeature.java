@@ -14,19 +14,19 @@ import dev.echo.client.utils.strings.Concat;
 import dev.echo.client.utils.targeting.TargetSelection;
 import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedDeque;
-import net.minecraft.client.network.ClientPlayNetworkHandler;
-import net.minecraft.entity.Entity;
-import net.minecraft.entity.LivingEntity;
-import net.minecraft.network.packet.Packet;
-import net.minecraft.network.packet.c2s.play.ChatMessageC2SPacket;
-import net.minecraft.network.packet.c2s.play.CommandExecutionC2SPacket;
-import net.minecraft.network.packet.s2c.common.DisconnectS2CPacket;
-import net.minecraft.network.packet.s2c.play.EntitiesDestroyS2CPacket;
-import net.minecraft.network.packet.s2c.play.EntityVelocityUpdateS2CPacket;
-import net.minecraft.network.packet.s2c.play.ExplosionS2CPacket;
-import net.minecraft.network.packet.s2c.play.GameMessageS2CPacket;
-import net.minecraft.network.packet.s2c.play.HealthUpdateS2CPacket;
-import net.minecraft.network.packet.s2c.play.PlayerPositionLookS2CPacket;
+import net.minecraft.client.multiplayer.ClientPacketListener;
+import net.minecraft.network.protocol.Packet;
+import net.minecraft.network.protocol.common.ClientboundDisconnectPacket;
+import net.minecraft.network.protocol.game.ClientboundExplodePacket;
+import net.minecraft.network.protocol.game.ClientboundPlayerPositionPacket;
+import net.minecraft.network.protocol.game.ClientboundRemoveEntitiesPacket;
+import net.minecraft.network.protocol.game.ClientboundSetEntityMotionPacket;
+import net.minecraft.network.protocol.game.ClientboundSetHealthPacket;
+import net.minecraft.network.protocol.game.ClientboundSystemChatPacket;
+import net.minecraft.network.protocol.game.ServerboundChatCommandPacket;
+import net.minecraft.network.protocol.game.ServerboundChatPacket;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.LivingEntity;
 
 /** Holds incoming packets behind a sampled knockback delay, then replays them in order. */
 public class KnockbackDelayFeature extends Feature {
@@ -62,7 +62,7 @@ public class KnockbackDelayFeature extends Feature {
     @Override
     public CharSequence getSuffix() {
         if (delayActive) return holdingSuffix;
-        boolean airborne = client.player != null && !client.player.isOnGround();
+        boolean airborne = client.player != null && !client.player.onGround();
         FloatRangeSetting range = airborne ? airDelay : groundDelay;
         return Concat.sequences(Concat.integer((int) range.getLower()), rangeSeparator,
                 Concat.integer((int) range.getUpper()), groundDelayOption);
@@ -118,8 +118,8 @@ public class KnockbackDelayFeature extends Feature {
 
     private boolean isTrackedTargetInvalid() {
         if (trackedEntityId == -1) return false;
-        if (client.world == null) return true;
-        Entity target = client.world.getEntityById(trackedEntityId);
+        if (client.level == null) return true;
+        Entity target = client.level.getEntity(trackedEntityId);
         if (target == null || !target.isAlive() || target.isRemoved()) return true;
         if (target instanceof LivingEntity living) {
             if (living.getHealth() <= 0.0f) return true;
@@ -133,18 +133,18 @@ public class KnockbackDelayFeature extends Feature {
         if (isOutsideWorld() || MinecraftRenderState.isConnectedToLocalServer(client)) return;
         Packet<?> packet = event.getPacket();
         if (packet == null) return;
-        if (packet instanceof ChatMessageC2SPacket || packet instanceof GameMessageS2CPacket
-                || packet instanceof CommandExecutionC2SPacket) return;
-        if (packet instanceof PlayerPositionLookS2CPacket || packet instanceof DisconnectS2CPacket) {
+        if (packet instanceof ServerboundChatPacket || packet instanceof ClientboundSystemChatPacket
+                || packet instanceof ServerboundChatCommandPacket) return;
+        if (packet instanceof ClientboundPlayerPositionPacket || packet instanceof ClientboundDisconnectPacket) {
             flushKnockbackPackets();
             return;
         }
-        if (packet instanceof HealthUpdateS2CPacket health && health.getHealth() <= 0.0f) {
+        if (packet instanceof ClientboundSetHealthPacket health && health.getHealth() <= 0.0f) {
             flushKnockbackPackets();
             return;
         }
         boolean targetRemoved = false;
-        if (packet instanceof EntitiesDestroyS2CPacket removed && trackedEntityId != -1
+        if (packet instanceof ClientboundRemoveEntitiesPacket removed && trackedEntityId != -1
                 && removed.getEntityIds().contains(trackedEntityId)) {
             trackedEntityId = -1;
             targetRemoved = true;
@@ -174,21 +174,21 @@ public class KnockbackDelayFeature extends Feature {
     }
 
     private float sampleDelayMillis() {
-        boolean airborne = client.player != null && !client.player.isOnGround();
+        boolean airborne = client.player != null && !client.player.onGround();
         return (airborne ? airDelay : groundDelay).sampleGaussian();
     }
 
     private boolean isPlayerKnockback(Packet<?> packet) {
         if (client.player == null) return false;
-        if (packet instanceof EntityVelocityUpdateS2CPacket velocity) {
+        if (packet instanceof ClientboundSetEntityMotionPacket velocity) {
             return VelocityPackets.entityId(velocity) == client.player.getId();
         }
-        return packet instanceof ExplosionS2CPacket explosion && explosion.playerKnockback().isPresent();
+        return packet instanceof ClientboundExplodePacket explosion && explosion.playerKnockback().isPresent();
     }
 
     @SuppressWarnings({"rawtypes", "unchecked"})
     private void flushKnockbackPackets() {
-        ClientPlayNetworkHandler handler = client.getNetworkHandler();
+        ClientPacketListener handler = client.getConnection();
         if (handler == null) {
             delayedPackets.clear();
             delayActive = false;
@@ -198,7 +198,7 @@ public class KnockbackDelayFeature extends Feature {
         DelayedKnockbackPacket delayed;
         while ((delayed = delayedPackets.poll()) != null) {
             try {
-                ((Packet) delayed.packet).apply(handler);
+                ((Packet) delayed.packet).handle(handler);
             } catch (Throwable ignored) {
                 // The original continues replaying after any individual packet failure.
             }

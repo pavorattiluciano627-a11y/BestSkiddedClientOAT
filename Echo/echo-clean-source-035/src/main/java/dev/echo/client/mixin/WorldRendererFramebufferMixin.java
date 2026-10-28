@@ -2,15 +2,15 @@ package dev.echo.client.mixin;
 
 import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
 import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
+import com.mojang.blaze3d.pipeline.RenderTarget;
 import dev.echo.client.bridge.WorldFramebufferControl;
 import dev.echo.client.events.render.OutlineFramebufferEvent;
 import dev.echo.render.HandChamsRenderer;
 import java.util.Set;
-import net.minecraft.client.gl.Framebuffer;
-import net.minecraft.client.gl.PostEffectProcessor;
-import net.minecraft.client.gl.ShaderLoader;
-import net.minecraft.client.render.WorldRenderer;
-import net.minecraft.util.Identifier;
+import net.minecraft.client.renderer.LevelRenderer;
+import net.minecraft.client.renderer.PostChain;
+import net.minecraft.client.renderer.ShaderManager;
+import net.minecraft.resources.Identifier;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.Unique;
@@ -19,22 +19,22 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
-@Mixin(WorldRenderer.class)
+@Mixin(LevelRenderer.class)
 public abstract class WorldRendererFramebufferMixin implements WorldFramebufferControl {
-    @Shadow private Framebuffer entityOutlineFramebuffer;
-    @Shadow protected abstract boolean canDrawEntityOutlines();
+    @Shadow private RenderTarget entityOutlineTarget;
+    @Shadow protected abstract boolean shouldShowEntityOutlines();
     @Unique private boolean echo$skipNextOutlineDraw;
 
-    @WrapOperation(method = "render", at = @At(value = "INVOKE",
-            target = "Lnet/minecraft/client/gl/ShaderLoader;loadPostEffect(Lnet/minecraft/util/Identifier;Ljava/util/Set;)Lnet/minecraft/client/gl/PostEffectProcessor;"))
-    private PostEffectProcessor loadOutlinePostEffect(ShaderLoader loader, Identifier id,
-            Set<Identifier> framebufferIds, Operation<PostEffectProcessor> original) {
+    @WrapOperation(method = "renderLevel", at = @At(value = "INVOKE",
+            target = "Lnet/minecraft/client/renderer/ShaderManager;getPostChain(Lnet/minecraft/resources/Identifier;Ljava/util/Set;)Lnet/minecraft/client/renderer/PostChain;"))
+    private PostChain loadOutlinePostEffect(ShaderManager loader, Identifier id,
+            Set<Identifier> framebufferIds, Operation<PostChain> original) {
         OutlineFramebufferEvent.Render event = new OutlineFramebufferEvent.Render();
         event.post();
         return event.cancelled ? null : original.call(loader, id, framebufferIds);
     }
 
-    @Inject(method = "drawEntityOutlinesFramebuffer", at = @At("HEAD"), cancellable = true)
+    @Inject(method = "doEntityOutline", at = @At("HEAD"), cancellable = true)
     private void cancelPreparedOutlineDraw(CallbackInfo callback) {
         if (echo$skipNextOutlineDraw) {
             echo$skipNextOutlineDraw = false;
@@ -42,8 +42,8 @@ public abstract class WorldRendererFramebufferMixin implements WorldFramebufferC
         }
     }
 
-    @Inject(method = "getEntityOutlinesFramebuffer", at = @At("RETURN"), cancellable = true)
-    private void useHandChamsFramebuffer(CallbackInfoReturnable<Framebuffer> callback) {
+    @Inject(method = "entityOutlineTarget", at = @At("RETURN"), cancellable = true)
+    private void useHandChamsFramebuffer(CallbackInfoReturnable<RenderTarget> callback) {
         if (HandChamsRenderer.isFlushingOutlines()) {
             callback.setReturnValue(HandChamsRenderer.getFramebuffer());
         }
@@ -52,7 +52,7 @@ public abstract class WorldRendererFramebufferMixin implements WorldFramebufferC
     @Override
     public void updateOutlineFramebufferCancellation() {
         OutlineFramebufferEvent.Prepare event = new OutlineFramebufferEvent.Prepare(
-                entityOutlineFramebuffer, canDrawEntityOutlines());
+                entityOutlineTarget, shouldShowEntityOutlines());
         event.post();
         echo$skipNextOutlineDraw = event.cancelled;
     }

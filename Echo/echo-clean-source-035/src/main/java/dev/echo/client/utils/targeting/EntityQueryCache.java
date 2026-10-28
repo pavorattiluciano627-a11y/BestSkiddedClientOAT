@@ -2,7 +2,7 @@ package dev.echo.client.utils.targeting;
 
 import java.util.Map;
 import java.util.WeakHashMap;
-import net.minecraft.entity.Entity;
+import net.minecraft.world.entity.Entity;
 
 /**
  * Concrete weak-entity contact-time cache. Times and intervals retain their

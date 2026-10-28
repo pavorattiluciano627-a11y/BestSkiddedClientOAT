@@ -17,22 +17,22 @@ import dev.echo.client.setting.IntSetting;
 import dev.echo.client.setting.MultiChoiceSetting;
 import dev.echo.client.utils.items.InventoryItems;
 import dev.echo.client.utils.targeting.BlockRaycasts;
-import net.minecraft.block.BlockState;
-import net.minecraft.block.Blocks;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.gui.screen.Screen;
-import net.minecraft.item.Item;
-import net.minecraft.item.ItemStack;
-import net.minecraft.item.Items;
-import net.minecraft.registry.tag.BlockTags;
-import net.minecraft.util.hit.BlockHitResult;
-import net.minecraft.util.hit.HitResult;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.Box;
-import net.minecraft.util.math.Direction;
-import net.minecraft.util.math.MathHelper;
-import net.minecraft.util.math.Vec3d;
-import net.minecraft.world.RaycastContext;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
+import net.minecraft.tags.BlockTags;
+import net.minecraft.util.Mth;
+import net.minecraft.world.item.Item;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
+import net.minecraft.world.level.ClipContext;
+import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.phys.AABB;
+import net.minecraft.world.phys.BlockHitResult;
+import net.minecraft.world.phys.HitResult;
+import net.minecraft.world.phys.Vec3;
 
 /**
  * Ordered hotbar fall-breaking, including side-supported ladder/vine placement.
@@ -135,13 +135,13 @@ public class MLGFeature extends Feature {
         if (placementHit == null || isOutsideWorld() || currentScreen() != null) {
             return;
         }
-        if (!client.player.getMainHandStack().isOf(placementItem)) {
+        if (!client.player.getMainHandItem().is(placementItem)) {
             return;
         }
         if (!BlockRaycasts.matchesHit(placementHit, true)) {
             return;
         }
-        if (!client.player.isSneaking()) {
+        if (!client.player.isShiftKeyDown()) {
             return;
         }
         event.addClick();
@@ -152,33 +152,33 @@ public class MLGFeature extends Feature {
         if (isOutsideWorld() || placementHit == null) {
             return;
         }
-        double fallingSpeed = Math.max(0.1, -client.player.getVelocity().y);
-        if (client.player.getY() - placementHit.getPos().y <= fallingSpeed * SNEAK_LOOKAHEAD_TICKS) {
+        double fallingSpeed = Math.max(0.1, -client.player.getDeltaMovement().y);
+        if (client.player.getY() - placementHit.getLocation().y <= fallingSpeed * SNEAK_LOOKAHEAD_TICKS) {
             event.sneak = true;
         }
     }
 
     private BlockHitResult findLandingHit() {
-        if (client.player.isOnGround() || client.player.isTouchingWater() || client.player.getVelocity().y >= 0.0) {
+        if (client.player.onGround() || client.player.isInWater() || client.player.getDeltaMovement().y >= 0.0) {
             return null;
         }
-        Box bounds = client.player.getBoundingBox().contract(0.001, 0.0, 0.001);
-        Vec3d center = bounds.getCenter();
-        double rayDepth = Math.max(distanceToGround.getValue(), bounds.minY - client.world.getBottomY());
+        AABB bounds = client.player.getBoundingBox().deflate(0.001, 0.0, 0.001);
+        Vec3 center = bounds.getCenter();
+        double rayDepth = Math.max(distanceToGround.getValue(), bounds.minY - client.level.getMinY());
         BlockHitResult highestHit = null;
         double[][] origins = {
                 {center.x, center.z}, {bounds.minX, bounds.minZ}, {bounds.minX, bounds.maxZ},
                 {bounds.maxX, bounds.minZ}, {bounds.maxX, bounds.maxZ}
         };
         for (double[] origin : origins) {
-            Vec3d from = new Vec3d(origin[0], bounds.minY, origin[1]);
-            Vec3d to = from.subtract(0.0, rayDepth, 0.0);
-            BlockHitResult hit = client.world.raycast(new RaycastContext(from, to,
-                    RaycastContext.ShapeType.COLLIDER, RaycastContext.FluidHandling.ANY, client.player));
+            Vec3 from = new Vec3(origin[0], bounds.minY, origin[1]);
+            Vec3 to = from.subtract(0.0, rayDepth, 0.0);
+            BlockHitResult hit = client.level.clip(new ClipContext(from, to,
+                    ClipContext.Block.COLLIDER, ClipContext.Fluid.ANY, client.player));
             if (hit.getType() != HitResult.Type.BLOCK) {
                 continue;
             }
-            if (highestHit == null || hit.getPos().y > highestHit.getPos().y) {
+            if (highestHit == null || hit.getLocation().y > highestHit.getLocation().y) {
                 highestHit = hit;
             }
         }
@@ -188,7 +188,7 @@ public class MLGFeature extends Feature {
         if (client.player.fallDistance < fallDistanceThreshold.getValue()) {
             return null;
         }
-        if (bounds.minY - highestHit.getPos().y > distanceToGround.getValue()) {
+        if (bounds.minY - highestHit.getLocation().y > distanceToGround.getValue()) {
             return null;
         }
         if (alreadyBreaksFall(highestHit.getBlockPos())) {
@@ -205,26 +205,26 @@ public class MLGFeature extends Feature {
             return null;
         }
         for (int depth = 1; depth <= distanceToGround.getValue(); depth++) {
-            BlockPos position = client.player.getBlockPos().down(depth);
-            if (!client.world.getBlockState(position).isReplaceable()) {
+            BlockPos position = client.player.blockPosition().below(depth);
+            if (!client.level.getBlockState(position).canBeReplaced()) {
                 return null;
             }
             Direction support = findHorizontalSupport(position);
             if (support != null) {
-                return new BlockHitResult(Vec3d.ofCenter(position).offset(support, 0.5),
-                        support.getOpposite(), position.offset(support), false);
+                return new BlockHitResult(Vec3.atCenterOf(position).relative(support, 0.5),
+                        support.getOpposite(), position.relative(support), false);
             }
         }
         return null;
     }
 
     private boolean alreadyBreaksFall(BlockPos position) {
-        BlockState state = client.world.getBlockState(position);
+        BlockState state = client.level.getBlockState(position);
         return !state.getFluidState().isEmpty()
-                || state.isOf(Blocks.SLIME_BLOCK)
-                || state.isOf(Blocks.HAY_BLOCK)
-                || state.isOf(Blocks.HONEY_BLOCK)
-                || client.world.getBlockState(position.up()).isIn(BlockTags.CLIMBABLE);
+                || state.is(Blocks.SLIME_BLOCK)
+                || state.is(Blocks.HAY_BLOCK)
+                || state.is(Blocks.HONEY_BLOCK)
+                || client.level.getBlockState(position.above()).is(BlockTags.CLIMBABLE);
     }
 
     private boolean resolvePlacementItem(BlockPos landingBlock) {
@@ -235,7 +235,7 @@ public class MLGFeature extends Feature {
                 if (!requiresSideSupport) {
                     continue;
                 }
-            } else if (requiresSideSupport && findHorizontalSupport(landingBlock.up()) == null) {
+            } else if (requiresSideSupport && findHorizontalSupport(landingBlock.above()) == null) {
                 continue;
             }
             if (!items.isSelected(itemsOptionSet[index])) {
@@ -253,25 +253,25 @@ public class MLGFeature extends Feature {
     }
 
     private Direction findHorizontalSupport(BlockPos position) {
-        for (Direction direction : Direction.Type.HORIZONTAL) {
-            BlockPos neighbor = position.offset(direction);
-            if (client.world.getBlockState(neighbor).isSideSolidFullSquare(client.world, neighbor, direction.getOpposite())) {
+        for (Direction direction : Direction.Plane.HORIZONTAL) {
+            BlockPos neighbor = position.relative(direction);
+            if (client.level.getBlockState(neighbor).isFaceSturdy(client.level, neighbor, direction.getOpposite())) {
                 return direction;
             }
         }
         return null;
     }
 
-    private Vec3d adjustPlacementPoint(BlockHitResult hit) {
-        Vec3d point = hit.getPos();
-        if (hit.getSide() != Direction.UP) {
+    private Vec3 adjustPlacementPoint(BlockHitResult hit) {
+        Vec3 point = hit.getLocation();
+        if (hit.getDirection() != Direction.UP) {
             return point;
         }
-        Vec3d forward = client.player.getRotationVector(0.0F, client.player.getYaw());
+        Vec3 forward = client.player.calculateViewVector(0.0F, client.player.getYRot());
         BlockPos block = hit.getBlockPos();
-        double x = MathHelper.clamp(point.x + forward.x * 0.3, block.getX() + 0.05, block.getX() + 0.95);
-        double z = MathHelper.clamp(point.z + forward.z * 0.3, block.getZ() + 0.05, block.getZ() + 0.95);
-        return new Vec3d(x, point.y, z);
+        double x = Mth.clamp(point.x + forward.x * 0.3, block.getX() + 0.05, block.getX() + 0.95);
+        double z = Mth.clamp(point.z + forward.z * 0.3, block.getZ() + 0.05, block.getZ() + 0.95);
+        return new Vec3(x, point.y, z);
     }
 
     private void releasePlacement() {
@@ -292,7 +292,7 @@ public class MLGFeature extends Feature {
     }
 
     private static boolean matchesItem(Item item, ItemStack stack) {
-        return stack.isOf(item);
+        return stack.is(item);
     }
 
     private static Screen currentScreen() {
@@ -301,7 +301,7 @@ public class MLGFeature extends Feature {
         } catch (ClassNotFoundException failure) {
             throw new IllegalStateException("Resolved class initialization failed", failure);
         }
-        return MinecraftClient.getInstance().currentScreen;
+        return Minecraft.getInstance().gui.screen();
     }
 
     /** Appends this declaring class's settings in the recorded classfile order. */

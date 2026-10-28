@@ -13,7 +13,7 @@ import dev.echo.client.events.input.SwapHandsKeyEvent;
 import dev.echo.client.events.input.UseKeyEvent;
 import dev.echo.client.mixin.KeyBindingAccessor;
 import java.util.function.IntFunction;
-import net.minecraft.client.option.KeyBinding;
+import net.minecraft.client.KeyMapping;
 
 /** Intercepts pending key clicks before Minecraft consumes them in each input cycle. */
 public final class KeybindingEvents {
@@ -49,7 +49,7 @@ public final class KeybindingEvents {
             handled = true;
         }
         attackHandled = handled;
-        hasAction(MinecraftAccess.CLIENT.options.attackKey, AttackKeyEvent::new);
+        hasAction(MinecraftAccess.CLIENT.options.keyAttack, AttackKeyEvent::new);
     }
 
     public static void onUse() {
@@ -60,7 +60,7 @@ public final class KeybindingEvents {
             handled = true;
         }
         useHandled = handled;
-        hasAction(MinecraftAccess.CLIENT.options.useKey, UseKeyEvent::new);
+        hasAction(MinecraftAccess.CLIENT.options.keyUse, UseKeyEvent::new);
     }
 
     public static void onPickBlock() {
@@ -71,7 +71,7 @@ public final class KeybindingEvents {
             handled = true;
         }
         pickBlockHandled = handled;
-        hasAction(MinecraftAccess.CLIENT.options.pickItemKey, PickItemKeyEvent::new);
+        hasAction(MinecraftAccess.CLIENT.options.keyPickItem, PickItemKeyEvent::new);
     }
 
     public static void onSwapHands() {
@@ -82,7 +82,7 @@ public final class KeybindingEvents {
             handled = true;
         }
         swapHandsHandled = handled;
-        hasAction(MinecraftAccess.CLIENT.options.swapHandsKey, SwapHandsKeyEvent::new);
+        hasAction(MinecraftAccess.CLIENT.options.keySwapOffhand, SwapHandsKeyEvent::new);
     }
 
     public static void onDrop() {
@@ -93,7 +93,7 @@ public final class KeybindingEvents {
             handled = true;
         }
         dropHandled = handled;
-        hasAction(MinecraftAccess.CLIENT.options.dropKey, DropKeyEvent::new);
+        hasAction(MinecraftAccess.CLIENT.options.keyDrop, DropKeyEvent::new);
     }
 
     /** Each invocation advances the cursor, including out-of-range invocations. */
@@ -101,13 +101,13 @@ public final class KeybindingEvents {
         boolean dispatchStateClear = EventPhase.isDispatchStateClear();
         int slot = nextHotbarSlot++;
         if (!dispatchStateClear && slot < 0) return;
-        if (slot >= MinecraftAccess.CLIENT.options.hotbarKeys.length) return;
-        hasAction(MinecraftAccess.CLIENT.options.hotbarKeys[slot],
+        if (slot >= MinecraftAccess.CLIENT.options.keyHotbarSlots.length) return;
+        hasAction(MinecraftAccess.CLIENT.options.keyHotbarSlots[slot],
                 clickCount -> new HotbarKeyEvent(slot, clickCount));
     }
 
     /** Posts, replays, then reconciles the same payload against the live pending count. */
-    private static void hasAction(KeyBinding binding, IntFunction<KeybindingEvent> factory) {
+    private static void hasAction(KeyMapping binding, IntFunction<KeybindingEvent> factory) {
         boolean dispatchState = EventPhase.getDispatchState();
         if (Echo.eventsDisabled || binding == null || MinecraftAccess.CLIENT.player == null) return;
         KeyBindingAccessor accessor = (KeyBindingAccessor) binding;

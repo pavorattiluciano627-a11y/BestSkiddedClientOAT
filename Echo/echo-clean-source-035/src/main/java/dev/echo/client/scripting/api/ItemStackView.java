@@ -1,10 +1,10 @@
 package dev.echo.client.scripting.api;
 
-import net.minecraft.component.DataComponentTypes;
-import net.minecraft.component.type.LoreComponent;
-import net.minecraft.item.ItemStack;
-import net.minecraft.registry.Registries;
-import net.minecraft.text.Text;
+import net.minecraft.core.component.DataComponents;
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.network.chat.Component;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.component.ItemLore;
 
 public class ItemStackView {
     private final ItemStack stack;
@@ -22,24 +22,24 @@ public class ItemStackView {
     }
 
     public int getMaxCount() {
-        return stack.getMaxCount();
+        return stack.getMaxStackSize();
     }
 
     public String getName() {
-        return stack.getName().getString();
+        return stack.getHoverName().getString();
     }
 
     public String getId() {
-        return Registries.ITEM.getId(stack.getItem()).toString();
+        return BuiltInRegistries.ITEM.getKey(stack.getItem()).toString();
     }
 
     public String getLore() {
-        LoreComponent lore = stack.get(DataComponentTypes.LORE);
+        ItemLore lore = stack.get(DataComponents.LORE);
         if (lore == null) {
             return "";
         }
         StringBuilder text = new StringBuilder();
-        for (Text line : lore.lines()) {
+        for (Component line : lore.lines()) {
             // The separator depends on accumulated text, not the line index.
             if (!text.isEmpty()) {
                 text.append('\n');

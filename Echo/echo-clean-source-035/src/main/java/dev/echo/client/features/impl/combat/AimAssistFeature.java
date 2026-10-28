@@ -24,8 +24,8 @@ import dev.echo.client.utils.targeting.AimPointSettings;
 import dev.echo.client.utils.targeting.EntityRaycasts;
 import dev.echo.client.utils.targeting.TargetSelection;
 import java.util.List;
-import net.minecraft.entity.LivingEntity;
-import net.minecraft.util.math.Vec3d;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.phys.Vec3;
 
 /**
  * Configurable targeting, visible mouse assistance and silent rotation requests.
@@ -131,21 +131,21 @@ public class AimAssistFeature extends Feature {
             clearAim();
             return;
         }
-        if (onClick.getValue() && !KeybindingCache.isPressed(client.options.attackKey)) {
+        if (onClick.getValue() && !KeybindingCache.isPressed(client.options.keyAttack)) {
             clearAim();
             return;
         }
         double distance = range.getValue();
         double distanceSquared = distance * distance;
-        Vec3d eyes = client.player.getCameraPosVec(1.0F);
-        List<LivingEntity> candidates = client.world.getEntitiesByClass(LivingEntity.class,
-                client.player.getBoundingBox().expand(distance), AimAssistFeature::isLivingCandidate)
+        Vec3 eyes = client.player.getEyePosition(1.0F);
+        List<LivingEntity> candidates = client.level.getEntitiesOfClass(LivingEntity.class,
+                client.player.getBoundingBox().inflate(distance), AimAssistFeature::isLivingCandidate)
                 .stream().filter(TargetSelection::isValidTarget)
-                .filter(entity -> eyes.squaredDistanceTo(entity.getEntityPos()) <= distanceSquared)
+                .filter(entity -> eyes.distanceToSqr(entity.position()) <= distanceSquared)
                 .filter(this::isWithinFov).toList();
         LivingEntity selected = EntityRaycasts.selectTarget(client.player, candidates, eyes, targetPriority);
         LivingEntity target = TargetSelection.resolveTarget(selected);
-        if (target == null || eyes.squaredDistanceTo(target.getEntityPos()) > distanceSquared) {
+        if (target == null || eyes.distanceToSqr(target.position()) > distanceSquared) {
             clearAim();
             return;
         }

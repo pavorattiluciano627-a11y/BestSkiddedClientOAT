@@ -38,14 +38,14 @@ import dev.echo.client.utils.targeting.AimPointSettings;
 import dev.echo.client.utils.targeting.EntityRaycasts;
 import dev.echo.client.utils.targeting.TargetSelection;
 import java.util.List;
-import net.minecraft.client.network.ClientPlayerEntity;
-import net.minecraft.entity.LivingEntity;
-import net.minecraft.item.ItemStack;
-import net.minecraft.item.Items;
-import net.minecraft.util.hit.EntityHitResult;
-import net.minecraft.util.hit.HitResult;
-import net.minecraft.util.math.Box;
-import net.minecraft.util.math.Vec3d;
+import net.minecraft.client.player.LocalPlayer;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
+import net.minecraft.world.phys.AABB;
+import net.minecraft.world.phys.EntityHitResult;
+import net.minecraft.world.phys.HitResult;
+import net.minecraft.world.phys.Vec3;
 
 /** Mace attacks, aim requests and the timed chestplate/elytra exchange sequence. */
 public class AutoMaceFeature extends Feature {
@@ -92,7 +92,7 @@ public class AutoMaceFeature extends Feature {
     private boolean equipmentUseIssued;
     private boolean chestplateSwapObserved;
     private ActionReadiness actionReadiness;
-    private ClientPlayerEntity trackedPlayer;
+    private LocalPlayer trackedPlayer;
     private MaceFlightState flightState;
     private int glideEndWaitTicks;
 
@@ -191,8 +191,8 @@ public class AutoMaceFeature extends Feature {
             rotations().beginReturn(this);
             return;
         }
-        if (client.player.isGliding() || client.player.isOnGround()
-                || !(client.player.getVelocity().y < 0.0) || hasEquipmentSwap()) {
+        if (client.player.isFallFlying() || client.player.onGround()
+                || !(client.player.getDeltaMovement().y < 0.0) || hasEquipmentSwap()) {
             releaseOrCancelRotation();
             return;
         }
@@ -252,11 +252,11 @@ public class AutoMaceFeature extends Feature {
                 || MinecraftRenderState.getScreen() != null) {
             return;
         }
-        if (!workWithMaceSwap.getValue() || InventoryItems.mainHandStack().isOf(Items.MACE)
+        if (!workWithMaceSwap.getValue() || InventoryItems.mainHandStack().is(Items.MACE)
                 || hasEquipmentSwap() || DeferredActionQueue.hasPendingActions()) {
             return;
         }
-        if (client.player.isUsingItem() && InventoryItems.isSpear(client.player.getActiveItem().getItem())) {
+        if (client.player.isUsingItem() && InventoryItems.isSpear(client.player.getUseItem().getItem())) {
             return;
         }
         if (!isSmashReady() || !attackTimer.hasElapsedMillis((double) attackDelayMillis)) {
@@ -292,7 +292,7 @@ public class AutoMaceFeature extends Feature {
                 || equipmentUseIssued || client.player.getInventory().getSelectedSlot() != equipmentSlot) {
             return;
         }
-        boolean matches = reEquippingElytra ? InventoryItems.mainHandStack().isOf(Items.ELYTRA)
+        boolean matches = reEquippingElytra ? InventoryItems.mainHandStack().is(Items.ELYTRA)
                 : InventoryItems.holdsChestplateInMainHand();
         if (!matches) {
             return;
@@ -318,7 +318,7 @@ public class AutoMaceFeature extends Feature {
             updateReequip();
             return;
         }
-        if (!client.player.isGliding()) {
+        if (!client.player.isFallFlying()) {
             tryReequip();
             resetFlightState(false);
             return;
@@ -333,7 +333,7 @@ public class AutoMaceFeature extends Feature {
             return;
         }
         if (DeferredActionQueue.hasPendingActions() || client.player.isUsingItem()
-                || client.player.isTouchingWater() || client.player.isInLava()) {
+                || client.player.isInWater() || client.player.isInLava()) {
             return;
         }
         if (InventoryItems.findMaceWithEnchantmentInHotbar(null, true) == -1) {
@@ -357,7 +357,7 @@ public class AutoMaceFeature extends Feature {
             return;
         }
         observeChestplateSwap();
-        if (!client.player.isGliding() && !chestplateSwapObserved && equipmentStageTicks < EQUIPMENT_USE_TICK) {
+        if (!client.player.isFallFlying() && !chestplateSwapObserved && equipmentStageTicks < EQUIPMENT_USE_TICK) {
             restoreEquipmentSlot();
             resetFlightState(false);
             return;
@@ -375,7 +375,7 @@ public class AutoMaceFeature extends Feature {
             return chestplateSwapObserved;
         }
         chestplateSwapObserved = !InventoryItems.wearsElytra()
-                && client.player.getInventory().getStack(equipmentSlot).isOf(Items.ELYTRA);
+                && client.player.getInventory().getItem(equipmentSlot).is(Items.ELYTRA);
         if (chestplateSwapObserved && reEquipElytra.getValue()) {
             actionReadiness.beginWaiting();
             updateReequipReadiness();
@@ -389,7 +389,7 @@ public class AutoMaceFeature extends Feature {
         if (!observed) {
             actionReadiness.reset();
         }
-        if (!client.player.isGliding()) {
+        if (!client.player.isFallFlying()) {
             resetFlightState(false);
         }
     }
@@ -412,19 +412,19 @@ public class AutoMaceFeature extends Feature {
             actionReadiness.reset();
             return;
         }
-        if (client.player.isGliding()) {
+        if (client.player.isFallFlying()) {
             return;
         }
-        boolean supported = client.player.isOnGround() || client.player.isTouchingWater()
-                || client.player.isInLava() || client.player.isClimbing();
-        actionReadiness.update(client.player.getY() - client.player.lastY, supported);
+        boolean supported = client.player.onGround() || client.player.isInWater()
+                || client.player.isInLava() || client.player.onClimbable();
+        actionReadiness.update(client.player.getY() - client.player.yo, supported);
     }
 
     private void tryReequip() {
         if (!actionReadiness.isReady() || DeferredActionQueue.hasPendingActions() || client.player.isUsingItem()) {
             return;
         }
-        int elytra = InventoryItems.findStackInHotbar(stack -> stack.isOf(Items.ELYTRA));
+        int elytra = InventoryItems.findStackInHotbar(stack -> stack.is(Items.ELYTRA));
         if (elytra == -1) {
             actionReadiness.reset();
             return;
@@ -457,7 +457,7 @@ public class AutoMaceFeature extends Feature {
         if (immediate.size() <= 1 || delayed.size() <= 1) {
             return false;
         }
-        Box bounds = MovementSimulation.sampleBounds(immediate).union(MovementSimulation.sampleBounds(delayed));
+        AABB bounds = MovementSimulation.sampleBounds(immediate).minmax(MovementSimulation.sampleBounds(delayed));
         double minimumFall = Math.max(MINIMUM_SMASH_DISTANCE, fallDistance.getValue());
         double targetRange = range.getValue();
         for (LivingEntity target : predictionTargets(bounds)) {
@@ -479,7 +479,7 @@ public class AutoMaceFeature extends Feature {
         if (first.size() <= 1 || second.size() <= 1) {
             return false;
         }
-        Box bounds = MovementSimulation.sampleBounds(first).union(MovementSimulation.sampleBounds(second));
+        AABB bounds = MovementSimulation.sampleBounds(first).minmax(MovementSimulation.sampleBounds(second));
         double minimumFall = Math.max(MINIMUM_SMASH_DISTANCE, fallDistance.getValue());
         int lastTick = Math.round(lateWindow.getValue());
         MaceSwapFeature swap = (MaceSwapFeature) Echo.featureManager.findFeature(MaceSwapFeature.class);
@@ -513,9 +513,9 @@ public class AutoMaceFeature extends Feature {
         return best;
     }
 
-    private List<LivingEntity> predictionTargets(Box bounds) {
-        return client.world.getEntitiesByClass(LivingEntity.class,
-                bounds.expand(MovementSimulation.attackRange() + 1.0), this::isPredictionTarget);
+    private List<LivingEntity> predictionTargets(AABB bounds) {
+        return client.level.getEntitiesOfClass(LivingEntity.class,
+                bounds.inflate(MovementSimulation.attackRange() + 1.0), this::isPredictionTarget);
     }
 
     private boolean isPredictionTarget(LivingEntity entity) {
@@ -565,13 +565,13 @@ public class AutoMaceFeature extends Feature {
     private LivingEntity selectAimTarget() {
         double targetRange = range.getValue();
         double rangeSquared = targetRange * targetRange;
-        Vec3d eye = client.player.getCameraPosVec(1.0F);
-        List<LivingEntity> candidates = client.world.getEntitiesByClass(LivingEntity.class,
-                client.player.getBoundingBox().expand(targetRange),
+        Vec3 eye = client.player.getEyePosition(1.0F);
+        List<LivingEntity> candidates = client.level.getEntitiesOfClass(LivingEntity.class,
+                client.player.getBoundingBox().inflate(targetRange),
                 entity -> isAimCandidate(eye, rangeSquared, entity));
         LivingEntity target = TargetSelection.resolveTarget(
                 EntityRaycasts.selectTarget(client.player, candidates, eye, targetPriority));
-        if (target == null || eye.squaredDistanceTo(target.getEntityPos()) > rangeSquared) {
+        if (target == null || eye.distanceToSqr(target.position()) > rangeSquared) {
             return null;
         }
         return isWithinFov(target) ? target : null;
@@ -593,7 +593,7 @@ public class AutoMaceFeature extends Feature {
             return null;
         }
         LivingEntity locked = TargetSelection.resolveTarget(target);
-        if (locked == null || locked != target || target.isInvulnerable() || target.isDead() || !target.isAlive()) {
+        if (locked == null || locked != target || target.isInvulnerable() || target.isDeadOrDying() || !target.isAlive()) {
             return null;
         }
         return target;
@@ -606,14 +606,14 @@ public class AutoMaceFeature extends Feature {
     }
 
     private boolean isSmashReady() {
-        return !client.player.isGliding() && ServerFallDistanceTracker.fallDistance(client.player) > fallDistance.getValue();
+        return !client.player.isFallFlying() && ServerFallDistanceTracker.fallDistance(client.player) > fallDistance.getValue();
     }
 
     private LivingEntity crosshairLivingTarget() {
-        if (client.crosshairTarget == null || client.crosshairTarget.getType() != HitResult.Type.ENTITY) {
+        if (client.hitResult == null || client.hitResult.getType() != HitResult.Type.ENTITY) {
             return null;
         }
-        if (!(((EntityHitResult) client.crosshairTarget).getEntity() instanceof LivingEntity target)) {
+        if (!(((EntityHitResult) client.hitResult).getEntity() instanceof LivingEntity target)) {
             return null;
         }
         return !target.isAlive() || target.isRemoved() ? null : target;
@@ -621,7 +621,7 @@ public class AutoMaceFeature extends Feature {
 
     private boolean canUseMace() {
         ItemStack held = InventoryItems.mainHandStack();
-        if (held.isOf(Items.MACE)) {
+        if (held.is(Items.MACE)) {
             return true;
         }
         if (!workWithMaceSwap.getValue()) {
@@ -664,9 +664,9 @@ public class AutoMaceFeature extends Feature {
         return EntityRaycasts.isWithinFov(client.player, entity, yawFOV.getValue(), pitchFOV.getValue());
     }
 
-    private boolean isAimCandidate(Vec3d eye, double rangeSquared, LivingEntity entity) {
-        return entity != client.player && !entity.isDead() && entity.isAlive() && TargetSelection.isValidTarget(entity)
-                && eye.squaredDistanceTo(entity.getEntityPos()) <= rangeSquared && isWithinFov(entity);
+    private boolean isAimCandidate(Vec3 eye, double rangeSquared, LivingEntity entity) {
+        return entity != client.player && !entity.isDeadOrDying() && entity.isAlive() && TargetSelection.isValidTarget(entity)
+                && eye.distanceToSqr(entity.position()) <= rangeSquared && isWithinFov(entity);
     }
 
     /** Classfile declaration order, distinct from the metadata assignment order. */

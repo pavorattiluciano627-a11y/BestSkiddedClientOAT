@@ -2,15 +2,15 @@ package dev.echo.client.mixin;
 
 import dev.echo.client.Echo;
 import dev.echo.client.utils.audio.EchoAudio;
-import net.minecraft.client.sound.SoundSystem;
+import net.minecraft.client.sounds.SoundEngine;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
-@Mixin(SoundSystem.class)
+@Mixin(SoundEngine.class)
 public abstract class SoundSystemMixin {
-    @Inject(method = "reloadSounds()V", at = @At("TAIL"))
+    @Inject(method = "reload()V", at = @At("TAIL"))
     private void onReloadSoundsTail(CallbackInfo callback) {
         if (!Echo.eventsDisabled) {
             EchoAudio.rebuildBuffers();

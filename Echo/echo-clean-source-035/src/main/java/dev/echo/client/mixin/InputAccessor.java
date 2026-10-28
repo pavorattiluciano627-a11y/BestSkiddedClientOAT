@@ -1,20 +1,20 @@
 package dev.echo.client.mixin;
 
-import net.minecraft.client.input.Input;
-import net.minecraft.util.PlayerInput;
-import net.minecraft.util.math.Vec2f;
+import net.minecraft.client.player.ClientInput;
+import net.minecraft.world.entity.player.Input;
+import net.minecraft.world.phys.Vec2;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.gen.Accessor;
 
 /** Access to the input snapshot and its derived movement vector. */
-@Mixin(Input.class)
+@Mixin(ClientInput.class)
 public interface InputAccessor {
-    @Accessor("playerInput")
-    PlayerInput getPlayerInput();
+    @Accessor("keyPresses")
+    Input getPlayerInput();
 
-    @Accessor("playerInput")
-    void setPlayerInput(PlayerInput input);
+    @Accessor("keyPresses")
+    void setPlayerInput(Input input);
 
-    @Accessor("movementVector")
-    void setMovementVector(Vec2f movement);
+    @Accessor("moveVector")
+    void setMovementVector(Vec2 movement);
 }

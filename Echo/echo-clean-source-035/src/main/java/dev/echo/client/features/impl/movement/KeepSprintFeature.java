@@ -31,7 +31,7 @@ public class KeepSprintFeature extends Feature {
         if (!shouldSprint.getValue()) {
             return false;
         }
-        return sprintCondition.isSelected(client.player.isOnGround() ? GROUND : AIR);
+        return sprintCondition.isSelected(client.player.onGround() ? GROUND : AIR);
     }
 
     /** Appends this declaring class's settings in the recorded classfile order. */

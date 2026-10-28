@@ -1,5 +1,7 @@
 package dev.echo.client.features.impl.utility;
 
+import com.mojang.blaze3d.platform.InputConstants;
+import net.minecraft.world.inventory.ContainerInput;
 import dev.echo.client.bootstrap.CatalogSettings;
 import dev.echo.client.bootstrap.CatalogText;
 import dev.echo.client.events.Subscribe;
@@ -12,12 +14,11 @@ import dev.echo.client.render.MinecraftRenderState;
 import dev.echo.client.setting.FloatSetting;
 import dev.echo.client.setting.IntSetting;
 import dev.echo.client.utils.RandomMath;
-import net.minecraft.client.gui.screen.ingame.InventoryScreen;
-import net.minecraft.client.util.InputUtil;
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.item.BlockItem;
-import net.minecraft.item.ItemStack;
-import net.minecraft.screen.slot.SlotActionType;
+import net.minecraft.client.gui.screens.inventory.InventoryScreen;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.inventory.ClickAction;
+import net.minecraft.world.item.BlockItem;
+import net.minecraft.world.item.ItemStack;
 import org.lwjgl.glfw.GLFW;
 
 /** Replenishes low hotbar stacks and reproduces the original inventory-cursor animation. */
@@ -58,11 +59,11 @@ public class ReplenishFeature extends Feature {
             return;
         }
         for (int slot = 0; slot < 9; slot++) {
-            ItemStack stack = client.player.getInventory().getStack(slot);
+            ItemStack stack = client.player.getInventory().getItem(slot);
             if (stack.isEmpty() || !stack.isStackable()) {
                 continue;
             }
-            float percent = (float) stack.getCount() / (float) stack.getMaxCount() * 100.0f;
+            float percent = (float) stack.getCount() / (float) stack.getMaxStackSize() * 100.0f;
             if (stack.getCount() == 1 || percent <= Math.max(minPercent.getValue(), 5.0f)) {
                 replenish(stack);
             }
@@ -71,7 +72,7 @@ public class ReplenishFeature extends Feature {
 
     private void replenish(ItemStack hotbarStack) {
         for (int slot = 9; slot < 36; slot++) {
-            ItemStack stack = client.player.getInventory().getStack(slot);
+            ItemStack stack = client.player.getInventory().getItem(slot);
             if (stack.isEmpty() || !sameReplenishmentItem(hotbarStack, stack)) {
                 continue;
             }
@@ -93,28 +94,28 @@ public class ReplenishFeature extends Feature {
     }
 
     private int inventoryIndexForSlot(int slot) {
-        return client.player.currentScreenHandler.slots.get(slot).getIndex();
+        return client.player.containerMenu.slots.get(slot).getContainerSlot();
     }
 
     private void quickMove(int slot) {
-        int syncId = client.player.currentScreenHandler.syncId;
-        PlayerEntity player = client.player;
-        if (player == null || client.interactionManager == null) {
+        int syncId = client.player.containerMenu.containerId;
+        Player player = client.player;
+        if (player == null || client.gameMode == null) {
             return;
         }
-        client.interactionManager.clickSlot(syncId, slot, 0, SlotActionType.QUICK_MOVE, player);
+        client.gameMode.handleContainerInput(syncId, slot, 0, ContainerInput.QUICK_MOVE, player);
     }
 
     private void moveCursorToSlot(int slotIndex) {
         if (MinecraftRenderState.getScreen() == null) {
             return;
         }
-        var handler = ((InventoryScreen) MinecraftRenderState.getScreen()).getScreenHandler();
+        var handler = ((InventoryScreen) MinecraftRenderState.getScreen()).getMenu();
         var window = client.getWindow();
-        double mouseX = client.mouse.getX();
-        double mouseY = client.mouse.getY();
-        int left = (window.getScaledWidth() - 176) / 2;
-        int top = (window.getScaledHeight() - 166) / 2;
+        double mouseX = client.mouseHandler.xpos();
+        double mouseY = client.mouseHandler.ypos();
+        int left = (window.getGuiScaledWidth() - 176) / 2;
+        int top = (window.getGuiScaledHeight() - 166) / 2;
         var slot = handler.slots.get(slotIndex);
         double targetX = (double) (left + slot.x) + 8.0;
         double targetY = (double) (top + slot.y) + 8.0;
@@ -147,9 +148,9 @@ public class ReplenishFeature extends Feature {
         double x = cursorStartX + (cursorTargetX - cursorStartX) * eased;
         double y = cursorStartY + (cursorTargetY - cursorStartY) * eased;
         var window = client.getWindow();
-        double windowX = x * (double) window.getWidth() / (double) window.getScaledWidth();
-        double windowY = y * (double) window.getHeight() / (double) window.getScaledHeight();
-        InputUtil.setCursorParameters(window, GLFW.GLFW_CURSOR_NORMAL, windowX, windowY);
+        double windowX = x * (double) window.getScreenWidth() / (double) window.getGuiScaledWidth();
+        double windowY = y * (double) window.getScreenHeight() / (double) window.getGuiScaledHeight();
+        InputConstants.grabOrReleaseMouse(window, GLFW.GLFW_CURSOR_NORMAL, windowX, windowY);
         if (progress >= 1.0) {
             movingCursor = false;
             if (pendingInventorySlot >= 0) {

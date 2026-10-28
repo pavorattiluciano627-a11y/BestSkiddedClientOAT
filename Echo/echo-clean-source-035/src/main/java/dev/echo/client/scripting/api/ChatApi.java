@@ -1,7 +1,8 @@
 package dev.echo.client.scripting.api;
 
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.text.Text;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.multiplayer.chat.GuiMessageSource;
+import net.minecraft.network.chat.Component;
 import org.mozilla.javascript.Context;
 import org.mozilla.javascript.Function;
 import org.mozilla.javascript.Scriptable;
@@ -27,9 +28,9 @@ public class ChatApi extends ScriptableObject {
     @JSFunction("writeEvent")
     public static void print(Context context, Scriptable receiver, Object[] arguments, Function function) {
         if (arguments.length == 0) return;
-        Text message = Text.literal(Context.toString(arguments[0]));
-        MinecraftClient client = MinecraftClient.getInstance();
-        if (client.inGameHud == null) return;
-        client.inGameHud.getChatHud().addMessage(message);
+        Component message = Component.literal(Context.toString(arguments[0]));
+        Minecraft client = Minecraft.getInstance();
+        if (client.gui == null) return;
+        client.gui.hud.getChat().addMessage(message, null, net.minecraft.client.multiplayer.chat.GuiMessageSource.SYSTEM_CLIENT, null);
     }
 }

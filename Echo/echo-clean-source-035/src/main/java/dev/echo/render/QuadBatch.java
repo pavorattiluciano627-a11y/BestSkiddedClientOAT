@@ -12,7 +12,7 @@ import dev.echo.render.pipeline.BlendMode;
 import dev.echo.render.pipeline.GraphicsPipeline;
 import dev.echo.render.pipeline.GraphicsPipelineInfo;
 import dev.echo.render.vertex.VertexFormat;
-import net.minecraft.util.math.ColorHelper;
+import net.minecraft.util.ARGB;
 import org.lwjgl.system.MemoryUtil;
 
 /**
@@ -92,7 +92,7 @@ public class QuadBatch implements RenderBatch {
 
     public void addAlphaGradient(float x, float y, float width, float height,
             float radius, float red, float green, float blue, float opacity, float depth) {
-        int color = ColorHelper.fromFloats(1.0F, red, green, blue);
+        int color = ARGB.colorFromFloat(1.0F, red, green, blue);
         writeInstance(x, y, width, height, radius, radius, radius, radius,
                 color, color, color, color, depth, 0.0F, opacity, ALPHA, 0);
     }

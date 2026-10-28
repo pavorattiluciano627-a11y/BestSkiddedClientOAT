@@ -8,9 +8,9 @@ import dev.echo.client.handlers.DeferredActionQueue;
 import dev.echo.client.setting.BooleanSetting;
 import dev.echo.client.setting.KeybindSetting;
 import dev.echo.client.utils.items.InventoryItems;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.gui.screen.Screen;
-import net.minecraft.item.Items;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.world.item.Items;
 
 /** Hotbar-mediated chestplate/elytra switching with the original two-tick selection window. */
 public class ElytraSwapFeature extends Feature {
@@ -46,7 +46,7 @@ public class ElytraSwapFeature extends Feature {
         } catch (ClassNotFoundException failure) {
             throw new IllegalStateException("Resolved class initialization failed", failure);
         }
-        if (MinecraftClient.getInstance().currentScreen != null) {
+        if (Minecraft.getInstance().gui.screen() != null) {
             return;
         }
         boolean pressed = activateKey.getKey().isPressed();
@@ -77,7 +77,7 @@ public class ElytraSwapFeature extends Feature {
             return;
         }
         pendingHotbarSlot = slot;
-        pendingSlotPlayerAge = client.player.age;
+        pendingSlotPlayerAge = client.player.tickCount;
     }
 
     @Subscribe
@@ -85,7 +85,7 @@ public class ElytraSwapFeature extends Feature {
         if (pendingHotbarSlot == -1 || event.slot != pendingHotbarSlot) {
             return;
         }
-        if (client.player == null || (long) client.player.age - pendingSlotPlayerAge > 2L) {
+        if (client.player == null || (long) client.player.tickCount - pendingSlotPlayerAge > 2L) {
             pendingHotbarSlot = -1;
             pendingSlotPlayerAge = -1L;
             return;
@@ -105,7 +105,7 @@ public class ElytraSwapFeature extends Feature {
         if (startedWithElytra) {
             return InventoryItems.holdsChestplateInMainHand();
         }
-        return client.player.getMainHandStack().getItem() == Items.ELYTRA;
+        return client.player.getMainHandItem().getItem() == Items.ELYTRA;
     }
 
     private int findDesiredHotbarSlot() {

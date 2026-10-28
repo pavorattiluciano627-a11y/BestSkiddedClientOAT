@@ -1,8 +1,8 @@
 package dev.echo.client.setting.specialized;
 
 import java.util.function.Function;
-import net.minecraft.block.Block;
-import net.minecraft.item.ItemStack;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.block.Block;
 
 /** The item-stack display-name provider used by Search and Scaffold. */
 public final class BlockSelectionNames {
@@ -14,6 +14,6 @@ public final class BlockSelectionNames {
     }
 
     public static String displayName(Block block) {
-        return new ItemStack(block.asItem()).getName().getString();
+        return new ItemStack(block.asItem()).getHoverName().getString();
     }
 }

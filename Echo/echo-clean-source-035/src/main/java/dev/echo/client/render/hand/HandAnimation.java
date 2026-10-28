@@ -1,12 +1,12 @@
 package dev.echo.client.render.hand;
 
+import com.mojang.blaze3d.vertex.PoseStack;
+import com.mojang.math.Axis;
 import dev.echo.client.Echo;
 import dev.echo.client.features.impl.render.ViewModelFeature;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.util.math.MatrixStack;
-import net.minecraft.util.Arm;
-import net.minecraft.util.math.MathHelper;
-import net.minecraft.util.math.RotationAxis;
+import net.minecraft.client.Minecraft;
+import net.minecraft.util.Mth;
+import net.minecraft.world.entity.HumanoidArm;
 
 /** Named first-person hand transform and the original live-strength swing operation. */
 public abstract class HandAnimation {
@@ -20,27 +20,27 @@ public abstract class HandAnimation {
         return displayName;
     }
 
-    public abstract void apply(float swingProgress, MatrixStack matrices, int direction, Arm arm);
+    public abstract void apply(float swingProgress, PoseStack matrices, int direction, HumanoidArm arm);
 
     /** Samples the live feature and selected hand strength on every invocation. */
-    public static void applyConfiguredSwing(MatrixStack matrices, Arm arm, float swingProgress) {
+    public static void applyConfiguredSwing(PoseStack matrices, HumanoidArm arm, float swingProgress) {
         ViewModelFeature feature = (ViewModelFeature) Echo.featureManager.findFeature(ViewModelFeature.class);
         float amplitude = 1.0F;
         if (feature != null && feature.isEnabled()) {
-            if (MinecraftClient.getInstance().player != null) {
-                amplitude = arm == MinecraftClient.getInstance().player.getMainArm()
+            if (Minecraft.getInstance().player != null) {
+                amplitude = arm == Minecraft.getInstance().player.getMainArm()
                         ? ViewModelFeature.strengthMain.getValue()
                         : ViewModelFeature.strengthOff.getValue();
             } else {
                 amplitude = ViewModelFeature.strengthMain.getValue();
             }
         }
-        int side = arm == Arm.RIGHT ? 1 : -1;
-        float squaredWave = MathHelper.sin(swingProgress * swingProgress * (float) Math.PI);
-        matrices.multiply(RotationAxis.POSITIVE_Y.rotationDegrees(side * (45.0F + squaredWave * -20.0F)));
-        float wave = MathHelper.sin(MathHelper.sqrt(swingProgress) * (float) Math.PI);
-        matrices.multiply(RotationAxis.POSITIVE_Z.rotationDegrees(side * wave * (-2.0F * amplitude)));
-        matrices.multiply(RotationAxis.POSITIVE_X.rotationDegrees(wave * (-8.0F * amplitude)));
-        matrices.multiply(RotationAxis.POSITIVE_Y.rotationDegrees(side * -45.0F));
+        int side = arm == HumanoidArm.RIGHT ? 1 : -1;
+        float squaredWave = Mth.sin(swingProgress * swingProgress * (float) Math.PI);
+        matrices.mulPose(Axis.YP.rotationDegrees(side * (45.0F + squaredWave * -20.0F)));
+        float wave = Mth.sin(Mth.sqrt(swingProgress) * (float) Math.PI);
+        matrices.mulPose(Axis.ZP.rotationDegrees(side * wave * (-2.0F * amplitude)));
+        matrices.mulPose(Axis.XP.rotationDegrees(wave * (-8.0F * amplitude)));
+        matrices.mulPose(Axis.YP.rotationDegrees(side * -45.0F));
     }
 }

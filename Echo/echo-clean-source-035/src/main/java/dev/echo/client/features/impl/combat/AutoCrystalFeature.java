@@ -17,19 +17,19 @@ import dev.echo.client.setting.ItemListSetting;
 import dev.echo.client.setting.KeybindSetting;
 import dev.echo.client.utils.ActionTimer;
 import dev.echo.client.utils.items.InventoryItems;
-import net.minecraft.block.BlockState;
-import net.minecraft.block.Blocks;
-import net.minecraft.entity.decoration.EndCrystalEntity;
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.item.Item;
-import net.minecraft.item.ItemPlacementContext;
-import net.minecraft.item.Items;
-import net.minecraft.util.Hand;
-import net.minecraft.util.hit.BlockHitResult;
-import net.minecraft.util.hit.EntityHitResult;
-import net.minecraft.util.hit.HitResult;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.Box;
+import net.minecraft.core.BlockPos;
+import net.minecraft.world.InteractionHand;
+import net.minecraft.world.entity.boss.enderdragon.EndCrystal;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.Item;
+import net.minecraft.world.item.Items;
+import net.minecraft.world.item.context.BlockPlaceContext;
+import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.phys.AABB;
+import net.minecraft.world.phys.BlockHitResult;
+import net.minecraft.world.phys.EntityHitResult;
+import net.minecraft.world.phys.HitResult;
 
 /** Crystal clicks and the staged obsidian/crystal hotbar-ownership sequence. */
 public class AutoCrystalFeature extends Feature {
@@ -148,8 +148,8 @@ public class AutoCrystalFeature extends Feature {
         if (event.hasClicks() && shouldSuppressMining()) event.setClickCount(0);
         if (stage != CrystalPlacementStage.NONE && stage != CrystalPlacementStage.CRYSTAL) return;
         if (!InventoryItems.holdsInEitherHand(Items.END_CRYSTAL)) return;
-        if (!(client.crosshairTarget instanceof EntityHitResult hit)
-                || !(hit.getEntity() instanceof EndCrystalEntity crystal)
+        if (!(client.hitResult instanceof EntityHitResult hit)
+                || !(hit.getEntity() instanceof EndCrystal crystal)
                 || crystal.isRemoved() || !crystal.isAlive()) return;
         if (!breakTimer.hasElapsedTicks(sampleDelayTicks(breakDelay))) return;
         if (!event.hasClicks() && !rollFailure()) event.addClick();
@@ -172,13 +172,13 @@ public class AutoCrystalFeature extends Feature {
     private void onBlockBreaking(BlockBreakingEvent.Pre event) {
         if (isOutsideWorld() || MinecraftRenderState.getScreen() != null || activateKey.isListeningForKey()) return;
         if (!activateKey.getKey().isPressed() || !shouldSuppressMining()) return;
-        if (client.interactionManager.isBreakingBlock()) client.interactionManager.cancelBlockBreaking();
+        if (client.gameMode.isDestroying()) client.gameMode.stopDestroyBlock();
         event.cancel();
     }
 
     private void updateSequence() {
         BlockState pointedState = getCrosshairBlockState();
-        if (pointedState != null && pointedState.isOf(Blocks.RESPAWN_ANCHOR)) {
+        if (pointedState != null && pointedState.is(Blocks.RESPAWN_ANCHOR)) {
             if (stage != CrystalPlacementStage.NONE) resetSequence(switchBack.getValue());
             return;
         }
@@ -191,7 +191,7 @@ public class AutoCrystalFeature extends Feature {
             previousStage = stage;
             switch (stage) {
                 case SWITCH_OBSIDIAN -> {
-                    if (client.player.age < stageReadyAtTick) return;
+                    if (client.player.tickCount < stageReadyAtTick) return;
                     int slot = findObsidianSlot();
                     if (slot == -1 || !DeferredActionQueue.ensureSelected(this, slot, -1, false)) {
                         resetSequence(false);
@@ -200,7 +200,7 @@ public class AutoCrystalFeature extends Feature {
                     enterStage(CrystalPlacementStage.PLACE_OBSIDIAN, sampleDelayTicks(placeObsidianDelay));
                 }
                 case SWITCH_CRYSTAL -> {
-                    if (client.player.age < stageReadyAtTick) return;
+                    if (client.player.tickCount < stageReadyAtTick) return;
                     int slot = InventoryItems.findStackInHotbar(stack -> stack.getItem() == Items.END_CRYSTAL);
                     if (slot == -1 || !DeferredActionQueue.ensureSelected(this, slot, -1, false)) {
                         resetSequence(false);
@@ -217,56 +217,56 @@ public class AutoCrystalFeature extends Feature {
     private void tryStartSequence() {
         if (!placeObsidian.getValue()) return;
         if (itemWhitelist.getSelectedCount() != 0
-                && !itemWhitelist.isEntrySelected(client.player.getMainHandStack().getItem())) return;
+                && !itemWhitelist.isEntrySelected(client.player.getMainHandItem().getItem())) return;
         if (!hotbarWhitelist.permitsCurrentSlot()) return;
-        if (!(client.crosshairTarget instanceof BlockHitResult hit) || hit.getType() != HitResult.Type.BLOCK) return;
+        if (!(client.hitResult instanceof BlockHitResult hit) || hit.getType() != HitResult.Type.BLOCK) return;
         BlockPos position = hit.getBlockPos();
-        BlockState state = client.world.getBlockState(position);
+        BlockState state = client.level.getBlockState(position);
         boolean hasCrystal = InventoryItems.containsItemInHotbar(item -> item == Items.END_CRYSTAL);
         if (isCrystalBase(state)) {
             if (hasCrystal) enterStage(CrystalPlacementStage.SWITCH_CRYSTAL, sampleDelayTicks(switchDelay));
             return;
         }
         if (state.isAir() || !hasCrystal || findObsidianSlot() == -1) return;
-        BlockPos placement = state.isReplaceable() ? position : position.offset(hit.getSide());
-        BlockState placementState = client.world.getBlockState(placement);
-        if (!placementState.isAir() && !placementState.isReplaceable()) return;
+        BlockPos placement = state.canBeReplaced() ? position : position.relative(hit.getDirection());
+        BlockState placementState = client.level.getBlockState(placement);
+        if (!placementState.isAir() && !placementState.canBeReplaced()) return;
         enterStage(CrystalPlacementStage.SWITCH_OBSIDIAN, sampleDelayTicks(switchDelay));
     }
 
     private void handleObsidianUse(UseKeyEvent event) {
         if (event.getClickCount() > 1) event.setClickCount(1);
-        if (client.player.age < stageReadyAtTick) {
+        if (client.player.tickCount < stageReadyAtTick) {
             event.setClickCount(0);
             return;
         }
-        if (!(client.crosshairTarget instanceof BlockHitResult hit) || hit.getType() != HitResult.Type.BLOCK) {
+        if (!(client.hitResult instanceof BlockHitResult hit) || hit.getType() != HitResult.Type.BLOCK) {
             event.setClickCount(0);
             return;
         }
-        if (isCrystalBase(client.world.getBlockState(hit.getBlockPos()))) {
+        if (isCrystalBase(client.level.getBlockState(hit.getBlockPos()))) {
             enterStage(CrystalPlacementStage.SWITCH_CRYSTAL, sampleDelayTicks(switchDelay));
             event.setClickCount(0);
             return;
         }
         if (obsidianPlacementPending) {
-            if (pendingObsidianPosition != null && isCrystalBase(client.world.getBlockState(pendingObsidianPosition))) {
+            if (pendingObsidianPosition != null && isCrystalBase(client.level.getBlockState(pendingObsidianPosition))) {
                 enterStage(CrystalPlacementStage.SWITCH_CRYSTAL, sampleDelayTicks(switchDelay));
                 event.setClickCount(0);
                 return;
             }
             obsidianPlacementPending = false;
-            stageReadyAtTick = client.player.age + Math.max(1, sampleDelayTicks(placeObsidianDelay));
+            stageReadyAtTick = client.player.tickCount + Math.max(1, sampleDelayTicks(placeObsidianDelay));
             event.setClickCount(0);
             return;
         }
-        Item held = client.player.getMainHandStack().getItem();
+        Item held = client.player.getMainHandItem().getItem();
         if (held != Items.OBSIDIAN && held != Items.BEDROCK) {
             event.setClickCount(0);
             return;
         }
-        BlockPos position = new ItemPlacementContext(client.player, Hand.MAIN_HAND, client.player.getMainHandStack(), hit).getBlockPos();
-        if (isCrystalBase(client.world.getBlockState(position))) {
+        BlockPos position = new BlockPlaceContext(client.player, InteractionHand.MAIN_HAND, client.player.getMainHandItem(), hit).getClickedPos();
+        if (isCrystalBase(client.level.getBlockState(position))) {
             enterStage(CrystalPlacementStage.SWITCH_CRYSTAL, sampleDelayTicks(switchDelay));
             event.setClickCount(0);
             return;
@@ -287,9 +287,9 @@ public class AutoCrystalFeature extends Feature {
             return;
         }
         if (!InventoryItems.holdsInEitherHand(Items.END_CRYSTAL)) return;
-        if (!(client.crosshairTarget instanceof BlockHitResult hit) || hit.getType() != HitResult.Type.BLOCK) return;
+        if (!(client.hitResult instanceof BlockHitResult hit) || hit.getType() != HitResult.Type.BLOCK) return;
         BlockPos position = hit.getBlockPos();
-        if (!isCrystalBase(client.world.getBlockState(position)) || hasCrystalEntityCollision(position)) return;
+        if (!isCrystalBase(client.level.getBlockState(position)) || hasCrystalEntityCollision(position)) return;
         if (!placeTimer.hasElapsedTicks(sampleDelayTicks(placeDelay))) return;
         if (!event.hasClicks() && !rollFailure()) event.addClick();
         placeTimer.reset();
@@ -297,7 +297,7 @@ public class AutoCrystalFeature extends Feature {
 
     private void enterStage(CrystalPlacementStage next, int ticks) {
         stage = next;
-        stageReadyAtTick = client.player.age + ticks;
+        stageReadyAtTick = client.player.tickCount + ticks;
         pendingObsidianPosition = null;
         obsidianPlacementPending = false;
     }
@@ -339,8 +339,8 @@ public class AutoCrystalFeature extends Feature {
     }
 
     private BlockState getCrosshairBlockState() {
-        if (client.crosshairTarget instanceof BlockHitResult hit && hit.getType() == HitResult.Type.BLOCK) {
-            return client.world.getBlockState(hit.getBlockPos());
+        if (client.hitResult instanceof BlockHitResult hit && hit.getType() == HitResult.Type.BLOCK) {
+            return client.level.getBlockState(hit.getBlockPos());
         }
         return null;
     }
@@ -356,22 +356,22 @@ public class AutoCrystalFeature extends Feature {
     }
 
     private static boolean isCrystalBase(BlockState state) {
-        return state != null && (state.isOf(Blocks.OBSIDIAN) || state.isOf(Blocks.BEDROCK));
+        return state != null && (state.is(Blocks.OBSIDIAN) || state.is(Blocks.BEDROCK));
     }
 
     private static boolean hasCrystalEntityCollision(BlockPos base) {
-        if (client.world == null) return false;
-        BlockPos above = base.up();
-        if (!client.world.isAir(above)) return false;
+        if (client.level == null) return false;
+        BlockPos above = base.above();
+        if (!client.level.isEmptyBlock(above)) return false;
         double x = above.getX(), y = above.getY(), z = above.getZ();
-        return !client.world.getOtherEntities(null, new Box(x, y, z, x + 1.0, y + 2.0, z + 1.0)).isEmpty();
+        return !client.level.getEntities(null, new AABB(x, y, z, x + 1.0, y + 2.0, z + 1.0)).isEmpty();
     }
 
     private static boolean hasNearbyDeadPlayer(double range) {
-        if (client.player == null || client.world == null) return false;
+        if (client.player == null || client.level == null) return false;
         double squaredRange = range * range;
-        for (PlayerEntity player : client.world.getPlayers()) {
-            if (player != client.player && player.isDead() && client.player.squaredDistanceTo(player) < squaredRange) return true;
+        for (Player player : client.level.players()) {
+            if (player != client.player && player.isDeadOrDying() && client.player.distanceToSqr(player) < squaredRange) return true;
         }
         return false;
     }

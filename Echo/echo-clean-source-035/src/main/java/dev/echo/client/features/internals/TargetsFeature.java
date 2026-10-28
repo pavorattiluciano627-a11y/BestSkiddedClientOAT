@@ -27,13 +27,13 @@ import dev.echo.client.utils.strings.Concat;
 import dev.echo.client.utils.targeting.EntityPredicates;
 import dev.echo.client.utils.targeting.TargetSelection;
 import java.util.Optional;
-import net.minecraft.entity.Entity;
-import net.minecraft.entity.LivingEntity;
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.scoreboard.Team;
-import net.minecraft.text.Style;
-import net.minecraft.text.TextColor;
-import net.minecraft.util.hit.EntityHitResult;
+import net.minecraft.network.chat.Style;
+import net.minecraft.network.chat.TextColor;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.phys.EntityHitResult;
+import net.minecraft.world.scores.PlayerTeam;
 
 /**
  * Global combat targeting preferences and the independently subscribed target controls.
@@ -222,7 +222,7 @@ public class TargetsFeature extends Feature {
             return;
         }
         LivingEntity target = EntityInteractions.getManualSelectTarget();
-        if (!(target instanceof PlayerEntity player)) {
+        if (!(target instanceof Player player)) {
             return;
         }
         String name = player.getName().getString();
@@ -262,8 +262,8 @@ public class TargetsFeature extends Feature {
         if (isOutsideWorld() || !event.hasClicks()) {
             return;
         }
-        if (!(client.crosshairTarget instanceof EntityHitResult hit)
-                || !(hit.getEntity() instanceof PlayerEntity player)) {
+        if (!(client.hitResult instanceof EntityHitResult hit)
+                || !(hit.getEntity() instanceof Player player)) {
             return;
         }
         if (!EntityPredicates.isBlocking(player) || EntityPredicates.isOutsideBlockingArc(player)
@@ -271,7 +271,7 @@ public class TargetsFeature extends Feature {
                 || !TargetSelection.isValidTarget(player)) {
             return;
         }
-        if (!InventoryItems.isAxe(client.player.getMainHandStack())) {
+        if (!InventoryItems.isAxe(client.player.getMainHandItem())) {
             return;
         }
         currentTarget = player;
@@ -279,12 +279,12 @@ public class TargetsFeature extends Feature {
 
     /** Tests the configured team criteria without adding an ignoreTeams availability check. */
     public boolean isSameTeam(Entity entity) {
-        if (!(entity instanceof PlayerEntity player) || client.player == null || client.world == null) {
+        if (!(entity instanceof Player player) || client.player == null || client.level == null) {
             return false;
         }
         if (teamChecks.isSelected(SCOREBOARD)) {
-            Team other = client.world.getScoreboard().getTeam(player.getNameForScoreboard());
-            Team local = client.world.getScoreboard().getTeam(client.player.getNameForScoreboard());
+            PlayerTeam other = client.level.getScoreboard().getPlayerTeam(player.getScoreboardName());
+            PlayerTeam local = client.level.getScoreboard().getPlayerTeam(client.player.getScoreboardName());
             if (other != null && other == local) {
                 return true;
             }
@@ -307,8 +307,8 @@ public class TargetsFeature extends Feature {
     }
 
     /** Color of the first styled display-name segment containing the scoreboard name. */
-    public static TextColor getNameColor(PlayerEntity player) {
-        String name = player.getNameForScoreboard();
+    public static TextColor getNameColor(Player player) {
+        String name = player.getScoreboardName();
         return player.getDisplayName().visit((style, segment) -> {
             if (style.getColor() != null && segment.contains(name)) {
                 return Optional.of(style.getColor());

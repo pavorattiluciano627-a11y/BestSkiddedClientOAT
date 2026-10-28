@@ -34,26 +34,26 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
-import net.minecraft.block.AbstractRailBlock;
-import net.minecraft.block.Block;
-import net.minecraft.block.SlabBlock;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.enchantment.Enchantments;
-import net.minecraft.entity.Entity;
-import net.minecraft.entity.projectile.PersistentProjectileEntity;
-import net.minecraft.entity.vehicle.TntMinecartEntity;
-import net.minecraft.item.BlockItem;
-import net.minecraft.item.BowItem;
-import net.minecraft.item.Item;
-import net.minecraft.item.ItemStack;
-import net.minecraft.item.Items;
-import net.minecraft.network.packet.Packet;
-import net.minecraft.network.packet.c2s.play.PlayerActionC2SPacket;
-import net.minecraft.util.hit.BlockHitResult;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.Box;
-import net.minecraft.util.math.Direction;
-import net.minecraft.util.math.Vec3d;
+import net.minecraft.client.Minecraft;
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
+import net.minecraft.network.protocol.Packet;
+import net.minecraft.network.protocol.game.ServerboundPlayerActionPacket;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.projectile.arrow.AbstractArrow;
+import net.minecraft.world.entity.vehicle.minecart.MinecartTNT;
+import net.minecraft.world.item.BlockItem;
+import net.minecraft.world.item.BowItem;
+import net.minecraft.world.item.Item;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
+import net.minecraft.world.item.enchantment.Enchantments;
+import net.minecraft.world.level.block.BaseRailBlock;
+import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.SlabBlock;
+import net.minecraft.world.phys.AABB;
+import net.minecraft.world.phys.BlockHitResult;
+import net.minecraft.world.phys.Vec3;
 
 /** Predicts flaming-arrow impacts and sequences protective blocks, rails and TNT carts. */
 public class AutoCartFeature extends Feature {
@@ -79,19 +79,19 @@ public class AutoCartFeature extends Feature {
     private static HotbarSlotsSetting returnSlots;
     private static ItemListSetting returnItems;
     private Set<Integer> trackedProjectileIds;
-    private PersistentProjectileEntity trackedProjectile;
-    private PersistentProjectileEntity lastSeenProjectile;
+    private AbstractArrow trackedProjectile;
+    private AbstractArrow lastSeenProjectile;
     private BlockPos railPosition;
     private BlockPos supportBlockPosition;
-    private Vec3d targetHitPosition;
+    private Vec3 targetHitPosition;
     private BlockHitResult pendingBlockHit;
     private int placementStep;
     private int selectedPlacementSlot;
     private boolean waitingForProjectile;
     private boolean interactionSubmitted;
     private int projectileWaitUntilTick;
-    private Vec3d lastProjectilePosition;
-    private Vec3d lastProjectileVelocity;
+    private Vec3 lastProjectilePosition;
+    private Vec3 lastProjectileVelocity;
     private boolean disablePending;
 
     public AutoCartFeature() {
@@ -112,8 +112,8 @@ public class AutoCartFeature extends Feature {
     @Override
     public void onEnable() {
         try {
-            Class.forName(PersistentProjectileEntity.class.getName(), true,
-                    PersistentProjectileEntity.class.getClassLoader());
+            Class.forName(AbstractArrow.class.getName(), true,
+                    AbstractArrow.class.getClassLoader());
         } catch (ClassNotFoundException failure) {
             throw new IllegalStateException("Resolved class initialization failed", failure);
         }
@@ -126,7 +126,7 @@ public class AutoCartFeature extends Feature {
         railPosition = null;
         supportBlockPosition = null;
         try {
-            Class.forName(Vec3d.class.getName(), true, Vec3d.class.getClassLoader());
+            Class.forName(Vec3.class.getName(), true, Vec3.class.getClassLoader());
         } catch (ClassNotFoundException failure) {
             throw new IllegalStateException("Resolved class initialization failed", failure);
         }
@@ -169,7 +169,7 @@ public class AutoCartFeature extends Feature {
             completeDisable();
             return;
         }
-        if (isOutsideWorld() || MinecraftClient.getInstance().currentScreen != null) {
+        if (isOutsideWorld() || Minecraft.getInstance().gui.screen() != null) {
             if (isSequenceActive()) finishSequence(false);
             else releaseRotation();
             return;
@@ -185,13 +185,13 @@ public class AutoCartFeature extends Feature {
                 finishSequence(false);
                 return;
             }
-        } else if (client.player.age > projectileWaitUntilTick) {
+        } else if (client.player.tickCount > projectileWaitUntilTick) {
             finishSequence(false);
             return;
         }
         if (!updatePlacementStep()) return;
         var rotationManager = rotations();
-        Vec3d aimPoint = pendingBlockHit.getPos();
+        Vec3 aimPoint = pendingBlockHit.getLocation();
         RotationSettings settings = silentRotations.getValue()
                 ? RotationSettings.uniform(RotationVisibility.SILENT, AimTransition.SNAP, ROTATION_SPEED)
                 : RotationSettings.uniform(RotationVisibility.VISIBLE, AimTransition.EASED, ROTATION_SPEED);
@@ -224,7 +224,7 @@ public class AutoCartFeature extends Feature {
             if (pendingBlockHit == null) return;
             if (waitingForProjectile) return;
         }
-        if (isOutsideWorld() || MinecraftClient.getInstance().currentScreen != null) return;
+        if (isOutsideWorld() || Minecraft.getInstance().gui.screen() != null) return;
         if (DeferredActionQueue.selectedSlot() != selectedPlacementSlot) return;
         boolean requireSameFace = controlState == null ? placementStep == 0 : (placementStep & 1) != 0;
         boolean canUse = BlockRaycasts.matchesHit(pendingBlockHit, requireSameFace);
@@ -245,9 +245,9 @@ public class AutoCartFeature extends Feature {
     private void onPacketSend(PacketSendEvent event) {
         String[] controlState = SpearReachFeature.readSharedControlState();
         Packet<?> packet = event.getPacket();
-        if (controlState == null && !(packet instanceof PlayerActionC2SPacket)) return;
-        PlayerActionC2SPacket action = (PlayerActionC2SPacket) packet;
-        if (action.getAction() != PlayerActionC2SPacket.Action.RELEASE_USE_ITEM) return;
+        if (controlState == null && !(packet instanceof ServerboundPlayerActionPacket)) return;
+        ServerboundPlayerActionPacket action = (ServerboundPlayerActionPacket) packet;
+        if (action.getAction() != ServerboundPlayerActionPacket.Action.RELEASE_USE_ITEM) return;
         if (controlState == null && isOutsideWorld()) return;
         boolean active = isSequenceActive();
         if (controlState == null) {
@@ -255,45 +255,45 @@ public class AutoCartFeature extends Feature {
             active = place.isSelected(placeOption2);
         }
         if (!active) return;
-        ItemStack bow = client.player.getActiveItem();
+        ItemStack bow = client.player.getUseItem();
         if (controlState == null && !(bow.getItem() instanceof BowItem)) return;
         boolean flame = ItemProperties.hasEnchantment(bow, Enchantments.FLAME);
         int useTicks;
         if (controlState == null) {
             if (!flame) return;
-            useTicks = client.player.getItemUseTime();
+            useTicks = client.player.getTicksUsingItem();
         } else {
             useTicks = flame ? 1 : 0;
         }
-        float pull = BowItem.getPullProgress(useTicks);
+        float pull = BowItem.getPowerForTime(useTicks);
         if (pull < 0.1f) return;
         Rotation rotation = rotations().serverRotation();
-        if (rotation == null) rotation = new Rotation(client.player.getYaw(), client.player.getPitch());
-        Vec3d origin = client.player.getCameraPosVec(1.0f).subtract(0.0, 0.1, 0.0);
-        Vec3d velocity = launchVelocity(rotation, pull);
+        if (rotation == null) rotation = new Rotation(client.player.getYRot(), client.player.getXRot());
+        Vec3 origin = client.player.getEyePosition(1.0f).subtract(0.0, 0.1, 0.0);
+        Vec3 velocity = launchVelocity(rotation, pull);
         BlockImpactProjectileSimulation simulation = new BlockImpactProjectileSimulation(origin, velocity);
         int flightTicks = countFlightTicks(simulation);
         BlockHitResult bestHit = simulation.getBlockImpact();
-        if (bestHit == null || bestHit.getSide() != Direction.UP) return;
+        if (bestHit == null || bestHit.getDirection() != Direction.UP) return;
         if (flightTicks > LatencyTracker.milliseconds() / 50 + LATENCY_MARGIN_TICKS + RELEASE_LOOKAHEAD_TICKS) return;
-        List<Vec3d> velocities = new ArrayList<>();
+        List<Vec3> velocities = new ArrayList<>();
         velocities.add(velocity);
         for (int adjustment : new int[]{-1, 1}) {
-            float adjustedPull = BowItem.getPullProgress(useTicks + adjustment);
+            float adjustedPull = BowItem.getPowerForTime(useTicks + adjustment);
             if (adjustedPull >= 0.1f) velocities.add(launchVelocity(rotation, adjustedPull));
         }
         int bestScore = 0;
         int bestCollisionTick = -1;
-        for (Vec3d candidateVelocity : velocities) {
+        for (Vec3 candidateVelocity : velocities) {
             BlockHitResult hit = new BlockImpactProjectileSimulation(origin, candidateVelocity)
                     .findBlockHit(MAX_SIMULATION_TICKS);
-            if (hit == null || hit.getSide() != Direction.UP) continue;
-            BlockPos rail = hit.getBlockPos().up();
+            if (hit == null || hit.getDirection() != Direction.UP) continue;
+            BlockPos rail = hit.getBlockPos().above();
             int collisionTick = findCartCollisionTick(origin, velocity, 0, rail);
             if (collisionTick == -1) continue;
-            int minimumLead = 2 + (client.world.getBlockState(rail).getBlock() instanceof AbstractRailBlock ? 0 : 1);
+            int minimumLead = 2 + (client.level.getBlockState(rail).getBlock() instanceof BaseRailBlock ? 0 : 1);
             int score = 0;
-            for (Vec3d testVelocity : velocities) {
+            for (Vec3 testVelocity : velocities) {
                 if (findCartCollisionTick(origin, testVelocity, 0, rail) >= minimumLead) ++score;
             }
             if (score <= bestScore) continue;
@@ -302,7 +302,7 @@ public class AutoCartFeature extends Feature {
             bestHit = hit;
         }
         if (bestCollisionTick == -1) return;
-        if (startSequence(null, bestHit, bestCollisionTick)) projectileWaitUntilTick = client.player.age + flightTicks;
+        if (startSequence(null, bestHit, bestCollisionTick)) projectileWaitUntilTick = client.player.tickCount + flightTicks;
     }
 
     private void scanProjectiles() {
@@ -312,35 +312,35 @@ public class AutoCartFeature extends Feature {
             mayStart = !mayStart && (place.isSelected(placeOption) || place.isSelected(placeOption2)
                     || place.isSelected(placeOption3));
         }
-        Iterator<Entity> entities = client.world.getEntities().iterator();
+        Iterator<Entity> entities = client.level.entitiesForRendering().iterator();
         if (controlState != null) {
             boolean continueScan = entities.hasNext();
-            while (continueScan) continueScan = ((PersistentProjectileEntity) entities.next()).isOnFire();
+            while (continueScan) continueScan = ((AbstractArrow) entities.next()).isOnFire();
             return;
         }
         while (entities.hasNext()) {
             Entity entity = entities.next();
-            if (!(entity instanceof PersistentProjectileEntity projectile)) continue;
+            if (!(entity instanceof AbstractArrow projectile)) continue;
             if (projectile.getOwner() != client.player) continue;
             if (((PersistentProjectileEntityAccessor) projectile).invokeIsInGround()) {
                 trackedProjectileIds.remove(projectile.getId());
                 continue;
             }
-            if (projectile.age < FRESH_ARROW_AGE) trackedProjectileIds.add(projectile.getId());
+            if (projectile.tickCount < FRESH_ARROW_AGE) trackedProjectileIds.add(projectile.getId());
             if (trackedProjectile == null && projectileWaitUntilTick != -1
-                    && lastProjectileVelocity == null && projectile.age == 0) {
-                lastProjectilePosition = projectile.getEntityPos();
-                lastProjectileVelocity = projectile.getVelocity();
+                    && lastProjectileVelocity == null && projectile.tickCount == 0) {
+                lastProjectilePosition = projectile.position();
+                lastProjectileVelocity = projectile.getDeltaMovement();
             }
             if (!projectile.isOnFire()) continue;
             if (!mayStart) continue;
             if (projectile == lastSeenProjectile) continue;
             if (freshArrowsOnly.getValue() && !trackedProjectileIds.contains(projectile.getId())) continue;
             BlockHitResult hit = new BlockImpactProjectileSimulation(
-                    projectile.getEntityPos(), projectile.getVelocity(), projectile).findBlockHit(MAX_SIMULATION_TICKS);
-            if (hit == null || hit.getSide() != Direction.UP) continue;
-            if (findCartCollisionTick(projectile.getEntityPos(), projectile.getVelocity(), projectile.age,
-                    hit.getBlockPos().up()) == -1) continue;
+                    projectile.position(), projectile.getDeltaMovement(), projectile).findBlockHit(MAX_SIMULATION_TICKS);
+            if (hit == null || hit.getDirection() != Direction.UP) continue;
+            if (findCartCollisionTick(projectile.position(), projectile.getDeltaMovement(), projectile.tickCount,
+                    hit.getBlockPos().above()) == -1) continue;
             if (startSequence(projectile, hit, projectileFlightTicks(projectile))) {
                 lastSeenProjectile = projectile;
                 mayStart = false;
@@ -348,14 +348,14 @@ public class AutoCartFeature extends Feature {
         }
     }
 
-    private boolean startSequence(PersistentProjectileEntity projectile, BlockHitResult hit, int flightTicks) {
-        railPosition = hit.getBlockPos().up();
-        targetHitPosition = hit.getPos();
-        double range = client.player.getBlockInteractionRange();
+    private boolean startSequence(AbstractArrow projectile, BlockHitResult hit, int flightTicks) {
+        railPosition = hit.getBlockPos().above();
+        targetHitPosition = hit.getLocation();
+        double range = client.player.blockInteractionRange();
         double rangeSquared = range * range;
-        Vec3d eye = client.player.getCameraPosVec(1.0f);
+        Vec3 eye = client.player.getEyePosition(1.0f);
         String[] controlState = SpearReachFeature.readSharedControlState();
-        boolean railPresent = client.world.getBlockState(railPosition).getBlock() instanceof AbstractRailBlock;
+        boolean railPresent = client.level.getBlockState(railPosition).getBlock() instanceof BaseRailBlock;
         boolean placeRail = place.isSelected(placeOption);
         if (controlState != null) {
             if (placeRail) return railPresent;
@@ -364,27 +364,27 @@ public class AutoCartFeature extends Feature {
         }
         if (placeRail && !railPresent) {
             if (!PlacementWorldQueries.isReplaceable(railPosition)
-                    || !Block.hasTopRim(client.world, railPosition.down())) return false;
+                    || !Block.canSupportRigidBlock(client.level, railPosition.below())) return false;
             if (InventoryItems.findStackInHotbar(InventoryItems::isRail) == -1) return false;
             BlockHitResult railHit = BlockAimRotation.findHit(railPosition, targetHitPosition);
             if (railHit == null) return false;
-            if (eye.squaredDistanceTo(railHit.getPos()) > rangeSquared) return false;
+            if (eye.distanceToSqr(railHit.getLocation()) > rangeSquared) return false;
         }
         if (place.isSelected(placeOption2)) {
             if (!railPresent && !place.isSelected(placeOption)) return false;
             if (InventoryItems.findStackInHotbar(AutoCartFeature::isTntMinecart) == -1) return false;
-            if (eye.squaredDistanceTo(BlockAimRotation.insetBottomPoint(railPosition, targetHitPosition))
+            if (eye.distanceToSqr(BlockAimRotation.insetBottomPoint(railPosition, targetHitPosition))
                     > rangeSquared) return false;
         }
         supportBlockPosition = null;
         if (place.isSelected(placeOption3)) {
             if (findProtectionSlot() == -1) return false;
-            Vec3d towardRail = Vec3d.ofCenter(railPosition).subtract(client.player.getEntityPos());
-            BlockPos protection = client.player.getBlockPos().offset(Direction.getFacing(towardRail.x, 0.0, towardRail.z));
+            Vec3 towardRail = Vec3.atCenterOf(railPosition).subtract(client.player.position());
+            BlockPos protection = client.player.blockPosition().relative(Direction.getApproximateNearest(towardRail.x, 0.0, towardRail.z));
             if (!protection.equals(railPosition) && PlacementWorldQueries.isReplaceable(protection)
                     && !PlacementWorldQueries.intersectsPlayer(protection)
                     && !PlacementWorldQueries.hasBlockingEntity(protection)
-                    && new Box(protection).raycast(eye,
+                    && new AABB(protection).clip(eye,
                             BlockAimRotation.insetBottomPoint(railPosition, targetHitPosition)).isEmpty()) {
                 supportBlockPosition = protection;
             }
@@ -458,27 +458,27 @@ public class AutoCartFeature extends Feature {
         if (place.isSelected(placeOption3) && supportBlockPosition != null
                 && PlacementWorldQueries.isReplaceable(supportBlockPosition)) return PLACE_PROTECTION;
         if (place.isSelected(placeOption)
-                && !(client.world.getBlockState(railPosition).getBlock() instanceof AbstractRailBlock)) return PLACE_RAIL;
+                && !(client.level.getBlockState(railPosition).getBlock() instanceof BaseRailBlock)) return PLACE_RAIL;
         if (place.isSelected(placeOption2) && !interactionSubmitted
-                && client.world.getNonSpectatingEntities(TntMinecartEntity.class, new Box(railPosition)).isEmpty()) {
+                && client.level.getEntitiesOfClass(MinecartTNT.class, new AABB(railPosition)).isEmpty()) {
             return PLACE_CART;
         }
         return -1;
     }
 
-    private static int projectileFlightTicks(PersistentProjectileEntity projectile) {
+    private static int projectileFlightTicks(AbstractArrow projectile) {
         return countFlightTicks(new BlockImpactProjectileSimulation(
-                projectile.getEntityPos(), projectile.getVelocity(), projectile));
+                projectile.position(), projectile.getDeltaMovement(), projectile));
     }
 
-    private static Vec3d launchVelocity(Rotation rotation, float pull) {
-        Vec3d movement = client.player.getVelocity();
-        Vec3d launch = Vec3d.fromPolar(rotation.pitch(), rotation.yaw()).multiply(pull * 3.0f);
-        return launch.add(movement.x, client.player.isOnGround() ? 0.0 : movement.y, movement.z);
+    private static Vec3 launchVelocity(Rotation rotation, float pull) {
+        Vec3 movement = client.player.getDeltaMovement();
+        Vec3 launch = Vec3.directionFromRotation(rotation.pitch(), rotation.yaw()).scale(pull * 3.0f);
+        return launch.add(movement.x, client.player.onGround() ? 0.0 : movement.y, movement.z);
     }
 
-    private static int findCartCollisionTick(Vec3d origin, Vec3d velocity, int elapsedTicks, BlockPos rail) {
-        Box cart = new Box(rail.getX() + 0.01, rail.getY() + 0.0625, rail.getZ() + 0.01,
+    private static int findCartCollisionTick(Vec3 origin, Vec3 velocity, int elapsedTicks, BlockPos rail) {
+        AABB cart = new AABB(rail.getX() + 0.01, rail.getY() + 0.0625, rail.getZ() + 0.01,
                 rail.getX() + 0.99, rail.getY() + 0.7625, rail.getZ() + 0.99);
         String[] controlState = SpearReachFeature.readSharedControlState();
         BlockImpactProjectileSimulation simulation = new BlockImpactProjectileSimulation(origin, velocity);
@@ -486,10 +486,10 @@ public class AutoCartFeature extends Feature {
             boolean stopped = simulation.isStopped();
             if (controlState != null) return stopped ? 1 : 0;
             if (stopped) break;
-            Vec3d previous = simulation.getPosition();
+            Vec3 previous = simulation.getPosition();
             simulation.step();
             double margin = Math.max(0.0, Math.min(0.3, (elapsedTicks + tick - 2) / 20.0));
-            if (cart.expand(margin).raycast(previous, simulation.getPosition()).isPresent()) return tick;
+            if (cart.inflate(margin).clip(previous, simulation.getPosition()).isPresent()) return tick;
         }
         return -1;
     }
@@ -586,7 +586,7 @@ public class AutoCartFeature extends Feature {
         super.onDisable();
     }
 
-    private static boolean isTntMinecart(ItemStack stack) { return stack.isOf(Items.TNT_MINECART); }
+    private static boolean isTntMinecart(ItemStack stack) { return stack.is(Items.TNT_MINECART); }
     private static boolean isBow(ItemStack stack) { return stack.getItem() instanceof BowItem; }
 
     private static boolean isSlabBlockItem(ItemStack stack) {
@@ -602,13 +602,13 @@ public class AutoCartFeature extends Feature {
         String[] controlState = SpearReachFeature.readSharedControlState();
         if (controlState == null && !(item instanceof BlockItem)) return false;
         BlockItem blockItem = (BlockItem) item;
-        boolean rail = blockItem.getBlock() instanceof AbstractRailBlock;
+        boolean rail = blockItem.getBlock() instanceof BaseRailBlock;
         return controlState != null ? rail : !rail;
     }
 
     private static void initializeProjectileType() {
         try {
-            Class.forName(PersistentProjectileEntity.class.getName(), true, PersistentProjectileEntity.class.getClassLoader());
+            Class.forName(AbstractArrow.class.getName(), true, AbstractArrow.class.getClassLoader());
         } catch (ClassNotFoundException failure) {
             throw new IllegalStateException("Resolved class initialization failed", failure);
         }
@@ -624,7 +624,7 @@ public class AutoCartFeature extends Feature {
 
     private static void initializeVectorType() {
         try {
-            Class.forName(Vec3d.class.getName(), true, Vec3d.class.getClassLoader());
+            Class.forName(Vec3.class.getName(), true, Vec3.class.getClassLoader());
         } catch (ClassNotFoundException failure) {
             throw new IllegalStateException("Resolved class initialization failed", failure);
         }

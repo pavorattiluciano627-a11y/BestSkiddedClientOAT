@@ -5,8 +5,8 @@ import dev.echo.client.events.input.KeybindingEvent;
 import dev.echo.client.utils.targeting.AttackEvaluation;
 import java.lang.invoke.MethodHandles;
 import java.util.List;
-import net.minecraft.entity.LivingEntity;
-import net.minecraft.item.ItemStack;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.item.ItemStack;
 
 /**
  * An item-usage tick and its actual kinetic-attack evaluations.
@@ -44,7 +44,7 @@ public class ItemUsageTickEvent extends Event {
         ItemStack currentStack = stack;
         initializePayloadType(LivingEntity.class);
         LivingEntity currentUser = user;
-        return currentStack.getMaxUseTime(currentUser) - remainingUseTicks;
+        return currentStack.getUseDuration(currentUser) - remainingUseTicks;
     }
 
     /**

@@ -1,7 +1,7 @@
 package dev.echo.client.utils.trajectory;
 
-import net.minecraft.util.math.MathHelper;
-import net.minecraft.util.math.Vec3d;
+import net.minecraft.util.Mth;
+import net.minecraft.world.phys.Vec3;
 
 /** The key-independent numerical operations of the launch-trajectory search. */
 public final class LaunchTrajectoryMath {
@@ -13,18 +13,18 @@ public final class LaunchTrajectoryMath {
      * table are intentional: replacing them with double trigonometry changes
      * the search's sampled trajectories.
      */
-    public static Vec3d direction(float yaw, float pitch) {
-        float x = -MathHelper.sin(yaw * (float) (Math.PI / 180.0))
-                * MathHelper.cos(pitch * (float) (Math.PI / 180.0));
-        float y = -MathHelper.sin(pitch * (float) (Math.PI / 180.0));
-        float z = MathHelper.cos(yaw * (float) (Math.PI / 180.0))
-                * MathHelper.cos(pitch * (float) (Math.PI / 180.0));
-        return new Vec3d(x, y, z).normalize();
+    public static Vec3 direction(float yaw, float pitch) {
+        float x = -Mth.sin(yaw * (float) (Math.PI / 180.0))
+                * Mth.cos(pitch * (float) (Math.PI / 180.0));
+        float y = -Mth.sin(pitch * (float) (Math.PI / 180.0));
+        float z = Mth.cos(yaw * (float) (Math.PI / 180.0))
+                * Mth.cos(pitch * (float) (Math.PI / 180.0));
+        return new Vec3(x, y, z).normalize();
     }
 
     /** Signed distance from an interpolated path point to the launch reach. */
     public static double reachResidual(double[] segmentStart, double[] segmentEnd,
-            double fraction, Vec3d launchPosition, Vec3d inheritedVelocity, int ticks) {
+            double fraction, Vec3 launchPosition, Vec3 inheritedVelocity, int ticks) {
         double x = segmentStart[0] + (segmentEnd[0] - segmentStart[0]) * fraction
                 - launchPosition.x - inheritedVelocity.x * ticks;
         double y = segmentStart[1] + (segmentEnd[1] - segmentStart[1]) * fraction

@@ -1,12 +1,12 @@
 package dev.echo.client.mixin;
 
+import com.mojang.blaze3d.platform.Window;
 import dev.echo.client.Echo;
 import dev.echo.client.bridge.WindowControl;
 import dev.echo.client.events.EventBus;
 import dev.echo.client.events.window.WindowFocusEvent;
 import dev.echo.client.events.window.WindowPositionEvent;
 import dev.echo.client.events.window.WindowSizeEvent;
-import net.minecraft.client.util.Window;
 import org.lwjgl.glfw.GLFW;
 import org.lwjgl.glfw.GLFWVidMode;
 import org.lwjgl.system.Platform;
@@ -21,7 +21,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 @Mixin(Window.class)
 public abstract class WindowMixin implements WindowControl {
     @Shadow private boolean fullscreen;
-    @Shadow private boolean currentFullscreen;
+    @Shadow private boolean actuallyFullscreen;
     @Shadow private int x;
     @Shadow private int y;
     @Shadow private int width;
@@ -31,17 +31,17 @@ public abstract class WindowMixin implements WindowControl {
     @Override
     public void invalidateFullscreenState() {
         if (fullscreen) {
-            currentFullscreen = false;
+            actuallyFullscreen = false;
         }
     }
 
-    @Redirect(method = "updateWindowRegion", at = @At(value = "INVOKE",
+    @Redirect(method = "setMode", at = @At(value = "INVOKE",
             target = "Lorg/lwjgl/glfw/GLFW;glfwGetWindowMonitor(J)J", remap = false))
     private long getEffectiveMonitor(long window) {
         return echo$borderlessMonitor != 0L ? echo$borderlessMonitor : GLFW.glfwGetWindowMonitor(window);
     }
 
-    @Redirect(method = "updateWindowRegion", at = @At(value = "INVOKE",
+    @Redirect(method = "setMode", at = @At(value = "INVOKE",
             target = "Lorg/lwjgl/glfw/GLFW;glfwSetWindowMonitor(JJIIIII)V", remap = false))
     private void applyBorderlessFullscreen(long window, long monitor, int requestedX, int requestedY,
             int requestedWidth, int requestedHeight, int refreshRate) {
@@ -88,7 +88,7 @@ public abstract class WindowMixin implements WindowControl {
         }
     }
 
-    @Inject(method = "onWindowPosChanged", at = @At("TAIL"))
+    @Inject(method = "onMove", at = @At("TAIL"))
     void postWindowPosition(long window, int newX, int newY, CallbackInfo callback) {
         if (Echo.eventsDisabled) {
             return;
@@ -96,7 +96,7 @@ public abstract class WindowMixin implements WindowControl {
         EventBus.post(new WindowPositionEvent(newX, newY));
     }
 
-    @Inject(method = "onWindowSizeChanged", at = @At("TAIL"))
+    @Inject(method = "onResize", at = @At("TAIL"))
     void postWindowSize(long window, int newWidth, int newHeight, CallbackInfo callback) {
         if (Echo.eventsDisabled) {
             return;
@@ -104,7 +104,7 @@ public abstract class WindowMixin implements WindowControl {
         EventBus.post(new WindowSizeEvent(newWidth, newHeight));
     }
 
-    @Inject(method = "onWindowFocusChanged", at = @At("TAIL"))
+    @Inject(method = "onFocus", at = @At("TAIL"))
     void postWindowFocus(long window, boolean focused, CallbackInfo callback) {
         if (Echo.eventsDisabled) {
             return;

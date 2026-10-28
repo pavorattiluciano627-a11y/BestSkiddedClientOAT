@@ -16,8 +16,8 @@ import dev.echo.client.setting.ItemListSetting;
 import dev.echo.client.setting.KeybindSetting;
 import dev.echo.client.utils.items.InventoryItems;
 import dev.echo.client.utils.targeting.WeaponAttributes;
-import net.minecraft.enchantment.Enchantments;
-import net.minecraft.item.ItemStack;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.enchantment.Enchantments;
 
 /** Selects a Lunge-enchanted spear on an attack or an activation-key rising edge. */
 public class SpearLungeFeature extends Feature {
@@ -80,7 +80,7 @@ public class SpearLungeFeature extends Feature {
 
     private boolean holdsLungeSpear() {
         if (client.player == null) return false;
-        ItemStack stack = client.player.getMainHandStack();
+        ItemStack stack = client.player.getMainHandItem();
         return !stack.isEmpty() && InventoryItems.isSpear(stack.getItem())
                 && InventoryItems.hasEnchantment(stack, Enchantments.LUNGE);
     }
@@ -118,9 +118,9 @@ public class SpearLungeFeature extends Feature {
         int spearSlot = findLungeSpearSlot();
         if (spearSlot == -1) return false;
         if (cooldown.isSelected(VANILLA)) {
-            if (client.player.getAttackCooldownProgress(0.0f) < (float) cooldownPercent.getValue() / 100.0f) return false;
+            if (client.player.getAttackStrengthScale(0.0f) < (float) cooldownPercent.getValue() / 100.0f) return false;
         } else if (cooldown.isSelected(PAPER)) {
-            ItemStack spear = client.player.getInventory().getStack(spearSlot);
+            ItemStack spear = client.player.getInventory().getItem(spearSlot);
             if (WeaponAttributes.remainingCooldownSeconds(client.player, spear, 0.0f) > 0.0) return false;
         }
         if (client.player.getInventory().getSelectedSlot() == spearSlot) return false;
@@ -147,7 +147,7 @@ public class SpearLungeFeature extends Feature {
     public ItemStack getPaperCooldownSpear() {
         if (!isEnabled() || !cooldown.isSelected(PAPER) || isOutsideWorld()) return ItemStack.EMPTY;
         int slot = findLungeSpearSlot();
-        return slot == -1 ? ItemStack.EMPTY : client.player.getInventory().getStack(slot);
+        return slot == -1 ? ItemStack.EMPTY : client.player.getInventory().getItem(slot);
     }
 
     @Override

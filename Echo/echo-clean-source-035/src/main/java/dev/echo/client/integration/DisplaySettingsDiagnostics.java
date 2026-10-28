@@ -1,7 +1,7 @@
 package dev.echo.client.integration;
 
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.util.Window;
+import com.mojang.blaze3d.platform.Window;
+import net.minecraft.client.Minecraft;
 
 /** Formats the display settings included in the client's diagnostic report. */
 public final class DisplaySettingsDiagnostics {
@@ -14,7 +14,7 @@ public final class DisplaySettingsDiagnostics {
      * @return width and height separated by {@code x}
      */
     public static String framebufferSize(Window window) {
-        return window.getFramebufferWidth() + "x" + window.getFramebufferHeight();
+        return window.getWidth() + "x" + window.getHeight();
     }
 
     /**
@@ -23,7 +23,7 @@ public final class DisplaySettingsDiagnostics {
      * @return width and height separated by {@code x}
      */
     public static String windowSize(Window window) {
-        return window.getWidth() + "x" + window.getHeight();
+        return window.getScreenWidth() + "x" + window.getScreenHeight();
     }
 
     /**
@@ -31,7 +31,7 @@ public final class DisplaySettingsDiagnostics {
      * @return fully qualified class-loader implementation name
      */
     public static String minecraftClassLoader() {
-        return MinecraftClient.class.getClassLoader().getClass().getName();
+        return Minecraft.class.getClassLoader().getClass().getName();
     }
 
     /**
@@ -40,7 +40,7 @@ public final class DisplaySettingsDiagnostics {
      * @return decimal scale factor
      */
     public static String scaleFactor(Window window) {
-        return String.valueOf(window.getScaleFactor());
+        return String.valueOf(window.getGuiScale());
     }
 
     /**
@@ -48,8 +48,8 @@ public final class DisplaySettingsDiagnostics {
      * @param client client whose options are reported
      * @return option value as text
      */
-    public static String fullscreen(MinecraftClient client) {
-        return String.valueOf(client.options.getFullscreen().getValue());
+    public static String fullscreen(Minecraft client) {
+        return String.valueOf(client.options.fullscreen().get());
     }
 
     /**
@@ -57,8 +57,8 @@ public final class DisplaySettingsDiagnostics {
      * @param client client whose options are reported
      * @return option value as text
      */
-    public static String verticalSync(MinecraftClient client) {
-        return String.valueOf(client.options.getEnableVsync().getValue());
+    public static String verticalSync(Minecraft client) {
+        return String.valueOf(client.options.enableVsync().get());
     }
 
     /**
@@ -66,8 +66,8 @@ public final class DisplaySettingsDiagnostics {
      * @param client client whose options are reported
      * @return option value as text
      */
-    public static String maximumFps(MinecraftClient client) {
-        return String.valueOf(client.options.getMaxFps().getValue());
+    public static String maximumFps(Minecraft client) {
+        return String.valueOf(client.options.framerateLimit().get());
     }
 
     /**
@@ -75,8 +75,8 @@ public final class DisplaySettingsDiagnostics {
      * @param client client whose options are reported
      * @return option value as text
      */
-    public static String viewDistance(MinecraftClient client) {
-        return String.valueOf(client.options.getViewDistance().getValue());
+    public static String viewDistance(Minecraft client) {
+        return String.valueOf(client.options.renderDistance().get());
     }
 
     /**
@@ -84,7 +84,7 @@ public final class DisplaySettingsDiagnostics {
      * @param client client whose options are reported
      * @return option value as text
      */
-    public static String graphicsPreset(MinecraftClient client) {
-        return String.valueOf(client.options.getPreset().getValue());
+    public static String graphicsPreset(Minecraft client) {
+        return String.valueOf(client.options.graphicsPreset().get());
     }
 }

@@ -41,12 +41,12 @@ public class SpeedFeature extends Feature {
             return;
         }
         if (mode.isSelected(MINEMEN_CLUB)) {
-            if (client.player.isOnGround()) {
+            if (client.player.onGround()) {
                 MovementVectors.setHorizontalSpeed(0.26f);
                 event.jump = true;
             }
         } else if (mode.isSelected(LEGIT)) {
-            if (client.player.isOnGround()) {
+            if (client.player.onGround()) {
                 event.jump = true;
             }
         } else if (mode.isSelected(GRIM_ENTITY)) {

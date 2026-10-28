@@ -5,8 +5,8 @@ import dev.echo.client.setting.ItemListSetting;
 import dev.echo.client.setting.list.RegistryEntryGroup;
 import java.util.List;
 import java.util.function.Predicate;
-import net.minecraft.item.BlockItem;
-import net.minecraft.item.Item;
+import net.minecraft.world.item.BlockItem;
+import net.minecraft.world.item.Item;
 
 /** Xray's block-item filter and initial selection. */
 public class XrayBlockItemListSetting extends ItemListSetting {

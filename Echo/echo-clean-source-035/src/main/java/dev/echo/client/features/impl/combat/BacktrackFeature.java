@@ -27,24 +27,24 @@ import dev.echo.client.utils.network.VelocityPackets;
 import dev.echo.client.utils.strings.Concat;
 import java.util.ArrayDeque;
 import java.util.List;
-import net.minecraft.client.network.ClientPlayNetworkHandler;
-import net.minecraft.entity.Entity;
-import net.minecraft.entity.LivingEntity;
-import net.minecraft.network.packet.Packet;
-import net.minecraft.network.packet.s2c.common.DisconnectS2CPacket;
-import net.minecraft.network.packet.s2c.play.BundleS2CPacket;
-import net.minecraft.network.packet.s2c.play.EntitiesDestroyS2CPacket;
-import net.minecraft.network.packet.s2c.play.EntityDamageS2CPacket;
-import net.minecraft.network.packet.s2c.play.EntityPositionS2CPacket;
-import net.minecraft.network.packet.s2c.play.EntityPositionSyncS2CPacket;
-import net.minecraft.network.packet.s2c.play.EntityS2CPacket;
-import net.minecraft.network.packet.s2c.play.EntityVelocityUpdateS2CPacket;
-import net.minecraft.network.packet.s2c.play.HealthUpdateS2CPacket;
-import net.minecraft.network.packet.s2c.play.PlayerPositionLookS2CPacket;
-import net.minecraft.network.packet.s2c.play.PlayerRespawnS2CPacket;
-import net.minecraft.network.packet.s2c.play.PositionFlag;
-import net.minecraft.util.math.Box;
-import net.minecraft.util.math.Vec3d;
+import net.minecraft.client.multiplayer.ClientPacketListener;
+import net.minecraft.network.protocol.Packet;
+import net.minecraft.network.protocol.common.ClientboundDisconnectPacket;
+import net.minecraft.network.protocol.game.ClientboundBundlePacket;
+import net.minecraft.network.protocol.game.ClientboundDamageEventPacket;
+import net.minecraft.network.protocol.game.ClientboundEntityPositionSyncPacket;
+import net.minecraft.network.protocol.game.ClientboundMoveEntityPacket;
+import net.minecraft.network.protocol.game.ClientboundPlayerPositionPacket;
+import net.minecraft.network.protocol.game.ClientboundRemoveEntitiesPacket;
+import net.minecraft.network.protocol.game.ClientboundRespawnPacket;
+import net.minecraft.network.protocol.game.ClientboundSetEntityMotionPacket;
+import net.minecraft.network.protocol.game.ClientboundSetHealthPacket;
+import net.minecraft.network.protocol.game.ClientboundTeleportEntityPacket;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.Relative;
+import net.minecraft.world.phys.AABB;
+import net.minecraft.world.phys.Vec3;
 
 /** Buffers incoming packets while a target's server position is farther away than its client position. */
 public class BacktrackFeature extends Feature {
@@ -60,9 +60,9 @@ public class BacktrackFeature extends Feature {
     private ActionTimer trackingTimer;
     private LivingEntity trackedTarget;
     private long holdMillis;
-    private Vec3d serverTargetPosition;
-    private Vec3d previousRenderPosition;
-    private Vec3d renderPosition;
+    private Vec3 serverTargetPosition;
+    private Vec3 previousRenderPosition;
+    private Vec3 renderPosition;
     private static String timingTooltip;
     private static String itemTooltip;
     private static String hotbarTooltip;
@@ -132,7 +132,7 @@ public class BacktrackFeature extends Feature {
         trackedTarget = target;
         trackingTimer.reset();
         holdMillis = Math.max(0L, Math.round(RandomMath.randomDouble(holdTime.getLower(), holdTime.getUpper())));
-        Vec3d position = target.getTrackedPosition().getPos();
+        Vec3 position = target.getPositionCodec().getBase();
         renderPosition = position;
         previousRenderPosition = position;
         serverTargetPosition = position;
@@ -166,11 +166,11 @@ public class BacktrackFeature extends Feature {
     }
 
     private static Iterable<? extends Packet<?>> unpackBundle(Packet<?> packet) {
-        return packet instanceof BundleS2CPacket bundle ? bundle.getPackets() : List.of(packet);
+        return packet instanceof ClientboundBundlePacket bundle ? bundle.subPackets() : List.of(packet);
     }
 
     private boolean removesTrackedTarget(Packet<?> packet) {
-        return packet instanceof EntitiesDestroyS2CPacket removed
+        return packet instanceof ClientboundRemoveEntitiesPacket removed
                 && removed.getEntityIds().contains(trackedTarget.getId());
     }
 
@@ -190,11 +190,11 @@ public class BacktrackFeature extends Feature {
         boolean fill = fillColor.getAlpha() > 0;
         boolean outline = outlineColor.getAlpha() > 0;
         if (trackedTarget == null || delayedPackets.isEmpty() || (!fill && !outline)) return;
-        Vec3d position = previousRenderPosition.lerp(renderPosition, (double) event.getTickProgress());
-        Box box = trackedTarget.getBoundingBox().offset(position.subtract(trackedTarget.getEntityPos()));
+        Vec3 position = previousRenderPosition.lerp(renderPosition, (double) event.getTickProgress());
+        AABB box = trackedTarget.getBoundingBox().move(position.subtract(trackedTarget.position()));
         OverlayWorldGeometry geometry = event.getRenderContext().getOverlayGeometry();
         if (fill) geometry.drawBox(box.minX, box.minY, box.minZ,
-                box.getLengthX(), box.getLengthY(), box.getLengthZ(), fillColor.getArgb());
+                box.getXsize(), box.getYsize(), box.getZsize(), fillColor.getArgb());
         if (outline) drawTargetOutline(geometry, box, outlineColor.getArgb());
     }
 
@@ -204,74 +204,74 @@ public class BacktrackFeature extends Feature {
     }
 
     private boolean endsTracking(Packet<?> packet) {
-        return packet instanceof DisconnectS2CPacket || packet instanceof PlayerRespawnS2CPacket
-                || (packet instanceof HealthUpdateS2CPacket health && health.getHealth() <= 0.0f);
+        return packet instanceof ClientboundDisconnectPacket || packet instanceof ClientboundRespawnPacket
+                || (packet instanceof ClientboundSetHealthPacket health && health.getHealth() <= 0.0f);
     }
 
     private boolean requiresImmediateReplay(Packet<?> packet) {
-        if (packet instanceof PlayerPositionLookS2CPacket) return true;
+        if (packet instanceof ClientboundPlayerPositionPacket) return true;
         if (client.player == null) return false;
-        if (packet instanceof EntityDamageS2CPacket damage && damage.entityId() == client.player.getId()) return true;
-        return packet instanceof EntityVelocityUpdateS2CPacket velocity
+        if (packet instanceof ClientboundDamageEventPacket damage && damage.entityId() == client.player.getId()) return true;
+        return packet instanceof ClientboundSetEntityMotionPacket velocity
                 && VelocityPackets.entityId(velocity) == client.player.getId();
     }
 
     private void updateServerPosition(Packet<?> packet) {
-        if (packet instanceof EntityS2CPacket relative && relative.isPositionChanged() && client.world != null) {
-            Entity entity = relative.getEntity(client.world);
+        if (packet instanceof ClientboundMoveEntityPacket relative && relative.hasPosition() && client.level != null) {
+            Entity entity = relative.getEntity(client.level);
             if (entity != null && entity.getId() == trackedTarget.getId()) {
-                serverTargetPosition = new Vec3d(
-                        Packets.applyRelativeDelta(serverTargetPosition.x, relative.getDeltaX()),
-                        Packets.applyRelativeDelta(serverTargetPosition.y, relative.getDeltaY()),
-                        Packets.applyRelativeDelta(serverTargetPosition.z, relative.getDeltaZ()));
+                serverTargetPosition = new Vec3(
+                        Packets.applyRelativeDelta(serverTargetPosition.x, relative.getXa()),
+                        Packets.applyRelativeDelta(serverTargetPosition.y, relative.getYa()),
+                        Packets.applyRelativeDelta(serverTargetPosition.z, relative.getZa()));
             }
-        } else if (packet instanceof EntityPositionSyncS2CPacket position && position.id() == trackedTarget.getId()) {
+        } else if (packet instanceof ClientboundEntityPositionSyncPacket position && position.id() == trackedTarget.getId()) {
             serverTargetPosition = position.values().position();
-        } else if (packet instanceof EntityPositionS2CPacket teleport && teleport.entityId() == trackedTarget.getId()) {
-            Vec3d position = teleport.change().position();
-            serverTargetPosition = new Vec3d(
-                    teleport.relatives().contains(PositionFlag.X) ? serverTargetPosition.x + position.x : position.x,
-                    teleport.relatives().contains(PositionFlag.Y) ? serverTargetPosition.y + position.y : position.y,
-                    teleport.relatives().contains(PositionFlag.Z) ? serverTargetPosition.z + position.z : position.z);
+        } else if (packet instanceof ClientboundTeleportEntityPacket teleport && teleport.id() == trackedTarget.getId()) {
+            Vec3 position = teleport.change().position();
+            serverTargetPosition = new Vec3(
+                    teleport.relatives().contains(Relative.X) ? serverTargetPosition.x + position.x : position.x,
+                    teleport.relatives().contains(Relative.Y) ? serverTargetPosition.y + position.y : position.y,
+                    teleport.relatives().contains(Relative.Z) ? serverTargetPosition.z + position.z : position.z);
         }
     }
 
     private boolean isServerPositionFarther() {
         if (client.player == null) return false;
-        Vec3d eye = client.player.getEyePos();
-        Vec3d current = trackedTarget.getTrackedPosition().getPos();
+        Vec3 eye = client.player.getEyePosition();
+        Vec3 current = trackedTarget.getPositionCodec().getBase();
         return squaredDistanceToTargetAt(eye, serverTargetPosition) > squaredDistanceToTargetAt(eye, current);
     }
 
-    private double squaredDistanceToTargetAt(Vec3d observer, Vec3d targetPosition) {
-        return trackedTarget.getBoundingBox().offset(targetPosition.subtract(trackedTarget.getEntityPos()))
-                .squaredMagnitude(observer);
+    private double squaredDistanceToTargetAt(Vec3 observer, Vec3 targetPosition) {
+        return trackedTarget.getBoundingBox().move(targetPosition.subtract(trackedTarget.position()))
+                .distanceToSqr(observer);
     }
 
     private void updateRenderPosition() {
-        if (renderPosition.squaredDistanceTo(serverTargetPosition) > 4096.0) renderPosition = serverTargetPosition;
+        if (renderPosition.distanceToSqr(serverTargetPosition) > 4096.0) renderPosition = serverTargetPosition;
         previousRenderPosition = renderPosition;
         renderPosition = renderPosition.lerp(serverTargetPosition, 0.5);
     }
 
     private void replayThrough(long cutoffMillis) {
-        ClientPlayNetworkHandler handler = client.getNetworkHandler();
+        ClientPacketListener handler = client.getConnection();
         while (true) {
             DelayedPacket delayed = delayedPackets.peek();
             if (delayed == null || delayed.queuedAtMillis() > cutoffMillis) return;
             delayedPackets.poll();
             if (handler != null) {
                 Packet<?> packet = delayed.packet();
-                initializeResolvedClass(ClientPlayNetworkHandler.class);
+                initializeResolvedClass(ClientPacketListener.class);
                 applyIgnoringFailure(handler, packet);
             }
         }
     }
 
     @SuppressWarnings({"rawtypes", "unchecked"})
-    private static void applyIgnoringFailure(ClientPlayNetworkHandler handler, Packet<?> packet) {
+    private static void applyIgnoringFailure(ClientPacketListener handler, Packet<?> packet) {
         try {
-            ((Packet) packet).apply(handler);
+            ((Packet) packet).handle(handler);
         } catch (Throwable ignored) {
             // Each packet failure is discarded; the remaining queue is still replayed.
         }
@@ -281,11 +281,11 @@ public class BacktrackFeature extends Feature {
         replayThrough(Long.MAX_VALUE);
         initializeResolvedClass(LivingEntity.class);
         trackedTarget = null;
-        initializeResolvedClass(Vec3d.class);
+        initializeResolvedClass(Vec3.class);
         renderPosition = null;
-        initializeResolvedClass(Vec3d.class);
+        initializeResolvedClass(Vec3.class);
         previousRenderPosition = null;
-        initializeResolvedClass(Vec3d.class);
+        initializeResolvedClass(Vec3.class);
         serverTargetPosition = null;
     }
 
@@ -303,7 +303,7 @@ public class BacktrackFeature extends Feature {
     }
 
     /** The original outline helper emits these twelve edges in this order. */
-    private static void drawTargetOutline(OverlayWorldGeometry geometry, Box box, int color) {
+    private static void drawTargetOutline(OverlayWorldGeometry geometry, AABB box, int color) {
         double x = box.minX, y = box.minY, z = box.minZ;
         double maxX = box.maxX, maxY = box.maxY, maxZ = box.maxZ;
         geometry.drawLine(x, y, z, maxX, y, z, color);

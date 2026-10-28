@@ -8,16 +8,16 @@ import dev.echo.client.features.Feature;
 import dev.echo.client.features.FeatureInfo;
 import dev.echo.client.text.SegmentedText;
 import dev.echo.client.utils.items.InventoryItems;
-import net.minecraft.entity.Entity;
-import net.minecraft.entity.decoration.EndCrystalEntity;
-import net.minecraft.entity.effect.StatusEffectInstance;
-import net.minecraft.entity.effect.StatusEffects;
-import net.minecraft.util.hit.EntityHitResult;
-import net.minecraft.util.hit.HitResult;
+import net.minecraft.world.effect.MobEffectInstance;
+import net.minecraft.world.effect.MobEffects;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.boss.enderdragon.EndCrystal;
+import net.minecraft.world.phys.EntityHitResult;
+import net.minecraft.world.phys.HitResult;
 
 /** Candidate under the conditional member, input-event, and item-helper contracts. */
 public class CrystalOptimizerFeature extends Feature {
-    private EndCrystalEntity trackedCrystal;
+    private EndCrystal trackedCrystal;
 
     public CrystalOptimizerFeature() {
         super(new FeatureInfo(dev.echo.client.bootstrap.CatalogText.literal("Crystal Optimizer"), dev.echo.client.bootstrap.CatalogText.literal("Optimizes crystal speeds"), dev.echo.client.features.Category.COMBAT));
@@ -25,16 +25,16 @@ public class CrystalOptimizerFeature extends Feature {
 
     @Subscribe
     public void onAttackAttempt(AttackAttemptEvent event) {
-        if (isOutsideWorld() || client.crosshairTarget == null
-                || client.crosshairTarget.getType() != HitResult.Type.ENTITY) {
+        if (isOutsideWorld() || client.hitResult == null
+                || client.hitResult.getType() != HitResult.Type.ENTITY) {
             return;
         }
-        if (!(client.crosshairTarget instanceof EntityHitResult hit)
-                || !(hit.getEntity() instanceof EndCrystalEntity crystal)) {
+        if (!(client.hitResult instanceof EntityHitResult hit)
+                || !(hit.getEntity() instanceof EndCrystal crystal)) {
             return;
         }
-        StatusEffectInstance weakness = client.player.getStatusEffect(StatusEffects.WEAKNESS);
-        StatusEffectInstance strength = client.player.getStatusEffect(StatusEffects.STRENGTH);
+        MobEffectInstance weakness = client.player.getEffect(MobEffects.WEAKNESS);
+        MobEffectInstance strength = client.player.getEffect(MobEffects.STRENGTH);
         boolean canBreakCrystal = weakness == null
                 || strength != null && strength.getAmplifier() > weakness.getAmplifier()
                 || InventoryItems.holdsPickaxe() || InventoryItems.holdsSword();
@@ -50,7 +50,7 @@ public class CrystalOptimizerFeature extends Feature {
         }
         if (!trackedCrystal.isRemoved()) {
             trackedCrystal.setRemoved(Entity.RemovalReason.KILLED);
-            trackedCrystal.onRemoved();
+            trackedCrystal.onClientRemoval();
         }
         trackedCrystal = null;
     }

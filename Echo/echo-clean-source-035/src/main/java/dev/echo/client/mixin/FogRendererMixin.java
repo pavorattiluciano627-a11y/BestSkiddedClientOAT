@@ -3,10 +3,10 @@ package dev.echo.client.mixin;
 import dev.echo.client.Echo;
 import dev.echo.client.MinecraftAccess;
 import dev.echo.client.features.impl.render.AmbienceFeature;
-import net.minecraft.client.render.Camera;
-import net.minecraft.client.render.RenderTickCounter;
-import net.minecraft.client.render.fog.FogRenderer;
-import net.minecraft.client.world.ClientWorld;
+import net.minecraft.client.Camera;
+import net.minecraft.client.DeltaTracker;
+import net.minecraft.client.multiplayer.ClientLevel;
+import net.minecraft.client.renderer.fog.FogRenderer;
 import org.joml.Vector4f;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
@@ -17,12 +17,12 @@ import org.spongepowered.asm.mixin.injection.invoke.arg.Args;
 
 @Mixin(FogRenderer.class)
 public abstract class FogRendererMixin {
-    @Inject(method = "applyFog(Lnet/minecraft/client/render/Camera;ILnet/minecraft/client/render/RenderTickCounter;FLnet/minecraft/client/world/ClientWorld;)Lorg/joml/Vector4f;",
+    @Inject(method = "setupFog(Lnet/minecraft/client/Camera;ILnet/minecraft/client/DeltaTracker;FLnet/minecraft/client/multiplayer/ClientLevel;)Lorg/joml/Vector4f;",
         at = @At("RETURN"), cancellable = true)
-    private void onApplyFogReturn(Camera camera, int viewDistance, RenderTickCounter tickCounter,
-                                  float skyDarkness, ClientWorld world, CallbackInfoReturnable<Vector4f> callback) {
+    private void onApplyFogReturn(Camera camera, int viewDistance, DeltaTracker tickCounter,
+                                  float skyDarkness, ClientLevel world, CallbackInfoReturnable<Vector4f> callback) {
         if (!Echo.eventsDisabled && MinecraftAccess.CLIENT.player != null
-                && MinecraftAccess.CLIENT.world != null && Echo.featureManager != null) {
+                && MinecraftAccess.CLIENT.level != null && Echo.featureManager != null) {
             AmbienceFeature ambience = (AmbienceFeature) Echo.featureManager.findFeature(AmbienceFeature.class);
             if (ambience != null && ambience.isEnabled() && AmbienceFeature.isFogColorEnabled()) {
                 float red = AmbienceFeature.getFogRed() / 255.0F;
@@ -37,7 +37,7 @@ public abstract class FogRendererMixin {
         target = "Lnet/minecraft/client/render/fog/FogRenderer;applyFog(Ljava/nio/ByteBuffer;ILorg/joml/Vector4f;FFFFFF)V"))
     private void modifyArgumentsOfApplyFogAtApplyFog(Args arguments) {
         if (!Echo.eventsDisabled && MinecraftAccess.CLIENT.player != null
-                && MinecraftAccess.CLIENT.world != null && Echo.featureManager != null) {
+                && MinecraftAccess.CLIENT.level != null && Echo.featureManager != null) {
             AmbienceFeature ambience = (AmbienceFeature) Echo.featureManager.findFeature(AmbienceFeature.class);
             if (ambience != null && ambience.isEnabled() && AmbienceFeature.isFogColorEnabled()) {
                 float red = AmbienceFeature.getFogRed() / 255.0F;

@@ -13,7 +13,7 @@ public final class MinecraftRenderPass implements RenderTargetLease {
     private final int width;
     private final int height;
 
-    public MinecraftRenderPass(GpuTextureView color, OptionalInt clearColor,
+    public MinecraftRenderPass(GpuTextureView color, java.util.Optional<org.joml.Vector4fc> clearColor,
                                GpuTextureView depth, OptionalDouble clearDepth) {
         width = color.getWidth(0);
         height = color.getHeight(0);

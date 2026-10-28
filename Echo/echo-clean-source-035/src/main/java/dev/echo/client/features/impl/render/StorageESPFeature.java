@@ -6,12 +6,12 @@ import dev.echo.client.setting.BooleanSetting;
 import dev.echo.client.setting.ColorSetting;
 import dev.echo.client.utils.blocks.ContainerBlocks;
 import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
-import net.minecraft.block.AbstractChestBlock;
-import net.minecraft.block.BarrelBlock;
-import net.minecraft.block.Block;
-import net.minecraft.block.EnderChestBlock;
-import net.minecraft.block.ShulkerBoxBlock;
-import net.minecraft.registry.Registries;
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.world.level.block.AbstractChestBlock;
+import net.minecraft.world.level.block.BarrelBlock;
+import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.EnderChestBlock;
+import net.minecraft.world.level.block.ShulkerBoxBlock;
 
 /** Registers per-block storage colors with the shared asynchronous block ESP manager. */
 public class StorageESPFeature extends Feature {
@@ -51,7 +51,7 @@ public class StorageESPFeature extends Feature {
             return;
         }
         Object2IntOpenHashMap<Block> colors = new Object2IntOpenHashMap<>();
-        for (Block block : Registries.BLOCK) {
+        for (Block block : BuiltInRegistries.BLOCK) {
             if (bypass) {
                 return;
             }

@@ -1,11 +1,11 @@
 package dev.echo.client.feature.utility;
 
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.item.ItemStack;
-import net.minecraft.item.Items;
-import net.minecraft.util.Hand;
-import net.minecraft.util.math.MathHelper;
-import net.minecraft.util.math.Vec3d;
+import net.minecraft.client.Minecraft;
+import net.minecraft.util.Mth;
+import net.minecraft.world.InteractionHand;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
+import net.minecraft.world.phys.Vec3;
 
 /** Recovered pearl-catch aiming, motion and fallback-use operations. */
 public final class PearlCatchCalculations {
@@ -23,11 +23,11 @@ public final class PearlCatchCalculations {
      */
     public static float aimSpeed(float targetYaw, float targetPitch, float playerYaw, float playerPitch,
                                  int throwTick, int playerAge) {
-        float yawDifference = Math.abs(MathHelper.wrapDegrees(targetYaw - playerYaw));
+        float yawDifference = Math.abs(Mth.wrapDegrees(targetYaw - playerYaw));
         float pitchDifference = Math.abs(targetPitch - playerPitch);
         float largestDifference = Math.max(yawDifference, pitchDifference);
         float availableSeconds = Math.max(1, throwTick - playerAge - 1) * 0.05F;
-        return MathHelper.clamp(largestDifference / availableSeconds, 40.0F, 300.0F);
+        return Mth.clamp(largestDifference / availableSeconds, 40.0F, 300.0F);
     }
 
     /** Selects the captured origin while the sequence has one.
@@ -35,7 +35,7 @@ public final class PearlCatchCalculations {
      * @param playerPosition current player position
      * @return captured origin or current position
      */
-    public static Vec3d origin(Vec3d capturedOrigin, Vec3d playerPosition) {
+    public static Vec3 origin(Vec3 capturedOrigin, Vec3 playerPosition) {
         return capturedOrigin != null ? capturedOrigin : playerPosition;
     }
 
@@ -44,18 +44,18 @@ public final class PearlCatchCalculations {
      * @param suppressVertical whether to replace the vertical component with zero
      * @return a new velocity vector
      */
-    public static Vec3d restoredVelocity(Vec3d savedVelocity, boolean suppressVertical) {
-        return new Vec3d(savedVelocity.x, suppressVertical ? 0.0 : savedVelocity.y, savedVelocity.z);
+    public static Vec3 restoredVelocity(Vec3 savedVelocity, boolean suppressVertical) {
+        return new Vec3(savedVelocity.x, suppressVertical ? 0.0 : savedVelocity.y, savedVelocity.z);
     }
 
     /** Uses the offhand wind charge when normal input used only the pearl.
      * @param client client with a live player and interaction manager
      */
-    public static void usePendingOffhandWindCharge(MinecraftClient client) {
-        if (client.player.getItemCooldownManager().isCoolingDown(new ItemStack(Items.ENDER_PEARL))
-                && !client.player.getItemCooldownManager().isCoolingDown(new ItemStack(Items.WIND_CHARGE))
-                && client.player.getOffHandStack().isOf(Items.WIND_CHARGE)) {
-            client.interactionManager.interactItem(client.player, Hand.OFF_HAND);
+    public static void usePendingOffhandWindCharge(Minecraft client) {
+        if (client.player.getCooldowns().isOnCooldown(new ItemStack(Items.ENDER_PEARL))
+                && !client.player.getCooldowns().isOnCooldown(new ItemStack(Items.WIND_CHARGE))
+                && client.player.getOffhandItem().is(Items.WIND_CHARGE)) {
+            client.gameMode.useItem(client.player, InteractionHand.OFF_HAND);
         }
     }
 }

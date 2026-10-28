@@ -1,6 +1,6 @@
 package dev.echo.render;
 
-import net.minecraft.client.util.math.MatrixStack;
+import com.mojang.blaze3d.vertex.PoseStack;
 import org.joml.Quaternionf;
 
 /** Quaternion transforms applied to the current Minecraft matrix-stack entry. */
@@ -13,7 +13,7 @@ public final class MatrixStackTransforms {
     }
 
     /** Multiplies the current entry by the supplied rotation. */
-    public static void rotate(MatrixStack matrices, Quaternionf rotation) {
-        matrices.multiply(rotation);
+    public static void rotate(PoseStack matrices, Quaternionf rotation) {
+        matrices.mulPose(rotation);
     }
 }

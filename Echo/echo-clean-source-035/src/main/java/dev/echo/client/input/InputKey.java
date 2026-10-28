@@ -1,8 +1,8 @@
 package dev.echo.client.input;
 
+import com.mojang.blaze3d.platform.InputConstants;
 import it.unimi.dsi.fastutil.ints.Int2ObjectArrayMap;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.util.InputUtil;
+import net.minecraft.client.Minecraft;
 import org.lwjgl.glfw.GLFW;
 
 /**
@@ -205,7 +205,7 @@ public enum InputKey {
                 default -> DISPLAY_MOUSE_PREFIX + (ordinal() - MOUSE_LEFT.ordinal() + 1);
             };
         }
-        return normalizeDisplayLabel(InputUtil.Type.KEYSYM.createFromCode(code).getLocalizedText().getString());
+        return normalizeDisplayLabel(InputConstants.Type.KEYSYM.getOrCreate(code).getDisplayName().getString());
     }
 
     private static String normalizeDisplayLabel(String text) {
@@ -263,7 +263,7 @@ public enum InputKey {
         if (this == NONE) {
             return false;
         }
-        long window = MinecraftClient.getInstance().getWindow().getHandle();
+        long window = Minecraft.getInstance().getWindow().handle();
         if (mouse) {
             return GLFW.glfwGetMouseButton(window, code) == GLFW.GLFW_PRESS
                     || KeybindingCache.isMousePressed(code);

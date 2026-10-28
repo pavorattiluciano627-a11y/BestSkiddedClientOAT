@@ -22,9 +22,9 @@ import dev.echo.client.utils.targeting.AimPointSettings;
 import dev.echo.client.utils.targeting.EntityRaycasts;
 import dev.echo.client.utils.targeting.TargetSelection;
 import java.util.List;
-import net.minecraft.entity.LivingEntity;
-import net.minecraft.item.ItemStack;
-import net.minecraft.util.math.Vec3d;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.phys.Vec3;
 
 /** Spear-use targeting with high-priority rotation ownership and deferred disable. */
 public class SpearAssistFeature extends Feature {
@@ -101,12 +101,12 @@ public class SpearAssistFeature extends Feature {
         }
         double distance = range.getValue();
         double distanceSquared = distance * distance;
-        Vec3d eyes = client.player.getCameraPosVec(1.0F);
-        List<LivingEntity> candidates = client.world.getEntitiesByClass(LivingEntity.class,
-                client.player.getBoundingBox().expand(distance), entity -> isCandidate(eyes, distanceSquared, entity));
+        Vec3 eyes = client.player.getEyePosition(1.0F);
+        List<LivingEntity> candidates = client.level.getEntitiesOfClass(LivingEntity.class,
+                client.player.getBoundingBox().inflate(distance), entity -> isCandidate(eyes, distanceSquared, entity));
         LivingEntity selected = EntityRaycasts.selectTarget(client.player, candidates, eyes, targetPriority);
         LivingEntity target = TargetSelection.resolveTarget(selected);
-        if (target == null || eyes.squaredDistanceTo(target.getEntityPos()) > distanceSquared) {
+        if (target == null || eyes.distanceToSqr(target.position()) > distanceSquared) {
             clearAim();
             return;
         }
@@ -144,15 +144,15 @@ public class SpearAssistFeature extends Feature {
 
     private boolean isUsingSpear() {
         if (isOutsideWorld() || !client.player.isUsingItem()) return false;
-        ItemStack active = client.player.getActiveItem();
+        ItemStack active = client.player.getUseItem();
         if (active.isEmpty()) return false;
         return InventoryItems.isSpear(active.getItem());
     }
 
-    private boolean isCandidate(Vec3d eyes, double distanceSquared, LivingEntity entity) {
+    private boolean isCandidate(Vec3 eyes, double distanceSquared, LivingEntity entity) {
         return entity != client.player && !entity.isRemoved() && entity.isAlive()
                 && TargetSelection.isValidTarget(entity)
-                && eyes.squaredDistanceTo(entity.getEntityPos()) <= distanceSquared && isWithinFov(entity);
+                && eyes.distanceToSqr(entity.position()) <= distanceSquared && isWithinFov(entity);
     }
 
     public static void appendBootstrapSettings(SpearAssistFeature feature) {

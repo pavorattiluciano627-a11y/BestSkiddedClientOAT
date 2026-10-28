@@ -13,15 +13,16 @@ import dev.echo.client.features.Feature;
 import dev.echo.client.features.FeatureInfo;
 import dev.echo.client.setting.BooleanSetting;
 import dev.echo.client.setting.RegistryListSetting;
-import net.minecraft.block.Block;
-import net.minecraft.block.BlockState;
-import net.minecraft.entity.Entity;
-import net.minecraft.entity.EntityType;
-import net.minecraft.registry.Registries;
-import net.minecraft.registry.tag.BlockTags;
-import net.minecraft.util.hit.BlockHitResult;
-import net.minecraft.util.hit.EntityHitResult;
-import net.minecraft.util.hit.HitResult;
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.tags.BlockTags;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.EntityTypes;
+import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.phys.BlockHitResult;
+import net.minecraft.world.phys.EntityHitResult;
+import net.minecraft.world.phys.HitResult;
 
 /** Prevents configured decorative blocks and entities from obstructing interactions. */
 public final class AntiTrapFeature extends Feature {
@@ -34,7 +35,7 @@ public final class AntiTrapFeature extends Feature {
     private static BooleanSetting signs;
     private static BooleanSetting hangingSigns;
     private static RegistryListSetting<Block> blockedBlocks =
-            new AntiTrapBlockSelectionSetting(dev.echo.client.bootstrap.CatalogText.literal("Blocks"), () -> Registries.BLOCK);
+            new AntiTrapBlockSelectionSetting(dev.echo.client.bootstrap.CatalogText.literal("Blocks"), () -> BuiltInRegistries.BLOCK);
 
     /** Creates the feature after class initialization creates the shared block selector. */
     public AntiTrapFeature() {
@@ -51,15 +52,15 @@ public final class AntiTrapFeature extends Feature {
         if (!noInteract.getValue() || isOutsideWorld()) {
             return;
         }
-        if (!(client.crosshairTarget instanceof BlockHitResult hit)) {
+        if (!(client.hitResult instanceof BlockHitResult hit)) {
             return;
         }
-        if (!isBlockedBlock(client.world.getBlockState(hit.getBlockPos()))) {
+        if (!isBlockedBlock(client.level.getBlockState(hit.getBlockPos()))) {
             return;
         }
         HitResult replacement = AntiTrapTargeting.pickPastBlockedBlocks(client, this::isBlockedBlock, this::isBlockedEntityType);
-        client.crosshairTarget = replacement;
-        client.targetedEntity = replacement instanceof EntityHitResult entityHit ? entityHit.getEntity() : null;
+        client.hitResult = replacement;
+        client.crosshairPickEntity = replacement instanceof EntityHitResult entityHit ? entityHit.getEntity() : null;
     }
 
     @Subscribe
@@ -94,7 +95,7 @@ public final class AntiTrapFeature extends Feature {
         if (!noInteract.getValue() || isOutsideWorld()) {
             return false;
         }
-        if (!(client.crosshairTarget instanceof BlockHitResult hit)) {
+        if (!(client.hitResult instanceof BlockHitResult hit)) {
             return false;
         }
         return isBlockInteractionBlocked(hit);
@@ -107,7 +108,7 @@ public final class AntiTrapFeature extends Feature {
         if (hit.getType() != HitResult.Type.BLOCK) {
             return false;
         }
-        return isBlockedBlock(client.world.getBlockState(hit.getBlockPos()));
+        return isBlockedBlock(client.level.getBlockState(hit.getBlockPos()));
     }
 
     private boolean isEntityInteractionBlocked(Entity entity) {
@@ -121,19 +122,19 @@ public final class AntiTrapFeature extends Feature {
         if (type == null) {
             return false;
         }
-        if (armorStands.getValue() && type == EntityType.ARMOR_STAND) {
+        if (armorStands.getValue() && type == EntityTypes.ARMOR_STAND) {
             return true;
         }
-        if (itemFrames.getValue() && type == EntityType.ITEM_FRAME) {
+        if (itemFrames.getValue() && type == EntityTypes.ITEM_FRAME) {
             return true;
         }
-        if (glowFrames.getValue() && type == EntityType.GLOW_ITEM_FRAME) {
+        if (glowFrames.getValue() && type == EntityTypes.GLOW_ITEM_FRAME) {
             return true;
         }
-        if (paintings.getValue() && type == EntityType.PAINTING) {
+        if (paintings.getValue() && type == EntityTypes.PAINTING) {
             return true;
         }
-        return chestMinecarts.getValue() && type == EntityType.CHEST_MINECART;
+        return chestMinecarts.getValue() && type == EntityTypes.CHEST_MINECART;
     }
 
     /** Consults the live feature-manager instance, including the global shutdown gate. */
@@ -152,11 +153,11 @@ public final class AntiTrapFeature extends Feature {
         if (state == null || state.isAir()) {
             return false;
         }
-        if (signs.getValue() && (state.isIn(BlockTags.STANDING_SIGNS) || state.isIn(BlockTags.WALL_SIGNS))) {
+        if (signs.getValue() && (state.is(BlockTags.STANDING_SIGNS) || state.is(BlockTags.WALL_SIGNS))) {
             return true;
         }
         if (hangingSigns.getValue()
-                && (state.isIn(BlockTags.CEILING_HANGING_SIGNS) || state.isIn(BlockTags.WALL_HANGING_SIGNS))) {
+                && (state.is(BlockTags.CEILING_HANGING_SIGNS) || state.is(BlockTags.WALL_HANGING_SIGNS))) {
             return true;
         }
         return blockedBlocks.isEntrySelected(state.getBlock());

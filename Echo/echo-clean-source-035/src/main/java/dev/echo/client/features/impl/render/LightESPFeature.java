@@ -10,8 +10,8 @@ import dev.echo.client.setting.BooleanSetting;
 import dev.echo.client.setting.ColorSetting;
 import dev.echo.client.setting.IntSetting;
 import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
-import net.minecraft.block.Block;
-import net.minecraft.registry.Registries;
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.world.level.block.Block;
 
 /** Luminance-based block highlights; linkage and branch domains remain conditional. */
 public class LightESPFeature extends Feature {
@@ -58,8 +58,8 @@ public class LightESPFeature extends Feature {
         if (isOutsideWorld() || !isEnabled()) return;
         Object2IntOpenHashMap<Block> colors = new Object2IntOpenHashMap<>();
         int minimum = minLight.getValue();
-        for (Block block : Registries.BLOCK) {
-            int luminance = block.getDefaultState().getLuminance();
+        for (Block block : BuiltInRegistries.BLOCK) {
+            int luminance = block.defaultBlockState().getLightEmission();
             if (luminance >= minimum) colors.put(block, packedColorForLightLevel(luminance));
         }
         // The original rebuild reads minLight, not maxY. Preserve its actual arguments.

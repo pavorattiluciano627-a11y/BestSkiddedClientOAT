@@ -5,24 +5,24 @@ import static dev.echo.client.MinecraftAccess.CLIENT;
 import dev.echo.client.features.internals.TargetsFeature;
 import dev.echo.client.handlers.BlockingTicksTracker;
 import dev.echo.client.handlers.LatencyTracker;
-import net.minecraft.component.DataComponentTypes;
-import net.minecraft.component.type.BlocksAttacksComponent;
-import net.minecraft.entity.Entity;
-import net.minecraft.entity.EquipmentSlot;
-import net.minecraft.entity.LivingEntity;
-import net.minecraft.entity.mob.HostileEntity;
-import net.minecraft.entity.mob.MobEntity;
-import net.minecraft.entity.mob.Monster;
-import net.minecraft.entity.mob.SlimeEntity;
-import net.minecraft.entity.mob.ZombifiedPiglinEntity;
-import net.minecraft.entity.passive.PassiveEntity;
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.item.ItemStack;
-import net.minecraft.item.Items;
-import net.minecraft.item.consume.UseAction;
-import net.minecraft.util.math.Box;
-import net.minecraft.util.math.MathHelper;
-import net.minecraft.util.math.Vec3d;
+import net.minecraft.core.component.DataComponents;
+import net.minecraft.util.Mth;
+import net.minecraft.world.entity.AgeableMob;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.EquipmentSlot;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.Mob;
+import net.minecraft.world.entity.monster.Enemy;
+import net.minecraft.world.entity.monster.Monster;
+import net.minecraft.world.entity.monster.cubemob.Slime;
+import net.minecraft.world.entity.monster.zombie.ZombifiedPiglin;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.ItemUseAnimation;
+import net.minecraft.world.item.Items;
+import net.minecraft.world.item.component.BlocksAttacks;
+import net.minecraft.world.phys.AABB;
+import net.minecraft.world.phys.Vec3;
 
 /**
  * Entity classification, proximity queries and shield-state detection.
@@ -38,19 +38,19 @@ public class EntityPredicates {
     public EntityPredicates() {}
 
     /** Whether the actively used item's use action is blocking. */
-    public static boolean isUsingBlockingItem(PlayerEntity player) {
+    public static boolean isUsingBlockingItem(Player player) {
         if (player == null || !player.isUsingItem()) {
             return false;
         }
-        ItemStack activeItem = player.getActiveItem();
+        ItemStack activeItem = player.getUseItem();
         if (activeItem.isEmpty()) {
             return false;
         }
-        return activeItem.getItem().getUseAction(activeItem) == UseAction.BLOCK;
+        return activeItem.getItem().getUseAnimation(activeItem) == ItemUseAnimation.BLOCK;
     }
 
     /** Applies the current shield-detection mode, delay and ping compensation. */
-    public static boolean isBlocking(PlayerEntity player) {
+    public static boolean isBlocking(Player player) {
         if (player == null) {
             return false;
         }
@@ -66,30 +66,30 @@ public class EntityPredicates {
     }
 
     /** Whether the local player's direction lies outside this player's shield arc. */
-    public static boolean isOutsideBlockingArc(PlayerEntity player) {
+    public static boolean isOutsideBlockingArc(Player player) {
         if (CLIENT.player == null || player == null) {
             return false;
         }
-        Vec3d localPosition = CLIENT.player.getEntityPos();
-        Vec3d playerPosition = player.getEntityPos();
-        Vec3d direction = localPosition.subtract(playerPosition);
-        direction = new Vec3d(direction.x, 0.0, direction.z);
-        if (direction.lengthSquared() == 0.0) {
+        Vec3 localPosition = CLIENT.player.position();
+        Vec3 playerPosition = player.position();
+        Vec3 direction = localPosition.subtract(playerPosition);
+        direction = new Vec3(direction.x, 0.0, direction.z);
+        if (direction.lengthSqr() == 0.0) {
             return false;
         }
         direction = direction.normalize();
-        Vec3d facing = player.getRotationVector(0.0F, player.getHeadYaw());
-        double angle = Math.acos(MathHelper.clamp(direction.dotProduct(facing), -1.0, 1.0));
+        Vec3 facing = player.calculateViewVector(0.0F, player.getYHeadRot());
+        double angle = Math.acos(Mth.clamp(direction.dot(facing), -1.0, 1.0));
 
-        BlocksAttacksComponent blocking = player.getActiveItem().get(DataComponentTypes.BLOCKS_ATTACKS);
+        BlocksAttacks blocking = player.getUseItem().get(DataComponents.BLOCKS_ATTACKS);
         if (blocking == null) {
-            ItemStack heldItem = player.getStackInHand(player.getActiveHand());
-            blocking = heldItem.get(DataComponentTypes.BLOCKS_ATTACKS);
+            ItemStack heldItem = player.getItemInHand(player.getUsedItemHand());
+            blocking = heldItem.get(DataComponents.BLOCKS_ATTACKS);
         }
         double maximumAngleDegrees = 90.0;
         if (blocking != null && !blocking.damageReductions().isEmpty()) {
             maximumAngleDegrees = 0.0;
-            for (BlocksAttacksComponent.DamageReduction reduction : blocking.damageReductions()) {
+            for (BlocksAttacks.DamageReduction reduction : blocking.damageReductions()) {
                 maximumAngleDegrees = Math.max(maximumAngleDegrees, reduction.horizontalBlockingAngle());
             }
         }
@@ -97,17 +97,17 @@ public class EntityPredicates {
     }
 
     /** Nearest other non-dead, non-spectator player; ties keep list order. */
-    public static PlayerEntity nearestPlayer() {
-        if (CLIENT.player == null || CLIENT.world == null) {
+    public static Player nearestPlayer() {
+        if (CLIENT.player == null || CLIENT.level == null) {
             return null;
         }
-        PlayerEntity nearest = null;
+        Player nearest = null;
         double nearestSquaredDistance = Double.MAX_VALUE;
-        for (PlayerEntity player : CLIENT.world.getPlayers()) {
-            if (player == CLIENT.player || player.isDead() || player.isSpectator()) {
+        for (Player player : CLIENT.level.players()) {
+            if (player == CLIENT.player || player.isDeadOrDying() || player.isSpectator()) {
                 continue;
             }
-            double squaredDistance = CLIENT.player.squaredDistanceTo(player);
+            double squaredDistance = CLIENT.player.distanceToSqr(player);
             if (squaredDistance < nearestSquaredDistance) {
                 nearestSquaredDistance = squaredDistance;
                 nearest = player;
@@ -118,15 +118,15 @@ public class EntityPredicates {
 
     /** Nearest other non-dead living entity in the expanded player bounding box. */
     public static LivingEntity nearestLivingEntity(int range) {
-        if (CLIENT.player == null || CLIENT.world == null) {
+        if (CLIENT.player == null || CLIENT.level == null) {
             return null;
         }
         LivingEntity nearest = null;
         double nearestSquaredDistance = Double.MAX_VALUE;
-        Box searchBox = CLIENT.player.getBoundingBox().expand((double) range);
-        for (LivingEntity entity : CLIENT.world.getEntitiesByClass(
+        AABB searchBox = CLIENT.player.getBoundingBox().inflate((double) range);
+        for (LivingEntity entity : CLIENT.level.getEntitiesOfClass(
                 LivingEntity.class, searchBox, EntityPredicates::isLivingCandidate)) {
-            double squaredDistance = CLIENT.player.squaredDistanceTo(entity);
+            double squaredDistance = CLIENT.player.distanceToSqr(entity);
             if (squaredDistance < nearestSquaredDistance) {
                 nearestSquaredDistance = squaredDistance;
                 nearest = entity;
@@ -136,18 +136,18 @@ public class EntityPredicates {
     }
 
     private static boolean isLivingCandidate(LivingEntity entity) {
-        return entity != CLIENT.player && !entity.isDead();
+        return entity != CLIENT.player && !entity.isDeadOrDying();
     }
 
     /** Signed local-player Y minus the other player's Y. */
-    public static double verticalDifference(PlayerEntity player) {
+    public static double verticalDifference(Player player) {
         if (CLIENT.player == null || player == null) {
             return 0.0;
         }
         return CLIENT.player.getY() - player.getY();
     }
 
-    public static double horizontalDistance(PlayerEntity player) {
+    public static double horizontalDistance(Player player) {
         if (CLIENT.player == null || player == null) {
             return 0.0;
         }
@@ -156,7 +156,7 @@ public class EntityPredicates {
         return Math.sqrt(x * x + z * z);
     }
 
-    public static double distanceTo(PlayerEntity player) {
+    public static double distanceTo(Player player) {
         if (CLIENT.player == null || player == null) {
             return 0.0;
         }
@@ -171,12 +171,12 @@ public class EntityPredicates {
      * The original stops at zero and can return a negative distance inside a block.
      */
     public static double heightAboveGround() {
-        if (CLIENT.player == null || CLIENT.world == null) {
+        if (CLIENT.player == null || CLIENT.level == null) {
             return 0.0;
         }
         double playerY = CLIENT.player.getY();
         for (int y = (int) Math.floor(playerY); y >= 0; y--) {
-            if (!CLIENT.world.getBlockState(CLIENT.player.getBlockPos().withY(y)).isAir()) {
+            if (!CLIENT.level.getBlockState(CLIENT.player.blockPosition().atY(y)).isAir()) {
                 return playerY - y - 1.0;
             }
         }
@@ -184,25 +184,25 @@ public class EntityPredicates {
     }
 
     public static boolean isPlayer(Entity entity) {
-        return entity instanceof PlayerEntity;
+        return entity instanceof Player;
     }
 
     public static boolean isHostile(Entity entity) {
-        if (entity instanceof HostileEntity) {
-            return !(entity instanceof ZombifiedPiglinEntity piglin) || piglin.isAttacking();
+        if (entity instanceof Monster) {
+            return !(entity instanceof ZombifiedPiglin piglin) || piglin.isAggressive();
         }
-        if (entity instanceof SlimeEntity slime && slime.isSmall()) {
+        if (entity instanceof Slime slime && slime.isTiny()) {
             return false;
         }
-        return entity instanceof Monster || entity instanceof MobEntity mob && mob.isAttacking();
+        return entity instanceof Enemy || entity instanceof Mob mob && mob.isAggressive();
     }
 
     public static boolean isPassive(Entity entity) {
-        return entity instanceof PassiveEntity;
+        return entity instanceof AgeableMob;
     }
 
     public static boolean isNeutral(Entity entity) {
-        return entity instanceof MobEntity && !isHostile(entity) && !isPassive(entity);
+        return entity instanceof Mob && !isHostile(entity) && !isPassive(entity);
     }
 
     /** No armor in head/legs/feet, and an empty chest slot or an elytra. */
@@ -210,14 +210,14 @@ public class EntityPredicates {
         if (entity == null) {
             return false;
         }
-        ItemStack chest = entity.getEquippedStack(EquipmentSlot.CHEST);
-        if (!entity.getEquippedStack(EquipmentSlot.HEAD).isEmpty()) {
+        ItemStack chest = entity.getItemBySlot(EquipmentSlot.CHEST);
+        if (!entity.getItemBySlot(EquipmentSlot.HEAD).isEmpty()) {
             return false;
         }
         if (!chest.isEmpty() && chest.getItem() != Items.ELYTRA) {
             return false;
         }
-        return entity.getEquippedStack(EquipmentSlot.LEGS).isEmpty()
-                && entity.getEquippedStack(EquipmentSlot.FEET).isEmpty();
+        return entity.getItemBySlot(EquipmentSlot.LEGS).isEmpty()
+                && entity.getItemBySlot(EquipmentSlot.FEET).isEmpty();
     }
 }

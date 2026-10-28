@@ -1,7 +1,7 @@
 package dev.echo.client.render.hand;
 
-import net.minecraft.client.util.math.MatrixStack;
-import net.minecraft.util.Arm;
+import com.mojang.blaze3d.vertex.PoseStack;
+import net.minecraft.world.entity.HumanoidArm;
 
 /** Selects the original explicit no-animation strategy. */
 public class NoneHandAnimation extends HandAnimation {
@@ -10,7 +10,7 @@ public class NoneHandAnimation extends HandAnimation {
     }
 
     @Override
-    public void apply(float swingProgress, MatrixStack matrices, int direction, Arm arm) {
+    public void apply(float swingProgress, PoseStack matrices, int direction, HumanoidArm arm) {
         // The original method is exactly RETURN: no base translation is applied.
         return;
     }

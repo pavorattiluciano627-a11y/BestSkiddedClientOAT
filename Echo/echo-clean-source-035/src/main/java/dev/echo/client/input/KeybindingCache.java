@@ -1,11 +1,11 @@
 package dev.echo.client.input;
 
+import com.mojang.blaze3d.platform.InputConstants;
 import dev.echo.client.mixin.KeyBindingAccessor;
 import java.util.Arrays;
 import java.util.concurrent.ConcurrentHashMap;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.option.KeyBinding;
-import net.minecraft.client.util.InputUtil;
+import net.minecraft.client.KeyMapping;
+import net.minecraft.client.Minecraft;
 
 /**
  * Readable input-state consumer candidate from the fixed-native-v2 fragments.
@@ -50,28 +50,28 @@ public final class KeybindingCache {
         if (button < 0 || button >= mousePressed.length) {
             return false;
         }
-        if (!MinecraftClient.getInstance().isWindowFocused()) {
+        if (!Minecraft.getInstance().isWindowActive()) {
             Arrays.fill(mousePressed, false);
             return false;
         }
         return mousePressed[button];
     }
 
-    public static InputKey getKey(KeyBinding binding) {
+    public static InputKey getKey(KeyMapping binding) {
         if (binding == null) {
             return InputKey.NONE;
         }
-        InputUtil.Key boundKey = ((KeyBindingAccessor) binding).getBoundKey();
+        InputConstants.Key boundKey = ((KeyBindingAccessor) binding).getBoundKey();
         if (boundKey == null) {
             return InputKey.NONE;
         }
-        return boundKey.getCategory() == InputUtil.Type.MOUSE
-                ? InputKey.fromMouseCode(boundKey.getCode())
-                : InputKey.fromCode(boundKey.getCode());
+        return boundKey.getType() == InputConstants.Type.MOUSE
+                ? InputKey.fromMouseCode(boundKey.getValue())
+                : InputKey.fromCode(boundKey.getValue());
     }
 
-    public static boolean isPressed(KeyBinding binding) {
-        ensureInitialized(KeyBinding.class);
+    public static boolean isPressed(KeyMapping binding) {
+        ensureInitialized(KeyMapping.class);
         ensureInitialized(InputKey.class);
         return getKey(binding).isPressed();
     }

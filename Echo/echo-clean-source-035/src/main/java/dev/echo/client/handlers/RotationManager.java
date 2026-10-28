@@ -11,9 +11,9 @@ import dev.echo.client.features.internals.SilentAimFeature;
 import dev.echo.client.utils.Rotation;
 import dev.echo.client.utils.targeting.AimPointSettings;
 import java.util.Optional;
-import net.minecraft.entity.LivingEntity;
-import net.minecraft.util.math.MathHelper;
-import net.minecraft.util.math.Vec3d;
+import net.minecraft.util.Mth;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.phys.Vec3;
 
 /**
  * Request arbitration, visible/silent rotation application and temporary overrides.
@@ -97,7 +97,7 @@ public final class RotationManager extends ClientHandler {
     }
 
     /** Aims an owner's request at a world-space point. */
-    public boolean aim(Feature owner, RotationPriority priority, Vec3d point, RotationSettings settings) {
+    public boolean aim(Feature owner, RotationPriority priority, Vec3 point, RotationSettings settings) {
         Optional<RotationRequest> acquired = request(owner, priority);
         return acquired.isPresent() && acquired.get().aim(point, settings);
     }
@@ -174,7 +174,7 @@ public final class RotationManager extends ClientHandler {
 
     boolean isCurrent(RotationRequest request) { return activeRequest == request && request != null; }
 
-    boolean aimAt(RotationRequest request, Vec3d point, RotationSettings settings) {
+    boolean aimAt(RotationRequest request, Vec3 point, RotationSettings settings) {
         if (!canUpdate(request)) return false;
         updateTarget(request, point, null, settings);
         return true;
@@ -182,7 +182,7 @@ public final class RotationManager extends ClientHandler {
 
     boolean aimAt(RotationRequest request, LivingEntity entity, AimPointSettings targeting, RotationSettings settings) {
         if (!canUpdate(request)) return false;
-        Vec3d point = request.targetPoint(entity, targeting, targetTickDelta(settings)).orElse(null);
+        Vec3 point = request.targetPoint(entity, targeting, targetTickDelta(settings)).orElse(null);
         if (point == null) return false;
         updateTarget(request, point, entity, settings);
         return true;
@@ -194,12 +194,12 @@ public final class RotationManager extends ClientHandler {
         return request == activeRequest && request.isActive();
     }
 
-    private void updateTarget(RotationRequest request, Vec3d point, LivingEntity entity, RotationSettings settings) {
+    private void updateTarget(RotationRequest request, Vec3 point, LivingEntity entity, RotationSettings settings) {
         if (settings.visibility() == RotationVisibility.VISIBLE && silentActive) stopSilentRotation();
         Rotation current = settings.visibility() == RotationVisibility.SILENT && silentActive ? currentRotation : playerRotation();
         if (request.settings() != null && request.settings().visibility() != settings.visibility()) resetMouseInjection();
         request.settings(settings);
-        request.target(Rotation.lookingAt(CLIENT.player.getCameraPosVec(targetTickDelta(settings)), point).relativeTo(current), entity);
+        request.target(Rotation.lookingAt(CLIENT.player.getEyePosition(targetTickDelta(settings)), point).relativeTo(current), entity);
         request.refreshedTick(updateTick);
         request.returning(false);
     }
@@ -277,7 +277,7 @@ public final class RotationManager extends ClientHandler {
             }
             case RENDER_PITCH -> {
                 if (visualActive && SilentAimFeature.renderRotations()) {
-                    event.setPitch(MathHelper.clamp(MathHelper.lerp(event.getTickDelta(), previousVisualPitch, visualPitch), -90.0F, 90.0F));
+                    event.setPitch(Mth.clamp(Mth.lerp(event.getTickDelta(), previousVisualPitch, visualPitch), -90.0F, 90.0F));
                 }
             }
             default -> {
@@ -303,7 +303,7 @@ public final class RotationManager extends ClientHandler {
             previousVisualPitch = visualPitch;
             visualActive = true;
         }
-        float yawDelta = MathHelper.wrapDegrees(target.yaw() - visualYaw);
+        float yawDelta = Mth.wrapDegrees(target.yaw() - visualYaw);
         float pitchDelta = target.pitch() - visualPitch;
         previousVisualPitch = visualPitch;
         float blend = snapVisuals ? 1.0F : VISUAL_SMOOTHING;
@@ -322,16 +322,16 @@ public final class RotationManager extends ClientHandler {
         if (settings.visibility() == RotationVisibility.SILENT || activeRequest.returning()) {
             applyQuantized(stepped);
         } else {
-            boolean fineScale = CLIENT.options.getPerspective().isFirstPerson() && CLIENT.player.isUsingSpyglass();
+            boolean fineScale = CLIENT.options.getCameraType().isFirstPerson() && CLIENT.player.isScoping();
             float step = MouseSensitivity.angularStep(fineScale);
             if (step > 1.0E-5F) {
-                boolean invertX = CLIENT.options.getInvertMouseX().getValue();
-                boolean invertY = CLIENT.options.getInvertMouseY().getValue();
+                boolean invertX = CLIENT.options.invertMouseX().get();
+                boolean invertY = CLIENT.options.invertMouseY().get();
                 float pendingYaw = pendingMouseX * (invertX ? -step : step);
                 float pendingPitch = pendingMouseY * (invertY ? -step : step);
-                float mouseX = (MathHelper.wrapDegrees(stepped.yaw() - current.yaw()) - pendingYaw) / step + mouseRemainderX;
+                float mouseX = (Mth.wrapDegrees(stepped.yaw() - current.yaw()) - pendingYaw) / step + mouseRemainderX;
                 float mouseY = (stepped.pitch() - current.pitch() - pendingPitch) / step + mouseRemainderY;
-                if (Math.abs(MathHelper.wrapDegrees(desired.yaw() - current.yaw())) < step * 0.5F) mouseX = 0.0F;
+                if (Math.abs(Mth.wrapDegrees(desired.yaw() - current.yaw())) < step * 0.5F) mouseX = 0.0F;
                 // The original second tolerance comparison reads current yaw.
                 if (Math.abs(desired.pitch() - current.yaw()) < step * 0.5F) mouseY = 0.0F;
                 int wholeX = Math.round(mouseX);
@@ -342,14 +342,14 @@ public final class RotationManager extends ClientHandler {
                 pendingMouseY += invertY ? -wholeY : wholeY;
             }
         }
-        if (activeRequest.returning() && Math.abs(MathHelper.wrapDegrees(desired.yaw() - effectiveRotation().yaw())) < RETURN_TOLERANCE
+        if (activeRequest.returning() && Math.abs(Mth.wrapDegrees(desired.yaw() - effectiveRotation().yaw())) < RETURN_TOLERANCE
                 && Math.abs(desired.pitch() - effectiveRotation().pitch()) < RETURN_TOLERANCE) clearRequest();
     }
 
     private void applyQuantized(Rotation requested) {
         prepareSilentRotation();
         float step = MouseSensitivity.angularStep(false);
-        MouseDelta counts = sensitivity.quantize(MathHelper.wrapDegrees(requested.yaw() - currentRotation.yaw()),
+        MouseDelta counts = sensitivity.quantize(Mth.wrapDegrees(requested.yaw() - currentRotation.yaw()),
                 requested.pitch() - currentRotation.pitch(), false, false, false);
         if (counts.horizontalCounts() == 0 && counts.verticalCounts() == 0) return;
         updateCurrent(new Rotation(currentRotation.yaw() + counts.horizontalCounts() * step,
@@ -386,20 +386,20 @@ public final class RotationManager extends ClientHandler {
 
     private void stopSilentRotation() {
         if (!silentActive || CLIENT.player == null) { silentActive = false; return; }
-        float playerYaw = CLIENT.player.getYaw();
-        float nearestYaw = currentRotation.yaw() + MathHelper.wrapDegrees(playerYaw - currentRotation.yaw());
+        float playerYaw = CLIENT.player.getYRot();
+        float nearestYaw = currentRotation.yaw() + Mth.wrapDegrees(playerYaw - currentRotation.yaw());
         float offset = nearestYaw - playerYaw;
         if (offset != 0.0F) {
-            CLIENT.player.lastYaw += offset;
-            CLIENT.player.renderYaw += offset;
-            CLIENT.player.lastRenderYaw += offset;
-            CLIENT.player.bodyYaw += offset;
-            CLIENT.player.lastBodyYaw += offset;
-            CLIENT.player.headYaw += offset;
-            CLIENT.player.lastHeadYaw += offset;
-            CLIENT.player.setYaw(nearestYaw);
+            CLIENT.player.yRotO += offset;
+            CLIENT.player.yBob += offset;
+            CLIENT.player.yBobO += offset;
+            CLIENT.player.yBodyRot += offset;
+            CLIENT.player.yBodyRotO += offset;
+            CLIENT.player.yHeadRot += offset;
+            CLIENT.player.yHeadRotO += offset;
+            CLIENT.player.setYRot(nearestYaw);
         }
-        updateCurrent(new Rotation(nearestYaw, CLIENT.player.getPitch()));
+        updateCurrent(new Rotation(nearestYaw, CLIENT.player.getXRot()));
         silentActive = false;
     }
 
@@ -440,22 +440,22 @@ public final class RotationManager extends ClientHandler {
     }
 
     private Rotation playerRotation() {
-        return CLIENT.player == null ? new Rotation(0.0F, 0.0F) : new Rotation(CLIENT.player.getYaw(), CLIENT.player.getPitch());
+        return CLIENT.player == null ? new Rotation(0.0F, 0.0F) : new Rotation(CLIENT.player.getYRot(), CLIENT.player.getXRot());
     }
 
-    private boolean hasPlayerAndWorld() { return CLIENT.player != null && CLIENT.world != null; }
+    private boolean hasPlayerAndWorld() { return CLIENT.player != null && CLIENT.level != null; }
 
     private float targetTickDelta(RotationSettings settings) {
-        return settings.visibility() == RotationVisibility.SILENT ? 1.0F : CLIENT.getRenderTickCounter().getTickProgress(false);
+        return settings.visibility() == RotationVisibility.SILENT ? 1.0F : CLIENT.getDeltaTracker().getGameTimeDeltaPartialTick(false);
     }
 
     private void synchronizeContext() {
-        if (trackedPlayer != CLIENT.player || trackedWorld != CLIENT.world) {
+        if (trackedPlayer != CLIENT.player || trackedWorld != CLIENT.level) {
             trackedPlayer = CLIENT.player;
-            trackedWorld = CLIENT.world;
+            trackedWorld = CLIENT.level;
             reset();
         }
         trackedPlayer = CLIENT.player;
-        trackedWorld = CLIENT.world;
+        trackedWorld = CLIENT.level;
     }
 }

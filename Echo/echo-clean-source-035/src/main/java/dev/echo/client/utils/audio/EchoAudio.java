@@ -11,7 +11,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentLinkedQueue;
-import net.minecraft.sound.SoundCategory;
+import net.minecraft.sounds.SoundSource;
 import org.lwjgl.openal.AL10;
 import org.lwjgl.stb.STBVorbis;
 import org.lwjgl.stb.STBVorbisInfo;
@@ -113,8 +113,8 @@ public final class EchoAudio implements MinecraftAccess {
         if (buffer == null) {
             return;
         }
-        float masterVolume = CLIENT.options.getSoundVolume(SoundCategory.MASTER);
-        float uiVolume = CLIENT.options.getSoundVolume(SoundCategory.UI);
+        float masterVolume = CLIENT.options.getFinalSoundSourceVolume(SoundSource.MASTER);
+        float uiVolume = CLIENT.options.getFinalSoundSourceVolume(SoundSource.UI);
         float effectiveGain = gain * masterVolume * uiVolume;
         if (effectiveGain <= 0.0F) {
             return;

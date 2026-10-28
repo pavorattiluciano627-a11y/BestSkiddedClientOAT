@@ -5,10 +5,10 @@ import dev.echo.client.scripting.api.EntityView;
 import dev.echo.client.scripting.api.PlayerView;
 import java.util.ArrayList;
 import java.util.List;
-import net.minecraft.client.world.ClientWorld;
-import net.minecraft.entity.Entity;
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.util.math.BlockPos;
+import net.minecraft.client.multiplayer.ClientLevel;
+import net.minecraft.core.BlockPos;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.player.Player;
 
 /**
  * Script-facing view of one retained client world.
@@ -18,10 +18,10 @@ import net.minecraft.util.math.BlockPos;
  * mapping remain explicit integration obligations in the adjacent receipt.
  */
 public class WorldView {
-    private final ClientWorld world;
+    private final ClientLevel world;
 
     /** Retains the supplied reference, including null, as the original constructor does. */
-    public WorldView(ClientWorld world) {
+    public WorldView(ClientLevel world) {
         this.world = world;
     }
 
@@ -30,7 +30,7 @@ public class WorldView {
      * type is EntityView even though each populated entry is a PlayerView.
      */
     public EntityView[] getPlayers() {
-        List<? extends PlayerEntity> players = world.getPlayers();
+        List<? extends Player> players = world.players();
         EntityView[] result = new EntityView[players.size()];
         for (int index = 0; index < players.size(); index++) {
             result[index] = new PlayerView(players.get(index));
@@ -41,7 +41,7 @@ public class WorldView {
     /** Creates fresh wrappers in the world's entity iteration order. */
     public EntityView[] getEntities() {
         ArrayList<EntityView> result = new ArrayList<>();
-        for (Entity entity : world.getEntities()) {
+        for (Entity entity : world.entitiesForRendering()) {
             result.add(new EntityView(entity));
         }
         return result.toArray(new EntityView[0]);

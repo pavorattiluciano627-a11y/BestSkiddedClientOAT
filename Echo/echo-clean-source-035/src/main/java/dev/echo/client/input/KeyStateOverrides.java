@@ -3,9 +3,9 @@ package dev.echo.client.input;
 import java.lang.reflect.Method;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.option.GameOptions;
-import net.minecraft.client.option.KeyBinding;
+import net.minecraft.client.KeyMapping;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.Options;
 
 /**
  * Structured candidate for temporary key-state overrides.
@@ -13,7 +13,7 @@ import net.minecraft.client.option.KeyBinding;
  */
 public final class KeyStateOverrides {
     private static final long OVERRIDE_LIFETIME_NANOS = 75_000_000L;
-    private static final Map<KeyBinding, KeyOverride> overrides = new ConcurrentHashMap<>();
+    private static final Map<KeyMapping, KeyOverride> overrides = new ConcurrentHashMap<>();
     private static final String BOUND_KEY_BRIDGE_METHOD = "bridge$getKey";
     private static Method boundKeyBridge;
 
@@ -21,14 +21,14 @@ public final class KeyStateOverrides {
     }
 
     /** Replaces the binding's override for seventy-five milliseconds. */
-    public static void setPressed(KeyBinding binding, boolean pressed) {
+    public static void setPressed(KeyMapping binding, boolean pressed) {
         overrides.put(binding, new KeyOverride(pressed, System.nanoTime() + OVERRIDE_LIFETIME_NANOS));
     }
 
     /** Returns a live override, falling back to the binding's actual state. */
-    public static boolean isPressed(KeyBinding binding) {
+    public static boolean isPressed(KeyMapping binding) {
         Boolean override = activeOverride(binding);
-        return override == null ? binding.isPressed() : override;
+        return override == null ? binding.isDown() : override;
     }
 
     /**
@@ -36,12 +36,12 @@ public final class KeyStateOverrides {
      * The original does not return false for an unpressed matching binding.
      */
     public static Boolean pressedActionForMouseButton(int code) {
-        GameOptions options = MinecraftClient.getInstance().options;
+        Options options = Minecraft.getInstance().options;
         if (options == null) {
             return null;
         }
         InputKey key = InputKey.fromMouseCode(code);
-        for (KeyBinding binding : new KeyBinding[]{options.attackKey, options.useKey}) {
+        for (KeyMapping binding : new KeyMapping[]{options.keyAttack, options.keyUse}) {
             if (KeybindingCache.getKey(binding) == key && isPressed(binding)) {
                 return true;
             }
@@ -51,7 +51,7 @@ public final class KeyStateOverrides {
 
     /** Looks up a live override by the identity of a bound input key. */
     public static Boolean forBoundKey(Object key) {
-        for (KeyBinding binding : overrides.keySet()) {
+        for (KeyMapping binding : overrides.keySet()) {
             if (readBoundKey(binding) == key) {
                 return activeOverride(binding);
             }
@@ -59,7 +59,7 @@ public final class KeyStateOverrides {
         return null;
     }
 
-    private static Boolean activeOverride(KeyBinding binding) {
+    private static Boolean activeOverride(KeyMapping binding) {
         KeyOverride override = overrides.get(binding);
         if (override == null) {
             return null;
@@ -71,7 +71,7 @@ public final class KeyStateOverrides {
         return null;
     }
 
-    private static Object readBoundKey(KeyBinding binding) {
+    private static Object readBoundKey(KeyMapping binding) {
         try {
             if (boundKeyBridge == null) {
                 boundKeyBridge = binding.getClass().getMethod(BOUND_KEY_BRIDGE_METHOD);

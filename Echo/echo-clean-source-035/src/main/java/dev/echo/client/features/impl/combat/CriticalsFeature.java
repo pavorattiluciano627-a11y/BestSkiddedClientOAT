@@ -14,11 +14,11 @@ import dev.echo.client.utils.simulation.PlayerPrediction;
 import dev.echo.client.utils.simulation.SimulatedPlayer;
 import dev.echo.client.utils.targeting.EntityRaycasts;
 import dev.echo.client.utils.targeting.TargetSelection;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.entity.Entity;
-import net.minecraft.entity.LivingEntity;
-import net.minecraft.network.packet.c2s.play.PlayerMoveC2SPacket;
-import net.minecraft.util.math.Vec3d;
+import net.minecraft.client.Minecraft;
+import net.minecraft.network.protocol.game.ServerboundMovePlayerPacket;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.phys.Vec3;
 
 /** Release/Unsprint timing and the original two-packet Vanilla critical mode. */
 public class CriticalsFeature extends Feature {
@@ -77,64 +77,64 @@ public class CriticalsFeature extends Feature {
     private static boolean isCurrentAttackReady() {
         String[] controlState = SpearReachFeature.readSharedControlState();
         try {
-            Class.forName(MinecraftClient.class.getName(), true, MinecraftClient.class.getClassLoader());
+            Class.forName(Minecraft.class.getName(), true, Minecraft.class.getClassLoader());
         } catch (ClassNotFoundException failure) {
             throw new IllegalStateException("Resolved class initialization failed", failure);
         }
-        float difference = client.player.getAttackCooldownProgress(0.5f) - 0.9f;
+        float difference = client.player.getAttackStrengthScale(0.5f) - 0.9f;
         return controlState != null ? difference != 0.0f : difference > 0.0f;
     }
 
     private static boolean isNextAttackReady() {
         String[] controlState = SpearReachFeature.readSharedControlState();
         try {
-            Class.forName(MinecraftClient.class.getName(), true, MinecraftClient.class.getClassLoader());
+            Class.forName(Minecraft.class.getName(), true, Minecraft.class.getClassLoader());
         } catch (ClassNotFoundException failure) {
             throw new IllegalStateException("Resolved class initialization failed", failure);
         }
-        float difference = client.player.getAttackCooldownProgress(1.5f) - 0.9f;
+        float difference = client.player.getAttackStrengthScale(1.5f) - 0.9f;
         return controlState != null ? difference != 0.0f : difference > 0.0f;
     }
 
     private static boolean willRemainAirborneWhileFalling(PlayerInputEvent input) {
         String[] controlState = SpearReachFeature.readSharedControlState();
-        boolean onGround = client.player.isOnGround();
+        boolean onGround = client.player.onGround();
         if (controlState != null) return onGround;
         if (onGround) return false;
-        if (client.player.isGliding()) return false;
-        if (client.player.isTouchingWater()) return false;
+        if (client.player.isFallFlying()) return false;
+        if (client.player.isInWater()) return false;
         // Allocation is deliberately outside the original handled-failure region.
-        SimulatedPlayer simulation = PlayerPrediction.forWorld(client.world);
+        SimulatedPlayer simulation = PlayerPrediction.forWorld(client.level);
         try {
-            simulation.copyFrom(client.player, client.player.getVelocity(), client.player.getYaw(),
-                    client.player.getPitch(),
+            simulation.copyFrom(client.player, client.player.getDeltaMovement(), client.player.getYRot(),
+                    client.player.getXRot(),
                     PlayerInputEvent.movementMultiplier(input.forward, input.backward) * 0.98f,
                     PlayerInputEvent.movementMultiplier(input.left, input.right) * 0.98f, false);
             double initialY = simulation.getY();
             simulation.tickPrediction();
-            if (simulation.isOnGround()) return false;
-            if (simulation.isTouchingWater()) return false;
-            if (simulation.isClimbing()) return false;
+            if (simulation.onGround()) return false;
+            if (simulation.isInWater()) return false;
+            if (simulation.onClimbable()) return false;
             if (simulation.getY() >= initialY) return false;
             simulation.tickPrediction();
-            return !simulation.isOnGround();
+            return !simulation.onGround();
         } catch (Throwable predictionFailure) {
             return false;
         }
     }
 
     private static boolean hasTargetInReach() {
-        Vec3d eyePosition = client.player.getEyePos();
+        Vec3 eyePosition = client.player.getEyePosition();
         String[] controlState = SpearReachFeature.readSharedControlState();
-        double range = client.player.getEntityInteractionRange();
-        for (Entity entity : client.world.getEntities()) {
+        double range = client.player.entityInteractionRange();
+        for (Entity entity : client.level.entitiesForRendering()) {
             if (controlState == null) {
                 if (entity == client.player) continue;
                 if (!(entity instanceof LivingEntity)) continue;
             }
             LivingEntity target = (LivingEntity) entity;
             if (controlState == null && !TargetSelection.isValidTarget(target)) continue;
-            double difference = target.getBoundingBox().squaredMagnitude(eyePosition) - range * range;
+            double difference = target.getBoundingBox().distanceToSqr(eyePosition) - range * range;
             if (controlState != null) return difference != 0.0;
             if (difference <= 0.0) return true;
         }
@@ -187,7 +187,7 @@ public class CriticalsFeature extends Feature {
                 resumeTicks = -1;
                 return;
             }
-            if (client.player.isTouchingWater()) input.forward = false;
+            if (client.player.isInWater()) input.forward = false;
             return;
         }
         if (outsideWorld) return;
@@ -196,8 +196,8 @@ public class CriticalsFeature extends Feature {
             return;
         }
         if (!mode.isSelected(RELEASE)) return;
-        if (client.player.isOnGround() || client.player.getVelocity().y > 0.0
-                || client.player.isGliding() || client.player.isTouchingWater()) {
+        if (client.player.onGround() || client.player.getDeltaMovement().y > 0.0
+                || client.player.isFallFlying() || client.player.isInWater()) {
             resumeTicks = -1;
             return;
         }
@@ -226,9 +226,9 @@ public class CriticalsFeature extends Feature {
             sendPackets = mode.isSelected(VANILLA);
         }
         if (sendPackets) {
-            client.player.networkHandler.sendPacket(new PlayerMoveC2SPacket.PositionAndOnGround(
+            client.player.connection.send(new ServerboundMovePlayerPacket.Pos(
                     client.player.getX(), client.player.getY() + 0.2, client.player.getZ(), false, false));
-            client.player.networkHandler.sendPacket(new PlayerMoveC2SPacket.PositionAndOnGround(
+            client.player.connection.send(new ServerboundMovePlayerPacket.Pos(
                     client.player.getX(), client.player.getY() + 0.1, client.player.getZ(), false, false));
         }
     }

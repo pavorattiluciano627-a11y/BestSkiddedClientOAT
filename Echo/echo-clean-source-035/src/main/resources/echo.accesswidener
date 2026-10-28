@@ -1,20 +1,41 @@
 accessWidener v2 official
-# Original widened palette method and chunk-map fields, in Minecraft 26.2's official namespace.
-accessible method net/minecraft/world/chunk/PalettedContainer get (I)Ljava/lang/Object;
-accessible field net/minecraft/client/world/ClientChunkManager chunks Lnet/minecraft/client/world/ClientChunkManager$ClientChunkMap;
-accessible field net/minecraft/client/world/ClientChunkManager$ClientChunkMap chunks Ljava/util/concurrent/atomic/AtomicReferenceArray;
-# Expose the nested declaring type for ordinary named Java compilation.
-accessible class net/minecraft/client/world/ClientChunkManager$ClientChunkMap
+# Echo access widener for Minecraft 26.2 (official/unobfuscated namespace).
+# Every entry below was verified against the 26.2 client jar with
+# tools/port/jar_index.py: class path, member name, descriptor and access flags.
 
-# Original direct Minecraft fields used by OutputAdapter's ordinary Java recovery.
-# Merge with the parent-owned application widener; this file is not runtime dispatch.
-accessible field net/minecraft/client/font/TextRenderer fonts Lnet/minecraft/client/font/TextRenderer$GlyphsProvider;
-accessible field net/minecraft/client/font/BakedGlyphImpl textureView Lcom/mojang/blaze3d/textures/GpuTextureView;
-accessible field net/minecraft/client/font/BakedGlyphImpl minU F
-accessible field net/minecraft/client/font/BakedGlyphImpl maxU F
-accessible field net/minecraft/client/font/BakedGlyphImpl minV F
-accessible field net/minecraft/client/font/BakedGlyphImpl maxV F
-accessible field net/minecraft/client/font/BakedGlyphImpl minX F
-accessible field net/minecraft/client/font/BakedGlyphImpl maxX F
-accessible field net/minecraft/client/font/BakedGlyphImpl minY F
-accessible field net/minecraft/client/font/BakedGlyphImpl maxY F
+# Palette access used by the chunk block-ESP scanner.
+accessible method net/minecraft/world/level/chunk/PalettedContainer get (I)Ljava/lang/Object;
+
+# Client chunk storage used to iterate loaded sections without a per-chunk copy.
+accessible field net/minecraft/client/multiplayer/ClientChunkCache storage Lnet/minecraft/client/multiplayer/ClientChunkCache$Storage;
+accessible field net/minecraft/client/multiplayer/ClientChunkCache$Storage chunks Ljava/util/concurrent/atomic/AtomicReferenceArray;
+accessible class net/minecraft/client/multiplayer/ClientChunkCache$Storage
+
+# Chunk coordinates (record components became private in 26.2).
+accessible field net/minecraft/world/level/ChunkPos x I
+accessible field net/minecraft/world/level/ChunkPos z I
+
+# Baked glyph metrics for the custom text batch (BakedGlyphImpl -> BakedSheetGlyph in 26.2).
+accessible field net/minecraft/client/gui/font/glyphs/BakedSheetGlyph textureView Lcom/mojang/blaze3d/textures/GpuTextureView;
+accessible field net/minecraft/client/gui/font/glyphs/BakedSheetGlyph u0 F
+accessible field net/minecraft/client/gui/font/glyphs/BakedSheetGlyph u1 F
+accessible field net/minecraft/client/gui/font/glyphs/BakedSheetGlyph v0 F
+accessible field net/minecraft/client/gui/font/glyphs/BakedSheetGlyph v1 F
+accessible field net/minecraft/client/gui/font/glyphs/BakedSheetGlyph left F
+accessible field net/minecraft/client/gui/font/glyphs/BakedSheetGlyph right F
+accessible field net/minecraft/client/gui/font/glyphs/BakedSheetGlyph up F
+accessible field net/minecraft/client/gui/font/glyphs/BakedSheetGlyph down F
+
+# Glyph provider used to build the monochrome text atlas.
+accessible field net/minecraft/client/gui/Font provider Lnet/minecraft/client/gui/Font$Provider;
+
+# Submit-node storage and GUI render state hooks.
+accessible field net/minecraft/client/renderer/GameRenderer handAndScreenSubmitNodeStorage Lnet/minecraft/client/renderer/SubmitNodeStorage;
+accessible field net/minecraft/client/gui/GuiGraphicsExtractor guiRenderState Lnet/minecraft/client/renderer/state/gui/GuiRenderState;
+
+# Attack-miss cooldown timer driven by the auto-clicker and shield-breaker features.
+accessible field net/minecraft/client/Minecraft missTime I
+
+# ChatComponent.addMessage(Component, MessageSignature, GuiMessageSource, GuiMessageTag)
+# is private in 26.2; the client's chat helpers post system messages through it.
+accessible method net/minecraft/client/gui/components/ChatComponent addMessage (Lnet/minecraft/network/chat/Component;Lnet/minecraft/network/chat/MessageSignature;Lnet/minecraft/client/multiplayer/chat/GuiMessageSource;Lnet/minecraft/client/multiplayer/chat/GuiMessageTag;)V

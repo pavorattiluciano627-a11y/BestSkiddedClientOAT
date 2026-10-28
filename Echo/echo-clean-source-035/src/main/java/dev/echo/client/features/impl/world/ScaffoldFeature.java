@@ -20,16 +20,16 @@ import dev.echo.client.setting.RegistryListSetting;
 import dev.echo.client.setting.specialized.ScaffoldBlockListSetting;
 import dev.echo.client.utils.placement.ScaffoldController;
 import java.util.function.Predicate;
-import net.minecraft.block.Block;
-import net.minecraft.block.BlockState;
-import net.minecraft.block.FallingBlock;
-import net.minecraft.item.BlockItem;
-import net.minecraft.item.ItemStack;
-import net.minecraft.registry.Registries;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.Direction;
-import net.minecraft.util.shape.VoxelShape;
-import net.minecraft.world.EmptyBlockView;
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.world.item.BlockItem;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.EmptyBlockGetter;
+import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.FallingBlock;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.phys.shapes.VoxelShape;
 
 /** Bridges through the original placement controller and its six event hooks. */
 public class ScaffoldFeature extends Feature {
@@ -40,7 +40,7 @@ public class ScaffoldFeature extends Feature {
     private static BooleanSetting pitchCheck;
     private static ChoiceSetting listType;
     private static RegistryListSetting<Block> blocks =
-        new ScaffoldBlockListSetting(CatalogText.literal("Blocks Selection"), () -> Registries.BLOCK);
+        new ScaffoldBlockListSetting(CatalogText.literal("Blocks Selection"), () -> BuiltInRegistries.BLOCK);
     private ScaffoldController scaffoldController;
     private static String conditionsSection;
     private static String listTypeSection;
@@ -78,7 +78,7 @@ public class ScaffoldFeature extends Feature {
     }
 
     public static boolean passesPitchCheck() {
-        return !pitchCheck.getValue() || client.player.getPitch() > 0.0f;
+        return !pitchCheck.getValue() || client.player.getXRot() > 0.0f;
     }
 
     public static boolean isAllowedStack(ItemStack stack) {
@@ -99,13 +99,13 @@ public class ScaffoldFeature extends Feature {
         if (block instanceof FallingBlock) {
             return false;
         }
-        BlockState state = block.getDefaultState();
-        if (state.getCollisionShape(EmptyBlockView.INSTANCE, BlockPos.ORIGIN).isEmpty()) {
+        BlockState state = block.defaultBlockState();
+        if (state.getCollisionShape(EmptyBlockGetter.INSTANCE, BlockPos.ZERO).isEmpty()) {
             return false;
         }
-        VoxelShape outline = state.getOutlineShape(EmptyBlockView.INSTANCE, BlockPos.ORIGIN);
-        return Block.isFaceFullSquare(outline, Direction.DOWN)
-            && outline.getMax(Direction.Axis.Y) >= 0.75;
+        VoxelShape outline = state.getShape(EmptyBlockGetter.INSTANCE, BlockPos.ZERO);
+        return Block.isFaceFull(outline, Direction.DOWN)
+            && outline.max(Direction.Axis.Y) >= 0.75;
     }
 
     @Override

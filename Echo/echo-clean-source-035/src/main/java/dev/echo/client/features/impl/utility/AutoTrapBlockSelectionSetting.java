@@ -5,13 +5,13 @@ import dev.echo.client.setting.RegistryListSetting;
 import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
-import net.minecraft.block.Block;
-import net.minecraft.block.Blocks;
-import net.minecraft.item.BlockItem;
-import net.minecraft.item.ItemStack;
-import net.minecraft.registry.Registry;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.world.EmptyBlockView;
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.Registry;
+import net.minecraft.world.item.BlockItem;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.EmptyBlockGetter;
+import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.Blocks;
 
 /** Full-block selection for the corresponding Auto Trap mode. */
 public final class AutoTrapBlockSelectionSetting extends RegistryListSetting<Block> {
@@ -35,13 +35,13 @@ public final class AutoTrapBlockSelectionSetting extends RegistryListSetting<Blo
 
     @Override
     public Function<Block, String> getEntryLabel() {
-        return block -> new ItemStack(block.asItem()).getName().getString();
+        return block -> new ItemStack(block.asItem()).getHoverName().getString();
     }
 
     @Override
     public Predicate<Block> getEntryFilter() {
         return block -> block.asItem() instanceof BlockItem
-                && block.getDefaultState().isFullCube(EmptyBlockView.INSTANCE, BlockPos.ORIGIN);
+                && block.defaultBlockState().isCollisionShapeFullBlock(EmptyBlockGetter.INSTANCE, BlockPos.ZERO);
     }
 
     @Override

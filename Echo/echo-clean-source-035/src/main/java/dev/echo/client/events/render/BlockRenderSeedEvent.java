@@ -1,8 +1,8 @@
 package dev.echo.client.events.render;
 
 import dev.echo.client.events.Event;
-import net.minecraft.block.BlockState;
-import net.minecraft.util.math.BlockPos;
+import net.minecraft.core.BlockPos;
+import net.minecraft.world.level.block.state.BlockState;
 
 /** Notification when a block state's rendering seed is requested. */
 public class BlockRenderSeedEvent extends Event {

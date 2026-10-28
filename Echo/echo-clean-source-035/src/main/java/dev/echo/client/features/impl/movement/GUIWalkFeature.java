@@ -14,16 +14,16 @@ import dev.echo.client.render.MinecraftRenderState;
 import dev.echo.client.setting.ChoiceSetting;
 import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedDeque;
-import net.minecraft.client.gui.screen.ChatScreen;
-import net.minecraft.client.gui.screen.ingame.HandledScreen;
-import net.minecraft.client.network.ClientPlayNetworkHandler;
-import net.minecraft.client.option.KeyBinding;
-import net.minecraft.network.packet.Packet;
-import net.minecraft.network.packet.c2s.play.ChatMessageC2SPacket;
-import net.minecraft.network.packet.c2s.play.ClickSlotC2SPacket;
-import net.minecraft.network.packet.c2s.play.CloseHandledScreenC2SPacket;
-import net.minecraft.network.packet.c2s.play.CommandExecutionC2SPacket;
-import net.minecraft.network.packet.c2s.play.PlayerMoveC2SPacket;
+import net.minecraft.client.KeyMapping;
+import net.minecraft.client.gui.screens.ChatScreen;
+import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
+import net.minecraft.client.multiplayer.ClientPacketListener;
+import net.minecraft.network.protocol.Packet;
+import net.minecraft.network.protocol.game.ServerboundChatCommandPacket;
+import net.minecraft.network.protocol.game.ServerboundChatPacket;
+import net.minecraft.network.protocol.game.ServerboundContainerClickPacket;
+import net.minecraft.network.protocol.game.ServerboundContainerClosePacket;
+import net.minecraft.network.protocol.game.ServerboundMovePlayerPacket;
 
 import static dev.echo.client.features.FeatureLiterals.literal;
 
@@ -33,7 +33,7 @@ public class GUIWalkFeature extends Feature {
     private boolean flushingPackets;
     private boolean packetDelayActive;
     private int packetDelayCounter;
-    private KeyBinding[] movementKeys;
+    private KeyMapping[] movementKeys;
     private static ChoiceSetting mode;
     private static final String VANILLA_MODE = "Vanilla";
 
@@ -67,15 +67,15 @@ public class GUIWalkFeature extends Feature {
         SprintOverrideHandler.setSuppressSprint(false);
     }
 
-    private KeyBinding[] getMovementKeys() {
+    private KeyMapping[] getMovementKeys() {
         if (movementKeys == null) {
-            movementKeys = new KeyBinding[]{client.options.forwardKey, client.options.rightKey,
-                    client.options.leftKey, client.options.jumpKey, client.options.backKey};
+            movementKeys = new KeyMapping[]{client.options.keyUp, client.options.keyRight,
+                    client.options.keyLeft, client.options.keyJump, client.options.keyDown};
         }
         return movementKeys;
     }
 
-    public static boolean isPhysicallyPressed(KeyBinding key) {
+    public static boolean isPhysicallyPressed(KeyMapping key) {
         return KeybindingCache.isPressed(key);
     }
 
@@ -83,8 +83,8 @@ public class GUIWalkFeature extends Feature {
     private void onWorldRender(WorldRenderEvent event) {
         if (isOutsideWorld()) return;
         if (!(MinecraftRenderState.getScreen() instanceof ChatScreen)) {
-            for (KeyBinding key : getMovementKeys()) {
-                key.setPressed(isPhysicallyPressed(key));
+            for (KeyMapping key : getMovementKeys()) {
+                key.setDown(isPhysicallyPressed(key));
             }
         }
     }
@@ -93,8 +93,8 @@ public class GUIWalkFeature extends Feature {
     private void onPacketSend(PacketSendEvent event) {
         if (isOutsideWorld() || flushingPackets || mode.isSelected(VANILLA_MODE)) return;
         Packet<?> packet = event.getPacket();
-        if (packet instanceof ClickSlotC2SPacket || packet instanceof CloseHandledScreenC2SPacket
-                || packet instanceof ChatMessageC2SPacket || packet instanceof CommandExecutionC2SPacket) {
+        if (packet instanceof ServerboundContainerClickPacket || packet instanceof ServerboundContainerClosePacket
+                || packet instanceof ServerboundChatPacket || packet instanceof ServerboundChatCommandPacket) {
             queuedPackets.add(packet);
             event.cancel();
             packetDelayActive = true;
@@ -102,7 +102,7 @@ public class GUIWalkFeature extends Feature {
             SprintOverrideHandler.setSuppressSprint(true);
             return;
         }
-        if (packetDelayActive && packet instanceof PlayerMoveC2SPacket) {
+        if (packetDelayActive && packet instanceof ServerboundMovePlayerPacket) {
             packetDelayCounter++;
             if (packetDelayCounter >= 1) {
                 flushQueuedPackets();
@@ -117,7 +117,7 @@ public class GUIWalkFeature extends Feature {
     private void onClientTick(ClientTickEvent event) {
         if (isOutsideWorld()) return;
         if (!queuedPackets.isEmpty() && !packetDelayActive
-                && !(MinecraftRenderState.getScreen() instanceof HandledScreen<?>)) {
+                && !(MinecraftRenderState.getScreen() instanceof AbstractContainerScreen<?>)) {
             packetDelayActive = true;
             packetDelayCounter = 0;
             SprintOverrideHandler.setSuppressSprint(true);
@@ -125,7 +125,7 @@ public class GUIWalkFeature extends Feature {
     }
 
     private void flushQueuedPackets() {
-        ClientPlayNetworkHandler handler = client.getNetworkHandler();
+        ClientPacketListener handler = client.getConnection();
         if (handler == null) {
             queuedPackets.clear();
             return;
@@ -133,7 +133,7 @@ public class GUIWalkFeature extends Feature {
         flushingPackets = true;
         while (!queuedPackets.isEmpty()) {
             Packet<?> packet = queuedPackets.poll();
-            if (packet != null) handler.sendPacket(packet);
+            if (packet != null) handler.send(packet);
         }
         // Deliberately not a finally: a send failure leaves the original reentrancy flag set.
         flushingPackets = false;

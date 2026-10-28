@@ -5,17 +5,17 @@ import dev.echo.client.features.impl.movement.DiveBombFeature;
 import java.util.ArrayDeque;
 import java.util.Deque;
 import java.util.function.DoubleSupplier;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.item.ItemStack;
-import net.minecraft.item.Items;
-import net.minecraft.util.Hand;
+import net.minecraft.client.Minecraft;
+import net.minecraft.world.InteractionHand;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
 
 /** Tick-driven preparation, aiming, throwing and restoration for an instant dive bomb.
  * The input-use and offhand-swap actions are the feature's existing operations;
  * their concrete mixin/network bindings remain owned by their shared services.
  */
 public final class DiveBombSequence {
-    private final MinecraftClient client;
+    private final Minecraft client;
     private final int originalSlot;
     private final int windChargeSlot;
     private final boolean movedWindChargeToOffhand;
@@ -38,7 +38,7 @@ public final class DiveBombSequence {
      * @param useItem normal Minecraft input-use operation
      * @param effectivePitch current server pitch for silent aim, otherwise visible player pitch
      */
-    public DiveBombSequence(MinecraftClient client, int originalSlot, int windChargeSlot, int pearlSlot,
+    public DiveBombSequence(Minecraft client, int originalSlot, int windChargeSlot, int pearlSlot,
                             boolean moveWindChargeToOffhand, Runnable swapHands, Runnable useItem,
                              DoubleSupplier effectivePitch) {
         this.client = client;
@@ -59,7 +59,7 @@ public final class DiveBombSequence {
                 preparation.add(selectSlot(windChargeSlot));
                 preparation.add(swapOffhand(true));
             }
-            if (!client.player.getMainHandStack().isOf(Items.ENDER_PEARL)) {
+            if (!client.player.getMainHandItem().is(Items.ENDER_PEARL)) {
                 preparation.add(selectSlot(pearlSlot));
             }
         }
@@ -91,17 +91,17 @@ public final class DiveBombSequence {
 
     private DiveBombAction swapOffhand(boolean expectWindCharge) {
         return new DiveBombAction(swapHands,
-                () -> client.player.getOffHandStack().isOf(Items.WIND_CHARGE) == expectWindCharge);
+                () -> client.player.getOffhandItem().is(Items.WIND_CHARGE) == expectWindCharge);
     }
 
     private boolean hasThrowItemsInHands() {
-        return client.player.getMainHandStack().isOf(Items.ENDER_PEARL)
-                && client.player.getOffHandStack().isOf(Items.WIND_CHARGE);
+        return client.player.getMainHandItem().is(Items.ENDER_PEARL)
+                && client.player.getOffhandItem().is(Items.WIND_CHARGE);
     }
 
     private boolean hasItemCooldown() {
-        return client.player.getItemCooldownManager().isCoolingDown(new ItemStack(Items.ENDER_PEARL))
-                || client.player.getItemCooldownManager().isCoolingDown(new ItemStack(Items.WIND_CHARGE));
+        return client.player.getCooldowns().isOnCooldown(new ItemStack(Items.ENDER_PEARL))
+                || client.player.getCooldowns().isOnCooldown(new ItemStack(Items.WIND_CHARGE));
     }
 
     private boolean waitForAim() {
@@ -119,10 +119,10 @@ public final class DiveBombSequence {
         if (hasThrowItemsInHands() && !hasItemCooldown()) {
             useItem.run();
             useItem.run();
-            if (client.player.getItemCooldownManager().isCoolingDown(new ItemStack(Items.ENDER_PEARL))
-                    && !client.player.getItemCooldownManager().isCoolingDown(new ItemStack(Items.WIND_CHARGE))
-                    && client.player.getOffHandStack().isOf(Items.WIND_CHARGE)) {
-                client.interactionManager.interactItem(client.player, Hand.OFF_HAND);
+            if (client.player.getCooldowns().isOnCooldown(new ItemStack(Items.ENDER_PEARL))
+                    && !client.player.getCooldowns().isOnCooldown(new ItemStack(Items.WIND_CHARGE))
+                    && client.player.getOffhandItem().is(Items.WIND_CHARGE)) {
+                client.gameMode.useItem(client.player, InteractionHand.OFF_HAND);
             }
         }
         return beginRestoration();
@@ -130,7 +130,7 @@ public final class DiveBombSequence {
 
     private boolean beginRestoration() {
         restoration.clear();
-        if (movedWindChargeToOffhand && client.player.getOffHandStack().isOf(Items.WIND_CHARGE)) {
+        if (movedWindChargeToOffhand && client.player.getOffhandItem().is(Items.WIND_CHARGE)) {
             restoration.add(selectSlot(windChargeSlot));
             restoration.add(swapOffhand(false));
         }

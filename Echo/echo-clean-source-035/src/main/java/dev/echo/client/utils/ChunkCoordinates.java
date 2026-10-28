@@ -1,6 +1,6 @@
 package dev.echo.client.utils;
 
-import net.minecraft.util.math.ChunkPos;
+import net.minecraft.world.level.ChunkPos;
 
 /** Coordinate accessors for chunk positions (coordinates are in chunks, not blocks). */
 public final class ChunkCoordinates {

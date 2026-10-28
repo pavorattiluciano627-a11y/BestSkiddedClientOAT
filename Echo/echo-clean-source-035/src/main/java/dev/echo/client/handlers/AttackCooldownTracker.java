@@ -7,12 +7,12 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
-import net.minecraft.entity.LivingEntity;
-import net.minecraft.entity.damage.DamageSource;
-import net.minecraft.network.packet.s2c.play.EntityDamageS2CPacket;
-import net.minecraft.network.packet.s2c.play.PlayerPositionLookS2CPacket;
-import net.minecraft.network.packet.s2c.play.PlayerRespawnS2CPacket;
-import net.minecraft.registry.tag.DamageTypeTags;
+import net.minecraft.network.protocol.game.ClientboundDamageEventPacket;
+import net.minecraft.network.protocol.game.ClientboundPlayerPositionPacket;
+import net.minecraft.network.protocol.game.ClientboundRespawnPacket;
+import net.minecraft.tags.DamageTypeTags;
+import net.minecraft.world.damagesource.DamageSource;
+import net.minecraft.world.entity.LivingEntity;
 
 /** Tracks attack age, damage confirmations and latency-adjusted hurt windows. */
 public class AttackCooldownTracker extends ClientHandler {
@@ -22,7 +22,7 @@ public class AttackCooldownTracker extends ClientHandler {
 
     /** Returns the local-player age recorded at the most recent attack on this entity. */
     public static long lastAttackTick(LivingEntity entity) {
-        return entity == null ? 0L : attackTicks.getOrDefault(entity.getUuid(), 0L);
+        return entity == null ? 0L : attackTicks.getOrDefault(entity.getUUID(), 0L);
     }
 
     public static boolean hasAttackCooldown(LivingEntity entity) {
@@ -35,7 +35,7 @@ public class AttackCooldownTracker extends ClientHandler {
             return 0;
         }
         int remaining = ATTACK_COOLDOWN_TICKS - ticksSinceAttack(entity);
-        DamageSource source = entity.getRecentDamageSource();
+        DamageSource source = entity.getLastDamageSource();
         if (source != null && !ignoresHurtTime(source)) {
             remaining = Math.max(remaining, entity.hurtTime - latencyTicks());
         }
@@ -48,10 +48,10 @@ public class AttackCooldownTracker extends ClientHandler {
             return 0;
         }
         Integer confirmedAt = damageTicks.get(entity.getId());
-        if (confirmedAt == null || !attackTicks.containsKey(entity.getUuid())) {
+        if (confirmedAt == null || !attackTicks.containsKey(entity.getUUID())) {
             return 0;
         }
-        int ticksSinceConfirmation = CLIENT.player.age - confirmedAt;
+        int ticksSinceConfirmation = CLIENT.player.tickCount - confirmedAt;
         return Math.max(0, ticksSinceAttack(entity) - ticksSinceConfirmation - latencyTicks());
     }
 
@@ -59,27 +59,27 @@ public class AttackCooldownTracker extends ClientHandler {
         if (entity == null || CLIENT.player == null || !allowsHurtTimePrediction()) {
             return false;
         }
-        DamageSource source = entity.getRecentDamageSource();
+        DamageSource source = entity.getLastDamageSource();
         return source != null
-                && !source.isIn(DamageTypeTags.IS_FIRE)
+                && !source.is(DamageTypeTags.IS_FIRE)
                 && entity.hurtTime > latencyTicks();
     }
 
     private static boolean ignoresHurtTime(DamageSource source) {
-        if (source.getAttacker() == CLIENT.player) {
+        if (source.getEntity() == CLIENT.player) {
             return false;
         }
-        if (source.isIn(DamageTypeTags.IS_FIRE)) {
+        if (source.is(DamageTypeTags.IS_FIRE)) {
             return true;
         }
-        return source.getAttacker() == null
-                && !source.isIn(DamageTypeTags.IS_FALL)
-                && !source.isIn(DamageTypeTags.IS_EXPLOSION);
+        return source.getEntity() == null
+                && !source.is(DamageTypeTags.IS_FALL)
+                && !source.is(DamageTypeTags.IS_EXPLOSION);
     }
 
     private static int ticksSinceAttack(LivingEntity entity) {
-        Long attackedAt = attackTicks.get(entity.getUuid());
-        return attackedAt == null ? Integer.MAX_VALUE : (int) ((long) CLIENT.player.age - attackedAt);
+        Long attackedAt = attackTicks.get(entity.getUUID());
+        return attackedAt == null ? Integer.MAX_VALUE : (int) ((long) CLIENT.player.tickCount - attackedAt);
     }
 
     private static int latencyTicks() {
@@ -87,30 +87,30 @@ public class AttackCooldownTracker extends ClientHandler {
     }
 
     private static boolean allowsHurtTimePrediction() {
-        if (CLIENT.getNetworkHandler() == null) {
+        if (CLIENT.getConnection() == null) {
             return false;
         }
-        String brand = CLIENT.getNetworkHandler().getBrand();
+        String brand = CLIENT.getConnection().serverBrand();
         return ServerBrandPolicy.allowsHurtTimePrediction(brand);
     }
 
     @Subscribe
     private void onAttack(EntityAttackEvent.Post event) {
         if (CLIENT.player != null && event.getTarget() instanceof LivingEntity target) {
-            attackTicks.put(target.getUuid(), (long) CLIENT.player.age);
+            attackTicks.put(target.getUUID(), (long) CLIENT.player.tickCount);
         }
     }
 
     @Subscribe
     private void onPacketReceived(PacketReceiveEvent event) {
-        if (event.getPacket() instanceof EntityDamageS2CPacket damage) {
+        if (event.getPacket() instanceof ClientboundDamageEventPacket damage) {
             if (CLIENT.player != null && damage.sourceCauseId() == CLIENT.player.getId()) {
-                damageTicks.put(damage.entityId(), CLIENT.player.age);
+                damageTicks.put(damage.entityId(), CLIENT.player.tickCount);
             }
             return;
         }
-        if (event.getPacket() instanceof PlayerPositionLookS2CPacket
-                || event.getPacket() instanceof PlayerRespawnS2CPacket) {
+        if (event.getPacket() instanceof ClientboundPlayerPositionPacket
+                || event.getPacket() instanceof ClientboundRespawnPacket) {
             attackTicks.clear();
             damageTicks.clear();
         }

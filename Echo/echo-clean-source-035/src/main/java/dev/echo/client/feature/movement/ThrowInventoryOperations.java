@@ -1,11 +1,11 @@
 package dev.echo.client.feature.movement;
 
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.item.ItemStack;
-import net.minecraft.network.packet.c2s.play.PlayerActionC2SPacket;
-import net.minecraft.util.Hand;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.Direction;
+import net.minecraft.client.Minecraft;
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
+import net.minecraft.network.protocol.game.ServerboundPlayerActionPacket;
+import net.minecraft.world.InteractionHand;
+import net.minecraft.world.item.ItemStack;
 
 /** Inventory mutation shared by the wind-charge/pearl throw features. */
 public final class ThrowInventoryOperations {
@@ -17,11 +17,11 @@ public final class ThrowInventoryOperations {
      * The captured offhand stack is retained by reference, as in both original callers.
      * @param client current client with a live player/network handler
      */
-    public static void swapHands(MinecraftClient client) {
-        ItemStack previousOffhand = client.player.getStackInHand(Hand.OFF_HAND);
-        client.player.networkHandler.sendPacket(new PlayerActionC2SPacket(
-                PlayerActionC2SPacket.Action.SWAP_ITEM_WITH_OFFHAND, BlockPos.ORIGIN, Direction.DOWN));
-        client.player.setStackInHand(Hand.OFF_HAND, client.player.getStackInHand(Hand.MAIN_HAND));
-        client.player.setStackInHand(Hand.MAIN_HAND, previousOffhand);
+    public static void swapHands(Minecraft client) {
+        ItemStack previousOffhand = client.player.getItemInHand(InteractionHand.OFF_HAND);
+        client.player.connection.send(new ServerboundPlayerActionPacket(
+                ServerboundPlayerActionPacket.Action.SWAP_ITEM_WITH_OFFHAND, BlockPos.ZERO, Direction.DOWN));
+        client.player.setItemInHand(InteractionHand.OFF_HAND, client.player.getItemInHand(InteractionHand.MAIN_HAND));
+        client.player.setItemInHand(InteractionHand.MAIN_HAND, previousOffhand);
     }
 }

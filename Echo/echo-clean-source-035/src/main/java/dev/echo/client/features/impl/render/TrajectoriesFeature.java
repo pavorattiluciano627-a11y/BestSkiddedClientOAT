@@ -20,23 +20,24 @@ import dev.echo.client.utils.trajectory.FluidAwareProjectileTrajectories;
 import dev.echo.client.utils.trajectory.ThrownProjectileTrajectories;
 import dev.echo.client.utils.trajectory.WindChargeTrajectories;
 import java.util.List;
-import net.minecraft.entity.Entity;
-import net.minecraft.entity.EntityType;
-import net.minecraft.entity.projectile.FireworkRocketEntity;
-import net.minecraft.entity.projectile.PersistentProjectileEntity;
-import net.minecraft.entity.projectile.thrown.PotionEntity;
-import net.minecraft.item.BowItem;
-import net.minecraft.item.CrossbowItem;
-import net.minecraft.item.Item;
-import net.minecraft.item.ItemStack;
-import net.minecraft.item.Items;
-import net.minecraft.util.hit.BlockHitResult;
-import net.minecraft.util.hit.HitResult;
-import net.minecraft.util.math.ColorHelper;
-import net.minecraft.util.math.Direction;
-import net.minecraft.util.math.MathHelper;
-import net.minecraft.util.math.Vec3d;
-import net.minecraft.world.RaycastContext;
+import net.minecraft.core.Direction;
+import net.minecraft.util.ARGB;
+import net.minecraft.util.Mth;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.EntityTypes;
+import net.minecraft.world.entity.projectile.FireworkRocketEntity;
+import net.minecraft.world.entity.projectile.arrow.AbstractArrow;
+import net.minecraft.world.entity.projectile.throwableitemprojectile.AbstractThrownPotion;
+import net.minecraft.world.item.BowItem;
+import net.minecraft.world.item.CrossbowItem;
+import net.minecraft.world.item.Item;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
+import net.minecraft.world.level.ClipContext;
+import net.minecraft.world.phys.BlockHitResult;
+import net.minecraft.world.phys.HitResult;
+import net.minecraft.world.phys.Vec3;
 
 /** Held-projectile previews and trajectories of projectiles already in the world. */
 public class TrajectoriesFeature extends Feature {
@@ -102,8 +103,8 @@ public class TrajectoriesFeature extends Feature {
         }
         if (showsPearls()) {
             int argb = trajectoryColor(pearlColor);
-            for (Entity entity : client.world.getEntities()) {
-                if (entity.getType() == EntityType.ENDER_PEARL) {
+            for (Entity entity : client.level.entitiesForRendering()) {
+                if (entity.getType() == EntityTypes.ENDER_PEARL) {
                     drawTrajectory(geometry, FluidAwareProjectileTrajectories.fromEntity(entity), argb);
                 }
             }
@@ -114,8 +115,8 @@ public class TrajectoriesFeature extends Feature {
         }
         if (showsPotions()) {
             int argb = trajectoryColor(potionColor);
-            for (Entity entity : client.world.getEntities()) {
-                if (entity instanceof PotionEntity) {
+            for (Entity entity : client.level.entitiesForRendering()) {
+                if (entity instanceof AbstractThrownPotion) {
                     drawTrajectory(geometry, ThrownProjectileTrajectories.fromEntity(entity), argb);
                 }
             }
@@ -126,8 +127,8 @@ public class TrajectoriesFeature extends Feature {
         }
         if (showsWindCharges()) {
             int argb = trajectoryColor(windChargeColor);
-            for (Entity entity : client.world.getEntities()) {
-                if (entity.getType() == EntityType.WIND_CHARGE) {
+            for (Entity entity : client.level.entitiesForRendering()) {
+                if (entity.getType() == EntityTypes.WIND_CHARGE) {
                     drawTrajectory(geometry, WindChargeTrajectories.fromEntity(entity), argb);
                 }
             }
@@ -140,14 +141,14 @@ public class TrajectoriesFeature extends Feature {
             ItemStack crossbow = heldCrossbow();
             if (!crossbow.isEmpty()) {
                 int argb = trajectoryColor(crossbowColor);
-                for (List<Vec3d> path : CrossbowTrajectories.fromPlayer(client.player, crossbow, tickDelta)) {
+                for (List<Vec3> path : CrossbowTrajectories.fromPlayer(client.player, crossbow, tickDelta)) {
                     drawTrajectory(geometry, path, argb);
                 }
             }
         }
         if (showsFireworks()) {
             int argb = trajectoryColor(fireworkColor);
-            for (Entity entity : client.world.getEntities()) {
+            for (Entity entity : client.level.entitiesForRendering()) {
                 if (entity instanceof FireworkRocketEntity firework) {
                     drawTrajectory(geometry, CrossbowTrajectories.fromFirework(firework), argb);
                 }
@@ -155,8 +156,8 @@ public class TrajectoriesFeature extends Feature {
         }
         if (showsArrows()) {
             int argb = trajectoryColor(arrowColor);
-            for (Entity entity : client.world.getEntities()) {
-                if (entity instanceof PersistentProjectileEntity projectile
+            for (Entity entity : client.level.entitiesForRendering()) {
+                if (entity instanceof AbstractArrow projectile
                         && !((PersistentProjectileEntityAccessor) projectile).invokeIsInGround()) {
                     drawTrajectory(geometry, BlockImpactProjectileTrajectories.fromEntity(projectile), argb);
                 }
@@ -168,12 +169,12 @@ public class TrajectoriesFeature extends Feature {
         if (!client.player.isUsingItem()) {
             return 20;
         }
-        ItemStack active = client.player.getActiveItem();
+        ItemStack active = client.player.getUseItem();
         if (!(active.getItem() instanceof BowItem)) {
             return 20;
         }
-        int ticks = active.getMaxUseTime(client.player) - client.player.getItemUseTimeLeft();
-        return MathHelper.clamp(ticks, 0, 20);
+        int ticks = active.getUseDuration(client.player) - client.player.getUseItemRemainingTicks();
+        return Mth.clamp(ticks, 0, 20);
     }
 
     private static boolean showsPearls() { return trajectories.isSelected(PEARL); }
@@ -185,11 +186,11 @@ public class TrajectoriesFeature extends Feature {
     private static boolean showsArrows() { return trajectories.isSelected(ARROW); }
 
     private ItemStack heldCrossbow() {
-        ItemStack mainHand = client.player.getMainHandStack();
+        ItemStack mainHand = client.player.getMainHandItem();
         if (mainHand.getItem() instanceof CrossbowItem) {
             return mainHand;
         }
-        ItemStack offHand = client.player.getOffHandStack();
+        ItemStack offHand = client.player.getOffhandItem();
         return offHand.getItem() instanceof CrossbowItem ? offHand : ItemStack.EMPTY;
     }
 
@@ -198,41 +199,41 @@ public class TrajectoriesFeature extends Feature {
     }
 
     private static boolean holdsItem(Item item) {
-        return client.player.getMainHandStack().getItem() == item
-                || client.player.getOffHandStack().getItem() == item;
+        return client.player.getMainHandItem().getItem() == item
+                || client.player.getOffhandItem().getItem() == item;
     }
 
-    private void drawTrajectory(WorldGeometry geometry, List<Vec3d> path, int argb) {
+    private void drawTrajectory(WorldGeometry geometry, List<Vec3> path, int argb) {
         if (path.size() < 2) {
             return;
         }
         for (int index = 0; index < path.size() - 1; index++) {
-            Vec3d start = path.get(index);
-            Vec3d end = path.get(index + 1);
+            Vec3 start = path.get(index);
+            Vec3 end = path.get(index + 1);
             geometry.drawLine(start.x, start.y, start.z, end.x, end.y, end.z, argb);
         }
-        Vec3d penultimate = path.get(path.size() - 2);
-        Vec3d impact = path.get(path.size() - 1);
-        Vec3d normal = new Vec3d(0.0, 1.0, 0.0);
-        if (client.world != null) {
-            BlockHitResult hit = client.world.raycast(new RaycastContext(penultimate, impact,
-                    RaycastContext.ShapeType.COLLIDER, RaycastContext.FluidHandling.NONE, client.player));
+        Vec3 penultimate = path.get(path.size() - 2);
+        Vec3 impact = path.get(path.size() - 1);
+        Vec3 normal = new Vec3(0.0, 1.0, 0.0);
+        if (client.level != null) {
+            BlockHitResult hit = client.level.clip(new ClipContext(penultimate, impact,
+                    ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, client.player));
             if (hit.getType() != HitResult.Type.MISS) {
-                impact = hit.getPos();
-                Direction side = hit.getSide();
-                normal = new Vec3d(side.getOffsetX(), side.getOffsetY(), side.getOffsetZ());
-                Vec3d towardPrevious = penultimate.subtract(impact);
-                if (towardPrevious.lengthSquared() > 1.0E-6 && normal.dotProduct(towardPrevious) < 0.0) {
-                    normal = normal.multiply(-1.0);
+                impact = hit.getLocation();
+                Direction side = hit.getDirection();
+                normal = new Vec3(side.getStepX(), side.getStepY(), side.getStepZ());
+                Vec3 towardPrevious = penultimate.subtract(impact);
+                if (towardPrevious.lengthSqr() > 1.0E-6 && normal.dot(towardPrevious) < 0.0) {
+                    normal = normal.scale(-1.0);
                 }
             }
         }
-        Vec3d center = impact.add(normal.normalize().multiply(IMPACT_SURFACE_OFFSET));
+        Vec3 center = impact.add(normal.normalize().scale(IMPACT_SURFACE_OFFSET));
         WorldProjection.drawCircle(geometry, center, normal, IMPACT_CIRCLE_RADIUS, IMPACT_CIRCLE_SEGMENTS, argb);
     }
 
     private int trajectoryColor(ColorSetting setting) {
-        return ColorHelper.fromFloats(setting.getAlphaFraction(), setting.getRedFraction(),
+        return ARGB.colorFromFloat(setting.getAlphaFraction(), setting.getRedFraction(),
                 setting.getGreenFraction(), setting.getBlueFraction());
     }
 

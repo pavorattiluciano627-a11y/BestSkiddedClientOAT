@@ -11,14 +11,14 @@ import dev.echo.client.setting.FloatSetting;
 import dev.echo.client.setting.RegistryListSetting;
 import dev.echo.client.setting.specialized.SearchBlockListSetting;
 import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
-import net.minecraft.block.Block;
-import net.minecraft.block.Blocks;
-import net.minecraft.registry.Registries;
-import net.minecraft.util.Identifier;
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.resources.Identifier;
+import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.Blocks;
 
 /** Registers selected block colors with the shared chunk ESP service. */
 public class SearchFeature extends Feature {
-    static RegistryListSetting<Block> blocks = new SearchBlockListSetting(CatalogText.literal("Blocks"), () -> Registries.BLOCK);
+    static RegistryListSetting<Block> blocks = new SearchBlockListSetting(CatalogText.literal("Blocks"), () -> BuiltInRegistries.BLOCK);
     static FloatSetting opacity;
     static BooleanSetting outline;
     static BooleanSetting tracers;
@@ -62,12 +62,12 @@ public class SearchFeature extends Feature {
         Object2IntOpenHashMap<Block> colors = new Object2IntOpenHashMap<>();
         int alpha = Math.round(opacity.getValue() * 255.0f);
         for (Identifier id : blocks.getSelectedIds()) {
-            Registries.ITEM.getEntry(id).ifPresent(entry -> {
-                Block block = Block.getBlockFromItem(entry.value());
+            BuiltInRegistries.ITEM.get(id).ifPresent(entry -> {
+                Block block = Block.byItem(entry.value());
                 if (block == Blocks.AIR) {
                     return;
                 }
-                int color = block.getDefaultMapColor().color;
+                int color = block.defaultMapColor().col;
                 colors.put(block, alpha << 24 | color & 0x00ffffff);
             });
         }

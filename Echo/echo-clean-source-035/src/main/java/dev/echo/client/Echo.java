@@ -28,9 +28,9 @@ import dev.echo.render.opengl.OpenGlDevice;
 import net.fabricmc.api.ModInitializer;
 import net.fabricmc.fabric.api.resource.ResourceManagerHelper;
 import net.fabricmc.fabric.api.resource.SimpleSynchronousResourceReloadListener;
-import net.minecraft.resource.ResourceManager;
-import net.minecraft.resource.ResourceType;
-import net.minecraft.util.Identifier;
+import net.minecraft.resources.Identifier;
+import net.minecraft.server.packs.PackType;
+import net.minecraft.server.packs.resources.ResourceManager;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -73,7 +73,7 @@ public class Echo implements ModInitializer, SimpleSynchronousResourceReloadList
     @Override
     public void onInitialize() {
         instance = this;
-        ResourceManagerHelper.get(ResourceType.CLIENT_RESOURCES).registerReloadListener(this);
+        ResourceManagerHelper.get(PackType.CLIENT_RESOURCES).registerReloadListener(this);
         EventBus.register(this);
         EventBus.register(DashboardController.INSTANCE);
     }
@@ -100,7 +100,7 @@ public class Echo implements ModInitializer, SimpleSynchronousResourceReloadList
 
     /** Initializes renderer consumers and then completes the deferred autosave load. */
     @Override
-    public void reload(ResourceManager resources) {
+    public void onResourceManagerReload(ResourceManager resources) {
         initializeReferencedClass(UiRenderer.class);
         if (uiRenderer != null) {
             return;
@@ -135,7 +135,7 @@ public class Echo implements ModInitializer, SimpleSynchronousResourceReloadList
     /** Returns the resource-reload listener's existing compatibility identifier. */
     @Override
     public Identifier getFabricId() {
-        return Identifier.of("echo", "echo");
+        return Identifier.fromNamespaceAndPath("echo", "echo");
     }
 
     /**

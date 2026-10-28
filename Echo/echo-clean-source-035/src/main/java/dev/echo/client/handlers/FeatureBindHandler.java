@@ -26,7 +26,7 @@ public class FeatureBindHandler extends ClientHandler {
         if (!pressed && event.getAction() != GLFW.GLFW_RELEASE) {
             return;
         }
-        if (pressed && CLIENT.currentScreen != null) {
+        if (pressed && CLIENT.gui.screen() != null) {
             return;
         }
         for (Feature feature : Echo.featureManager.getFeatures()) {
@@ -47,7 +47,7 @@ public class FeatureBindHandler extends ClientHandler {
 
     @Subscribe
     public void onTick(ClientTickEvent event) {
-        if (CLIENT.currentScreen != null || Echo.featureManager == null) {
+        if (CLIENT.gui.screen() != null || Echo.featureManager == null) {
             return;
         }
         Map<Integer, Boolean> currentMouseStates = new HashMap<>();

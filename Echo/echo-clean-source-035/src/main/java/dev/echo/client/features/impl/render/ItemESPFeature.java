@@ -28,16 +28,16 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Queue;
 import java.util.Set;
-import net.minecraft.client.render.Frustum;
-import net.minecraft.entity.Entity;
-import net.minecraft.entity.ItemEntity;
-import net.minecraft.item.Item;
-import net.minecraft.item.ItemStack;
-import net.minecraft.item.Items;
-import net.minecraft.registry.Registry;
-import net.minecraft.util.Identifier;
-import net.minecraft.util.math.Box;
-import net.minecraft.util.math.Vec3d;
+import net.minecraft.client.renderer.culling.Frustum;
+import net.minecraft.core.Registry;
+import net.minecraft.resources.Identifier;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.item.ItemEntity;
+import net.minecraft.world.item.Item;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
+import net.minecraft.world.phys.AABB;
+import net.minecraft.world.phys.Vec3;
 
 /** Dropped-item highlighting and settings preview; see the conditional source contract. */
 public class ItemESPFeature extends Feature {
@@ -91,13 +91,13 @@ public class ItemESPFeature extends Feature {
     @Subscribe
     public void onWorldRender(WorldRenderEvent event) {
         FreecamFeature.isPerspectiveRefreshBypassed();
-        if (client.world == null) return;
+        if (client.level == null) return;
         OverlayWorldGeometry geometry = event.getRenderContext().getOverlayGeometry();
         UiRenderer renderer = Echo.uiRenderer;
         float tickProgress = event.getTickProgress();
-        Vec3d camera = MinecraftRenderState.getCamera(client).getCameraPos();
+        Vec3 camera = MinecraftRenderState.getCamera(client).position();
         Frustum frustum = new Frustum(event.getViewMatrix(), event.getProjectionMatrix());
-        frustum.setPosition(camera.x, camera.y, camera.z);
+        frustum.prepare(camera.x, camera.y, camera.z);
         boolean boxes = modes.isSelected(BOX_MODE);
         boolean twoDimensional = modes.isSelected(TWO_DIMENSIONAL_MODE);
         boolean names = showName.getValue();
@@ -107,29 +107,29 @@ public class ItemESPFeature extends Feature {
         int borderColor = 0xFF000000;
         float borderWidth = 0.5f;
 
-        for (Entity entity : client.world.getEntities()) {
+        for (Entity entity : client.level.entitiesForRendering()) {
             if (!(entity instanceof ItemEntity item)) continue;
-            ItemStack stack = item.getStack();
+            ItemStack stack = item.getItem();
             if (stack.isEmpty()) continue;
             if (filterItems && !whitelist.isEntrySelected(stack.getItem())) continue;
-            Vec3d position = item.getLerpedPos(tickProgress);
-            Box bounds = item.getBoundingBox();
-            double width = bounds.getLengthX();
-            double height = bounds.getLengthY();
-            double depth = bounds.getLengthZ();
+            Vec3 position = item.getPosition(tickProgress);
+            AABB bounds = item.getBoundingBox();
+            double width = bounds.getXsize();
+            double height = bounds.getYsize();
+            double depth = bounds.getZsize();
             double x = position.x - width / 2.0;
             double y = position.y;
             double z = position.z - depth / 2.0;
             if (boxes) {
                 geometry.drawBox(x, y, z, width, height, depth, fillColor);
                 WorldProjection.drawBoxOutline(geometry,
-                        new Box(x, y, z, x + width, y + height, z + depth), outlineColor);
+                        new AABB(x, y, z, x + width, y + height, z + depth), outlineColor);
             }
             if (tracers.getValue()) {
                 geometry.drawTracer(position.x, position.y + height / 2.0, position.z, outlineColor);
             }
             if (!twoDimensional && !names) continue;
-            Box interpolatedBounds = new Box(x, y, z, x + width, y + height, z + depth);
+            AABB interpolatedBounds = new AABB(x, y, z, x + width, y + height, z + depth);
             if (!frustum.isVisible(interpolatedBounds)) continue;
             ProjectedBounds projected = WorldProjection.projectBox(event, interpolatedBounds);
             if (!projected.visible) continue;
@@ -206,7 +206,7 @@ public class ItemESPFeature extends Feature {
             if (emptyItemName == null) emptyItemName = new String("No items selected");
             return emptyItemName;
         }
-        String name = stack.getName().getString();
+        String name = stack.getHoverName().getString();
         if (stack.getCount() > 1) {
             if (countSeparator == null) countSeparator = new String(" x");
             return name + countSeparator + stack.getCount();
@@ -227,7 +227,7 @@ public class ItemESPFeature extends Feature {
         } else {
             Registry<Item> registry = whitelist.getRegistry();
             Objects.requireNonNull(registry);
-            previewItems = selected.stream().map(registry::get).filter(Objects::nonNull)
+            previewItems = selected.stream().map(registry::getValue).filter(Objects::nonNull)
                     .limit(PREVIEW_LIMIT).map(ItemStack::new).toList();
         }
         return previewItems;

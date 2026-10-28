@@ -8,7 +8,7 @@ import dev.echo.client.features.FeatureInfo;
 import dev.echo.client.screens.ScreenManager;
 import dev.echo.client.setting.TextSetting;
 import java.util.Optional;
-import net.minecraft.component.type.ProfileComponent;
+import net.minecraft.world.item.component.ResolvableProfile;
 
 /** Local display-name substitution preserving nonblocking local-player skin selection. */
 public class ProtectFeature extends Feature {
@@ -25,7 +25,7 @@ public class ProtectFeature extends Feature {
         if (replacement.isEmpty()) {
             return;
         }
-        String username = client.getSession().getUsername();
+        String username = client.getUser().getName();
         if (username.isEmpty() || username.equals(replacement)) {
             return;
         }
@@ -38,12 +38,12 @@ public class ProtectFeature extends Feature {
         if (profileName.isEmpty() || ScreenManager.focusedSetting == skin) {
             return;
         }
-        if (!client.uuidEquals(event.playerId)) {
+        if (!client.isLocalPlayer(event.playerId)) {
             return;
         }
-        client.getPlayerSkinCache().getFuture(ProfileComponent.ofDynamic(profileName))
+        client.playerSkinRenderCache().lookup(ResolvableProfile.createUnresolved(profileName))
                 .getNow(Optional.empty())
-                .ifPresent(entry -> event.textures = entry.getTextures());
+                .ifPresent(entry -> event.textures = entry.playerSkin());
     }
 
 }

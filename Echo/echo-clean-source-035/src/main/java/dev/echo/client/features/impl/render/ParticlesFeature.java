@@ -19,8 +19,8 @@ import dev.echo.client.utils.RandomMath;
 import java.lang.invoke.MethodHandles;
 import java.util.ArrayList;
 import java.util.Objects;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.util.math.BlockPos;
+import net.minecraft.client.Minecraft;
+import net.minecraft.core.BlockPos;
 
 /** Ambient ember producer. Binding/cache and lifecycle domains accompany this candidate. */
 public class ParticlesFeature extends Feature {
@@ -159,11 +159,11 @@ public class ParticlesFeature extends Feature {
             if (remaining <= 0) return;
             spawnCount = Math.min(remaining, Math.max(1, desiredCount / 40));
         }
-        initializeReferencedClass(MinecraftClient.class);
+        initializeReferencedClass(Minecraft.class);
         double playerX = client.player.getX();
-        initializeReferencedClass(MinecraftClient.class);
+        initializeReferencedClass(Minecraft.class);
         double playerY = client.player.getY();
-        initializeReferencedClass(MinecraftClient.class);
+        initializeReferencedClass(Minecraft.class);
         double playerZ = client.player.getZ();
         initializeReferencedClass(IntSetting.class);
         IntSetting radiusSetting = radius;
@@ -178,8 +178,8 @@ public class ParticlesFeature extends Feature {
                 // The alternate control state consumes these three draws, then leaves both loops.
                 if (!checkAvailability) return;
                 double z = playerZ + Math.sin(angle) * distance;
-                initializeReferencedClass(MinecraftClient.class);
-                if (!client.world.getBlockState(BlockPos.ofFloored(x, y, z)).isAir()) continue;
+                initializeReferencedClass(Minecraft.class);
+                if (!client.level.getBlockState(BlockPos.containing(x, y, z)).isAir()) continue;
                 AnimatedParticle particle = new AnimatedParticle(x, y, z);
                 initializeReferencedClass(ArrayList.class);
                 particles.add(particle);

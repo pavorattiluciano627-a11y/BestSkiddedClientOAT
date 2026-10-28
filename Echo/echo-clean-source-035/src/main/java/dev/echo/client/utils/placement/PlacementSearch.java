@@ -8,18 +8,18 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.function.Predicate;
-import net.minecraft.entity.LivingEntity;
-import net.minecraft.item.ItemStack;
-import net.minecraft.util.hit.BlockHitResult;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.Box;
-import net.minecraft.util.math.Direction;
-import net.minecraft.util.math.MathHelper;
-import net.minecraft.util.math.Vec3d;
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
+import net.minecraft.util.Mth;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.phys.AABB;
+import net.minecraft.world.phys.BlockHitResult;
+import net.minecraft.world.phys.Vec3;
 
 /** Shared placement geometry/planning in the original null-marker control domain. */
 public abstract class PlacementSearch implements MinecraftAccess {
-    public abstract List<PlacementFilter> plan(LivingEntity target, Vec3d displacement);
+    public abstract List<PlacementFilter> plan(LivingEntity target, Vec3 displacement);
 
     public boolean allowsPartialSupport() {
         return false;
@@ -31,21 +31,21 @@ public abstract class PlacementSearch implements MinecraftAccess {
         return true;
     }
 
-    public List<PlacementFilter> planPredicted(LivingEntity target, Vec3d displacement) {
-        Vec3d direction = new Vec3d(displacement.x, 0.0, displacement.z).normalize();
-        double pathLength = displacement.horizontalLength();
-        Box original = target.getBoundingBox().contract(1.0E-4);
-        int supportY = PlacementBounds.around(target, Vec3d.ZERO, PlacementWorldQueries::isReplaceable).minY();
-        Vec3d playerPosition = CLIENT.player.getEntityPos();
+    public List<PlacementFilter> planPredicted(LivingEntity target, Vec3 displacement) {
+        Vec3 direction = new Vec3(displacement.x, 0.0, displacement.z).normalize();
+        double pathLength = displacement.horizontalDistance();
+        AABB original = target.getBoundingBox().deflate(1.0E-4);
+        int supportY = PlacementBounds.around(target, Vec3.ZERO, PlacementWorldQueries::isReplaceable).minY();
+        Vec3 playerPosition = CLIENT.player.position();
         List<BlockPos> candidates = new ArrayList<>();
         Set<BlockPos> seen = new HashSet<>();
         for (double distance = 0.25; distance <= pathLength + 5.0; distance += 0.25) {
-            List<BlockPos> frontier = newlyCoveredCells(original, original.offset(direction.multiply(distance)), supportY);
+            List<BlockPos> frontier = newlyCoveredCells(original, original.move(direction.scale(distance)), supportY);
             BlockPos obstruction = frontier.stream().filter(position -> !PlacementWorldQueries.isReplaceable(position))
                     .findFirst().orElse(null);
             if (obstruction != null) {
-                if (includeRaisedPathPosition() && PlacementWorldQueries.isReplaceable(obstruction.up())) {
-                    return List.of(new PlacementFilter(obstruction.up(), stackFilter()));
+                if (includeRaisedPathPosition() && PlacementWorldQueries.isReplaceable(obstruction.above())) {
+                    return List.of(new PlacementFilter(obstruction.above(), stackFilter()));
                 }
                 List<BlockPos> forward = frontier.stream().filter(PlacementWorldQueries::isReplaceable)
                         .filter(position -> (position.getX() - obstruction.getX()) * direction.x
@@ -63,31 +63,31 @@ public abstract class PlacementSearch implements MinecraftAccess {
                 candidates.add(position);
             }
         }
-        List<PlacementFilter> result = candidates.isEmpty() ? plan(target, Vec3d.ZERO) : pathPlacements(candidates, playerPosition);
+        List<PlacementFilter> result = candidates.isEmpty() ? plan(target, Vec3.ZERO) : pathPlacements(candidates, playerPosition);
         if (Event.getEventCounterFallbackValue() == 0) {
             PlacementStackPredicates.setTypeCheckBypassMarker("wF4Oxb");
         }
         return result;
     }
 
-    private List<PlacementFilter> pathPlacements(List<BlockPos> positions, Vec3d origin) {
+    private List<PlacementFilter> pathPlacements(List<BlockPos> positions, Vec3 origin) {
         List<PlacementFilter> result = new ArrayList<>();
         positions.stream().sorted(Comparator.comparingDouble(position -> PlacementDistances.horizontalSquaredDistance(position, origin)))
                 .forEach(position -> {
                     result.add(new PlacementFilter(position, stackFilter()));
                     if (includeRaisedPathPosition()) {
-                        result.add(new PlacementFilter(position.up(), stackFilter()));
+                        result.add(new PlacementFilter(position.above(), stackFilter()));
                     }
                 });
         return result;
     }
 
-    private static List<BlockPos> newlyCoveredCells(Box original, Box shifted, int y) {
+    private static List<BlockPos> newlyCoveredCells(AABB original, AABB shifted, int y) {
         List<BlockPos> result = new ArrayList<>();
-        for (int x = MathHelper.floor(shifted.minX); x <= MathHelper.floor(shifted.maxX); x++) {
-            for (int z = MathHelper.floor(shifted.minZ); z <= MathHelper.floor(shifted.maxZ); z++) {
-                boolean insideOriginal = x >= MathHelper.floor(original.minX) && x <= MathHelper.floor(original.maxX)
-                        && z >= MathHelper.floor(original.minZ) && z <= MathHelper.floor(original.maxZ);
+        for (int x = Mth.floor(shifted.minX); x <= Mth.floor(shifted.maxX); x++) {
+            for (int z = Mth.floor(shifted.minZ); z <= Mth.floor(shifted.maxZ); z++) {
+                boolean insideOriginal = x >= Mth.floor(original.minX) && x <= Mth.floor(original.maxX)
+                        && z >= Mth.floor(original.minZ) && z <= Mth.floor(original.maxZ);
                 if (!insideOriginal) {
                     result.add(new BlockPos(x, y, z));
                 }
@@ -112,7 +112,7 @@ public abstract class PlacementSearch implements MinecraftAccess {
     protected static List<BlockPos> perimeterAt(PlacementBounds bounds, int y) {
         List<BlockPos> result = new ArrayList<>();
         for (BlockPos base : perimeter(bounds)) {
-            BlockPos position = base.withY(y);
+            BlockPos position = base.atY(y);
             if (PlacementWorldQueries.isReplaceable(position)) {
                 result.add(position);
             }
@@ -122,10 +122,10 @@ public abstract class PlacementSearch implements MinecraftAccess {
 
     protected static List<BlockPos> roof(PlacementBounds bounds) {
         List<BlockPos> result = new ArrayList<>();
-        for (BlockPos position : BlockPos.iterate(bounds.minX(), bounds.aboveTop(), bounds.minZ(),
+        for (BlockPos position : BlockPos.betweenClosed(bounds.minX(), bounds.aboveTop(), bounds.minZ(),
                 bounds.maxX(), bounds.aboveTop(), bounds.maxZ())) {
             if (PlacementWorldQueries.isReplaceable(position)) {
-                result.add(position.toImmutable());
+                result.add(position.immutable());
             }
         }
         return result;
@@ -135,12 +135,12 @@ public abstract class PlacementSearch implements MinecraftAccess {
         return positions.stream().anyMatch(position -> PlacementTargets.find(position, true, allowsPartialSupport(), true) != null);
     }
 
-    protected static boolean hasAdjacentVisibleFace(BlockPos position, List<BlockPos> adjacent, Vec3d eye) {
-        for (Direction side : Direction.Type.HORIZONTAL) {
-            if (!adjacent.contains(position.offset(side))) {
+    protected static boolean hasAdjacentVisibleFace(BlockPos position, List<BlockPos> adjacent, Vec3 eye) {
+        for (Direction side : Direction.Plane.HORIZONTAL) {
+            if (!adjacent.contains(position.relative(side))) {
                 continue;
             }
-            Vec3d point = Vec3d.ofCenter(position).offset(side, 0.5);
+            Vec3 point = Vec3.atCenterOf(position).relative(side, 0.5);
             if (PlacementRaycasts.facesEye(new BlockHitResult(point, side, position, false), eye)) {
                 return true;
             }

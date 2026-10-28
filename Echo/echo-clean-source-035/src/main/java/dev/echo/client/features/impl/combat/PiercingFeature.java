@@ -15,20 +15,20 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
-import net.minecraft.block.Block;
-import net.minecraft.client.network.ClientPlayerEntity;
-import net.minecraft.entity.Entity;
-import net.minecraft.entity.LivingEntity;
-import net.minecraft.item.BlockItem;
-import net.minecraft.item.Item;
-import net.minecraft.predicate.entity.EntityPredicates;
-import net.minecraft.registry.Registries;
-import net.minecraft.util.Hand;
-import net.minecraft.util.hit.BlockHitResult;
-import net.minecraft.util.hit.HitResult;
-import net.minecraft.util.math.Box;
-import net.minecraft.util.math.Vec3d;
-import net.minecraft.world.RaycastContext;
+import net.minecraft.client.player.LocalPlayer;
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.world.InteractionHand;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.EntitySelector;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.item.BlockItem;
+import net.minecraft.world.item.Item;
+import net.minecraft.world.level.ClipContext;
+import net.minecraft.world.level.block.Block;
+import net.minecraft.world.phys.AABB;
+import net.minecraft.world.phys.BlockHitResult;
+import net.minecraft.world.phys.HitResult;
+import net.minecraft.world.phys.Vec3;
 
 /** Replaces crosshair hits with eligible living targets behind intervening entities. */
 public final class PiercingFeature extends Feature {
@@ -37,7 +37,7 @@ public final class PiercingFeature extends Feature {
     public static BooleanSetting interact;
     public static ChoiceSetting sortTargetsBy;
     public static RegistryListSetting<Block> holdingBlock =
-            new PiercingBlockSelectionSetting(dev.echo.client.bootstrap.CatalogText.literal("Holding Block"), () -> Registries.BLOCK);
+            new PiercingBlockSelectionSetting(dev.echo.client.bootstrap.CatalogText.literal("Holding Block"), () -> BuiltInRegistries.BLOCK);
 
     /** Creates the feature; the shared target policy is consulted at each candidate. */
     public PiercingFeature() {
@@ -50,14 +50,14 @@ public final class PiercingFeature extends Feature {
         if (isOutsideWorld()) {
             return;
         }
-        if (interact.getValue() && client.options.useKey.isPressed() && interactionHand() != null) {
+        if (interact.getValue() && client.options.keyUse.isDown() && interactionHand() != null) {
             BlockHitResult hit = interactionBlockHit();
             if (hit != null && hit.getType() == HitResult.Type.BLOCK) {
                 event.target = hit;
             }
             return;
         }
-        if (client.player.isUsingItem() || client.options.useKey.isPressed()) {
+        if (client.player.isUsingItem() || client.options.keyUse.isDown()) {
             return;
         }
         PiercingRay ray = attackRay();
@@ -70,14 +70,14 @@ public final class PiercingFeature extends Feature {
         }
     }
 
-    private Hand interactionHand() {
-        Item mainItem = client.player.getMainHandStack().getItem();
-        Item offhandItem = client.player.getOffHandStack().getItem();
+    private InteractionHand interactionHand() {
+        Item mainItem = client.player.getMainHandItem().getItem();
+        Item offhandItem = client.player.getOffhandItem().getItem();
         if (mainItem instanceof BlockItem blockItem && holdingBlock.isEntrySelected(blockItem.getBlock())) {
-            return Hand.MAIN_HAND;
+            return InteractionHand.MAIN_HAND;
         }
         if (offhandItem instanceof BlockItem blockItem && holdingBlock.isEntrySelected(blockItem.getBlock())) {
-            return Hand.OFF_HAND;
+            return InteractionHand.OFF_HAND;
         }
         return null;
     }
@@ -91,19 +91,19 @@ public final class PiercingFeature extends Feature {
         if (isOutsideWorld()) {
             return null;
         }
-        ClientPlayerEntity player = client.player;
-        Vec3d eye = player.getCameraPosVec(1.0F);
-        return new PiercingRay(player, eye, eye.add(player.getRotationVec(1.0F).multiply(attackRayLength(player))));
+        LocalPlayer player = client.player;
+        Vec3 eye = player.getEyePosition(1.0F);
+        return new PiercingRay(player, eye, eye.add(player.getViewVector(1.0F).scale(attackRayLength(player))));
     }
 
-    private double attackRayLength(ClientPlayerEntity player) {
-        double attackReach = player.getAttackRange().getEffectiveMaxRange(player);
-        return Math.max(attackReach, player.getBlockInteractionRange());
+    private double attackRayLength(LocalPlayer player) {
+        double attackReach = player.getAttackRangeWith(player.getMainHandItem()).effectiveMaxRange(player);
+        return Math.max(attackReach, player.blockInteractionRange());
     }
 
     private double maximumAttackDistanceSquared(PiercingRay ray) {
-        ClientPlayerEntity player = ray.player();
-        double reach = player.getAttackRange().getEffectiveMaxRange(player);
+        LocalPlayer player = ray.player();
+        double reach = player.getAttackRangeWith(player.getMainHandItem()).effectiveMaxRange(player);
         double maximum = reach * reach;
         if (blocks.getValue()) {
             return maximum;
@@ -112,7 +112,7 @@ public final class PiercingFeature extends Feature {
         if (hit.getType() == HitResult.Type.MISS) {
             return maximum;
         }
-        double hitDistance = ray.start().squaredDistanceTo(hit.getPos());
+        double hitDistance = ray.start().distanceToSqr(hit.getLocation());
         return hitDistance < maximum ? hitDistance : maximum;
     }
 
@@ -125,34 +125,34 @@ public final class PiercingFeature extends Feature {
         if (isOutsideWorld()) {
             return null;
         }
-        ClientPlayerEntity player = client.player;
-        Vec3d eye = player.getCameraPosVec(1.0F);
-        Vec3d end = eye.add(player.getRotationVec(1.0F).multiply(player.getBlockInteractionRange()));
+        LocalPlayer player = client.player;
+        Vec3 eye = player.getEyePosition(1.0F);
+        Vec3 end = eye.add(player.getViewVector(1.0F).scale(player.blockInteractionRange()));
         return new PiercingRay(player, eye, end);
     }
 
     private BlockHitResult raycastBlocks(PiercingRay ray) {
-        return client.world.raycast(new RaycastContext(ray.start(), ray.end(), RaycastContext.ShapeType.OUTLINE,
-                RaycastContext.FluidHandling.NONE, ray.player()));
+        return client.level.clip(new ClipContext(ray.start(), ray.end(), ClipContext.Block.OUTLINE,
+                ClipContext.Fluid.NONE, ray.player()));
     }
 
     private List<PiercingTarget> collectTargets(PiercingRay ray, double maximumDistanceSquared) {
         List<PiercingTarget> targets = new ArrayList<>();
-        Box search = ray.player().getBoundingBox().stretch(ray.end().subtract(ray.start())).expand(1.0, 1.0, 1.0);
-        for (Entity entity : client.world.getOtherEntities(ray.player(), search, EntityPredicates.CAN_HIT)) {
+        AABB search = ray.player().getBoundingBox().expandTowards(ray.end().subtract(ray.start())).inflate(1.0, 1.0, 1.0);
+        for (Entity entity : client.level.getEntities(ray.player(), search, EntitySelector.CAN_BE_PICKED)) {
             if (!(entity instanceof LivingEntity living) || !TargetSelection.isValidTarget(living)) {
                 continue;
             }
-            Box bounds = entity.getBoundingBox().expand(entity.getTargetingMargin());
-            Optional<Vec3d> intersection = bounds.raycast(ray.start(), ray.end());
+            AABB bounds = entity.getBoundingBox().inflate(entity.getPickRadius());
+            Optional<Vec3> intersection = bounds.clip(ray.start(), ray.end());
             if (intersection.isEmpty()) {
                 continue;
             }
-            Vec3d position = intersection.get();
-            if (ray.start().squaredDistanceTo(position) > maximumDistanceSquared) {
+            Vec3 position = intersection.get();
+            if (ray.start().distanceToSqr(position) > maximumDistanceSquared) {
                 continue;
             }
-            if (!ray.player().getAttackRange().isWithinRange(ray.player(), position)) {
+            if (!ray.player().getAttackRangeWith(ray.player().getMainHandItem()).isInRange(ray.player(), position)) {
                 continue;
             }
             targets.add(new PiercingTarget(living, position));

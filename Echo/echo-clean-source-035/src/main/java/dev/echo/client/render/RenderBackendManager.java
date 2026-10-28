@@ -18,7 +18,7 @@ import dev.echo.render.texture.TextureView;
 import dev.echo.render.vulkan.VulkanDevice;
 import dev.echo.render.vulkan.VulkanSurface;
 import java.util.OptionalInt;
-import net.minecraft.client.MinecraftClient;
+import net.minecraft.client.Minecraft;
 
 /**
  * Structured backend lifecycle reconstruction. Constructor key/control and shared
@@ -73,8 +73,8 @@ public final class RenderBackendManager implements AutoCloseable {
 
     public void renderFrame() {
         boolean visible = Echo.externalRendererActive
-                && MinecraftClient.getInstance().world != null
-                && !MinecraftClient.getInstance().getWindow().isMinimized();
+                && Minecraft.getInstance().level != null
+                && !Minecraft.getInstance().getWindow().isIconified();
         window.setVisible(visible);
         if (!visible) {
             return;
@@ -134,7 +134,7 @@ public final class RenderBackendManager implements AutoCloseable {
         if (!presentationIntegrationAvailable) {
             return PresentMode.IMMEDIATE;
         }
-        return MinecraftClient.getInstance().options.getEnableVsync().getValue()
+        return Minecraft.getInstance().options.enableVsync().get()
                 ? PresentMode.FIFO : PresentMode.IMMEDIATE;
     }
 

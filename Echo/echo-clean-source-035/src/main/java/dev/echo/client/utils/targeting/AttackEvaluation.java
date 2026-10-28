@@ -1,6 +1,6 @@
 package dev.echo.client.utils.targeting;
 
-import net.minecraft.entity.Entity;
+import net.minecraft.world.entity.Entity;
 
 /** Candidate kinetic contact result; boolean order follows the constructor call. */
 public record AttackEvaluation(Entity target, boolean damage, boolean knockback,

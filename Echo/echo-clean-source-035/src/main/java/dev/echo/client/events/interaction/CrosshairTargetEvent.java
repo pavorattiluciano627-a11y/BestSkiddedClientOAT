@@ -1,7 +1,7 @@
 package dev.echo.client.events.interaction;
 
 import dev.echo.client.events.Event;
-import net.minecraft.util.hit.HitResult;
+import net.minecraft.world.phys.HitResult;
 
 /** Allows subscribers to replace the result of the crosshair-target query. */
 public class CrosshairTargetEvent extends Event {

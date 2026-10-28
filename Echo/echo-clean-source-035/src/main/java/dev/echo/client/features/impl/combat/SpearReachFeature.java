@@ -14,12 +14,12 @@ import dev.echo.client.utils.items.InventoryItems;
 import dev.echo.client.utils.items.ItemProperties;
 import dev.echo.client.utils.targeting.EntityRaycasts;
 import dev.echo.client.utils.targeting.WeaponAttributes;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.enchantment.Enchantments;
-import net.minecraft.item.Item;
-import net.minecraft.item.ItemStack;
-import net.minecraft.registry.RegistryKey;
-import net.minecraft.util.hit.EntityHitResult;
+import net.minecraft.client.Minecraft;
+import net.minecraft.resources.ResourceKey;
+import net.minecraft.world.item.Item;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.enchantment.Enchantments;
+import net.minecraft.world.phys.EntityHitResult;
 
 /** Temporarily selects a non-Lunge spear and performs its longer-range attack. */
 public class SpearReachFeature extends Feature {
@@ -49,7 +49,7 @@ public class SpearReachFeature extends Feature {
 
     private int findSpearSlot() {
         try {
-            Class.forName(MinecraftClient.class.getName(), true, MinecraftClient.class.getClassLoader());
+            Class.forName(Minecraft.class.getName(), true, Minecraft.class.getClassLoader());
         } catch (ClassNotFoundException failure) {
             throw new IllegalStateException("Resolved class initialization failed", failure);
         }
@@ -72,7 +72,7 @@ public class SpearReachFeature extends Feature {
             throw new IllegalStateException("Resolved class initialization failed", failure);
         }
         try {
-            Class.forName(RegistryKey.class.getName(), true, RegistryKey.class.getClassLoader());
+            Class.forName(ResourceKey.class.getName(), true, ResourceKey.class.getClassLoader());
         } catch (ClassNotFoundException failure) {
             throw new IllegalStateException("Resolved class initialization failed", failure);
         }
@@ -83,7 +83,7 @@ public class SpearReachFeature extends Feature {
     private boolean isHoldingSelectableSpear() {
         String[] controlState = readSharedControlState();
         if (controlState == null && client.player == null) return false;
-        ItemStack stack = client.player.getMainHandStack();
+        ItemStack stack = client.player.getMainHandItem();
         if (controlState == null && stack.isEmpty()) return false;
         if (!InventoryItems.isSpear(stack.getItem())) return false;
         boolean hasLunge = ItemProperties.hasEnchantment(stack, Enchantments.LUNGE);
@@ -141,7 +141,7 @@ public class SpearReachFeature extends Feature {
         }
         if (gate) return ItemStack.EMPTY;
         int slot = findSpearSlot();
-        return slot == -1 ? ItemStack.EMPTY : client.player.getInventory().getStack(slot);
+        return slot == -1 ? ItemStack.EMPTY : client.player.getInventory().getItem(slot);
     }
 
     @Override
@@ -154,7 +154,7 @@ public class SpearReachFeature extends Feature {
         String[] controlState = readSharedControlState();
         if (controlState == null && !isEnabled()) return null;
         if (isOutsideWorld()) return null;
-        if (MinecraftClient.getInstance().currentScreen != null) return null;
+        if (Minecraft.getInstance().gui.screen() != null) return null;
         boolean gate = client.isPaused();
         int slot;
         if (controlState == null) {
@@ -168,7 +168,7 @@ public class SpearReachFeature extends Feature {
             slot = gate ? 1 : 0;
         }
         if (slot == -1) return null;
-        ItemStack spear = client.player.getInventory().getStack(slot);
+        ItemStack spear = client.player.getInventory().getItem(slot);
         EntityHitResult hit = EntityRaycasts.raycastWithStackRange(client.player, spear);
         if (hit == null) return null;
         boolean paperSupport = paperMCSupport.getValue();

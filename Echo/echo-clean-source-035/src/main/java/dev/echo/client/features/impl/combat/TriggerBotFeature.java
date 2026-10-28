@@ -19,12 +19,12 @@ import dev.echo.client.utils.strings.Concat;
 import dev.echo.client.utils.targeting.EntityPredicates;
 import dev.echo.client.utils.targeting.EntityRaycasts;
 import dev.echo.client.utils.targeting.TargetSelection;
-import net.minecraft.entity.LivingEntity;
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.network.packet.Packet;
-import net.minecraft.network.packet.s2c.play.PlayerPositionLookS2CPacket;
-import net.minecraft.network.packet.s2c.play.PlayerRespawnS2CPacket;
-import net.minecraft.util.hit.EntityHitResult;
+import net.minecraft.network.protocol.Packet;
+import net.minecraft.network.protocol.game.ClientboundPlayerPositionPacket;
+import net.minecraft.network.protocol.game.ClientboundRespawnPacket;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.phys.EntityHitResult;
 
 /** Adds attack clicks after target acquisition, cooldown, reaction and critical-hit checks. */
 public class TriggerBotFeature extends Feature {
@@ -120,7 +120,7 @@ public class TriggerBotFeature extends Feature {
             resetTargetAcquisition();
             return;
         }
-        double squaredDistance = client.player.getEyePos().squaredDistanceTo(hit.getPos());
+        double squaredDistance = client.player.getEyePosition().distanceToSqr(hit.getLocation());
         if (distance > 0.0f && squaredDistance > (double) (distance * distance)) {
             resetTargetAcquisition();
             return;
@@ -140,27 +140,27 @@ public class TriggerBotFeature extends Feature {
             reactionDelayMillis = (long) reactionDelay.sampleGaussian();
         }
         if (hurtTimeCheck.getValue() && AttackCooldownTracker.hasAttackCooldown(target)) return;
-        if (target.isDead() || !target.isAlive()) return;
-        if (target instanceof PlayerEntity player && !attackShields.getValue()
+        if (target.isDeadOrDying() || !target.isAlive()) return;
+        if (target instanceof Player player && !attackShields.getValue()
                 && EntityPredicates.isBlocking(player) && !EntityPredicates.isOutsideBlockingArc(player)) return;
         float tickProgress = (float) sampledAttackCooldown - (float) AttackCooldownTracker.confirmedDamageDelayTicks(target);
-        if ((double) client.player.getAttackCooldownProgress(tickProgress) < sampledAttackCooldown) return;
+        if ((double) client.player.getAttackStrengthScale(tickProgress) < sampledAttackCooldown) return;
         if (!reactionTimer.hasElapsedMillis((double) reactionDelayMillis)) return;
         if (!attackTimer.hasElapsedMillis((double) attackDelayMillis)) return;
-        if (lastAttackTick == (long) client.player.age) return;
+        if (lastAttackTick == (long) client.player.tickCount) return;
         if (!allowsCriticalTiming(squaredDistance)) return;
         if (noSweepOrPickHits.getValue() && (EntityRaycasts.wouldSweepAttack() || EntityRaycasts.wouldPickHit())) return;
         event.addClick();
         attackTimer.reset();
         attackDelayMillis = (long) attackDelay.sampleGaussian();
         sampleAttackCooldown();
-        lastAttackTick = client.player.age;
+        lastAttackTick = client.player.tickCount;
     }
 
     private EntityHitResult findAttackTarget(float distance) {
         EntityHitResult hit;
         if (distance == 0.0f) {
-            hit = client.crosshairTarget instanceof EntityHitResult entityHit ? entityHit : null;
+            hit = client.hitResult instanceof EntityHitResult entityHit ? entityHit : null;
         } else {
             hit = EntityRaycasts.raycastEntity(client.player, distance);
         }
@@ -184,14 +184,14 @@ public class TriggerBotFeature extends Feature {
 
     private boolean allowsNonCriticalTiming() {
         if (EntityRaycasts.allowsNonCriticalHit()) return true;
-        return critOnlyOnSpace.getValue() && !client.options.jumpKey.isPressed() && !client.player.isOnGround();
+        return critOnlyOnSpace.getValue() && !client.options.keyJump.isDown() && !client.player.onGround();
     }
 
     private boolean allowsCriticalTiming(double squaredDistance) {
         float lower = critRange.getLower();
         float upper = critRange.getUpper();
         if (squaredDistance < (double) (lower * lower) || squaredDistance > (double) (upper * upper)) return true;
-        boolean allow = !(critOnlyOnSpace.getValue() && client.options.jumpKey.isPressed() && client.player.isOnGround());
+        boolean allow = !(critOnlyOnSpace.getValue() && client.options.keyJump.isDown() && client.player.onGround());
         boolean critical = EntityRaycasts.isCriticalState();
         if (critMode.isSelected(CRIT_PRECISE)) {
             if (critical && criticalWindowTimer.hasElapsedMillis(0.0) && !client.player.isSprinting()) {
@@ -213,7 +213,7 @@ public class TriggerBotFeature extends Feature {
     private void onPacketReceive(PacketReceiveEvent event) {
         if (isOutsideWorld()) return;
         Packet<?> packet = event.getPacket();
-        if (packet instanceof PlayerPositionLookS2CPacket || packet instanceof PlayerRespawnS2CPacket) resetTargetAcquisition();
+        if (packet instanceof ClientboundPlayerPositionPacket || packet instanceof ClientboundRespawnPacket) resetTargetAcquisition();
     }
 
     public static void appendBootstrapSettings(TriggerBotFeature feature) {

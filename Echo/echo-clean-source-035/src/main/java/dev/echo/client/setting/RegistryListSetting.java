@@ -11,9 +11,9 @@ import java.util.Set;
 import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
-import net.minecraft.registry.Registry;
-import net.minecraft.registry.RegistryKey;
-import net.minecraft.util.Identifier;
+import net.minecraft.core.Registry;
+import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceKey;
 
 /** Registry-backed selection; the supplied registry is resolved afresh for each operation. */
 public class RegistryListSetting<T> extends Setting {
@@ -42,18 +42,18 @@ public class RegistryListSetting<T> extends Setting {
 
     public boolean isEntrySelected(T entry) {
         if (entry == null) return false;
-        RegistryKey<T> key = getRegistry().getKey(entry).orElse(null);
+        ResourceKey<T> key = getRegistry().getResourceKey(entry).orElse(null);
         if (key == null) return false;
-        return selectedIds.contains(key.getValue());
+        return selectedIds.contains(key.identifier());
     }
 
     public boolean isIdSelected(Identifier id) { return id != null && selectedIds.contains(id); }
 
     public void setEntrySelected(T entry, boolean selected) {
         if (entry == null) return;
-        RegistryKey<T> key = getRegistry().getKey(entry).orElse(null);
+        ResourceKey<T> key = getRegistry().getResourceKey(entry).orElse(null);
         if (key == null) return;
-        setIdSelected(key.getValue(), selected);
+        setIdSelected(key.identifier(), selected);
     }
 
     public void setIdSelected(Identifier id, boolean selected) {
@@ -76,9 +76,9 @@ public class RegistryListSetting<T> extends Setting {
         boolean changed = false;
         for (T entry : currentRegistry) {
             if (!group.matches(entry)) continue;
-            RegistryKey<T> key = currentRegistry.getKey(entry).orElse(null);
+            ResourceKey<T> key = currentRegistry.getResourceKey(entry).orElse(null);
             if (key == null) continue;
-            Identifier id = key.getValue();
+            Identifier id = key.identifier();
             if (selected ? selectedIds.add(id) : selectedIds.remove(id)) changed = true;
         }
         if (changed) notifyChanged();
@@ -94,8 +94,8 @@ public class RegistryListSetting<T> extends Setting {
         if (matching.isEmpty()) return SelectionState.NONE;
         int selected = 0;
         for (T entry : matching) {
-            RegistryKey<T> key = currentRegistry.getKey(entry).orElse(null);
-            if (key != null && selectedIds.contains(key.getValue())) selected++;
+            ResourceKey<T> key = currentRegistry.getResourceKey(entry).orElse(null);
+            if (key != null && selectedIds.contains(key.identifier())) selected++;
         }
         if (selected == 0) return SelectionState.NONE;
         return selected == matching.size() ? SelectionState.ALL : SelectionState.PARTIAL;

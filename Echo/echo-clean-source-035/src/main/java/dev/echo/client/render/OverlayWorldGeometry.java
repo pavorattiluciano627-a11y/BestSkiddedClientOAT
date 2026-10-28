@@ -1,5 +1,6 @@
 package dev.echo.client.render;
 
+import com.mojang.blaze3d.pipeline.RenderTarget;
 import dev.echo.client.Echo;
 import dev.echo.client.particle.ParticleUv;
 import dev.echo.render.TriangleBatch;
@@ -16,8 +17,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.OptionalDouble;
 import java.util.OptionalInt;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.gl.Framebuffer;
+import net.minecraft.client.Minecraft;
 
 /** World overlays have an independent cleared depth texture, preserving their mutual depth order. */
 public final class OverlayWorldGeometry extends WorldGeometry {
@@ -49,16 +49,16 @@ public final class OverlayWorldGeometry extends WorldGeometry {
     }
 
     private void allocateDepth() {
-        Framebuffer framebuffer = MinecraftRenderState.getFramebuffer(MinecraftClient.getInstance());
+        RenderTarget framebuffer = MinecraftRenderState.getFramebuffer(Minecraft.getInstance());
         overlayDepth = device.createTexture(TextureInfo.builder()
-                .width(framebuffer.textureWidth).height(framebuffer.textureHeight)
+                .width(framebuffer.width).height(framebuffer.height)
                 .format(device.depthFormat()).usage(8).build());
     }
 
     @Override
     public void beginFrame() {
-        Framebuffer framebuffer = MinecraftRenderState.getFramebuffer(MinecraftClient.getInstance());
-        if (overlayDepth.width != framebuffer.textureWidth || overlayDepth.height != framebuffer.textureHeight) {
+        RenderTarget framebuffer = MinecraftRenderState.getFramebuffer(Minecraft.getInstance());
+        if (overlayDepth.width != framebuffer.width || overlayDepth.height != framebuffer.height) {
             device.release(overlayDepth);
             allocateDepth();
         }

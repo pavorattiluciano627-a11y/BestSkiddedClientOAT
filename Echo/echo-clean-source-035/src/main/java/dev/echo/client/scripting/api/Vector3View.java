@@ -1,6 +1,6 @@
 package dev.echo.client.scripting.api;
 
-import net.minecraft.util.math.Vec3d;
+import net.minecraft.world.phys.Vec3;
 
 /** Immutable script vector with componentwise arithmetic and identity equality. */
 public class Vector3View {
@@ -14,8 +14,8 @@ public class Vector3View {
         this.z = z;
     }
 
-    public Vector3View(Vec3d vector) {
-        this(vector.getX(), vector.getY(), vector.getZ());
+    public Vector3View(Vec3 vector) {
+        this(vector.x(), vector.y(), vector.z());
     }
 
     public Vector3View add(Vector3View other) {

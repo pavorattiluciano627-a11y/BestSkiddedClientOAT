@@ -149,7 +149,7 @@ public final class FullscreenEffects {
 
     private static void updateUniforms() {
         long address = uniformBuffer.mappedAddress();
-        NativeMemoryWrites.putMatrix4f(address, modelViewProjection.set(projection).mul(RenderSystem.getModelViewMatrix()));
+        NativeMemoryWrites.putMatrix4f(address, modelViewProjection.set(projection).mul(RenderSystem.getModelViewMatrixCopy()));
         NativeMemoryWrites.putFloat4(address + MATRIX_BYTES,
                 SkyShadersFeature.getPrimaryChannel(0), SkyShadersFeature.getPrimaryChannel(1),
                 SkyShadersFeature.getPrimaryChannel(2), SkyShadersFeature.getBrightness());
@@ -160,7 +160,7 @@ public final class FullscreenEffects {
     }
 
     private static TextureView mainColorView(RenderDevice device) {
-        GpuTextureView source = MinecraftAccess.CLIENT.getFramebuffer().getColorAttachmentView();
+        GpuTextureView source = MinecraftAccess.CLIENT.gameRenderer.mainRenderTarget().getColorTextureView();
         if (source != cachedMinecraftView) {
             cachedMinecraftView = source;
             cachedColorView = GlTextureBridge.importColor(device, source);

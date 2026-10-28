@@ -14,7 +14,7 @@ public class AutoWalkFeature extends Feature {
 
     @Subscribe
     public void onMovementInput(PlayerInputEvent event) {
-        if (client.player == null || client.world == null || client.player.isDead()) {
+        if (client.player == null || client.level == null || client.player.isDeadOrDying()) {
             return;
         }
         event.forward = true;

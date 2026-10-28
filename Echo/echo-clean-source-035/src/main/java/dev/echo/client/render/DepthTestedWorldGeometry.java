@@ -15,7 +15,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.OptionalDouble;
 import java.util.OptionalInt;
-import net.minecraft.client.MinecraftClient;
+import net.minecraft.client.Minecraft;
 
 /** Ordered world batches drawn against Minecraft's borrowed scene depth attachment. */
 public final class DepthTestedWorldGeometry extends WorldGeometry {
@@ -61,7 +61,7 @@ public final class DepthTestedWorldGeometry extends WorldGeometry {
     }
 
     private TextureView depthTexture() {
-        GpuTextureView source = MinecraftRenderState.getFramebuffer(MinecraftClient.getInstance()).getDepthAttachmentView();
+        GpuTextureView source = MinecraftRenderState.getFramebuffer(Minecraft.getInstance()).getDepthTextureView();
         if (source != minecraftDepthSource) {
             minecraftDepthSource = source;
             minecraftDepthView = GlTextureBridge.importView(device, source, device.depthFormat());

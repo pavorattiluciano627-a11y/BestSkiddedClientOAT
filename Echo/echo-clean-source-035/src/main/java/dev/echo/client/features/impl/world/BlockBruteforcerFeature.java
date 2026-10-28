@@ -19,13 +19,13 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
-import net.minecraft.network.packet.c2s.play.PlayerActionC2SPacket;
-import net.minecraft.network.packet.s2c.play.BlockUpdateS2CPacket;
-import net.minecraft.network.packet.s2c.play.PlayerPositionLookS2CPacket;
-import net.minecraft.util.Hand;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.ColorHelper;
-import net.minecraft.util.math.Direction;
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
+import net.minecraft.network.protocol.game.ClientboundBlockUpdatePacket;
+import net.minecraft.network.protocol.game.ClientboundPlayerPositionPacket;
+import net.minecraft.network.protocol.game.ServerboundPlayerActionPacket;
+import net.minecraft.util.ARGB;
+import net.minecraft.world.InteractionHand;
 
 /** Ordered block probes and confirmation tracking; conditional linkage receipt applies. */
 public class BlockBruteforcerFeature extends Feature {
@@ -105,11 +105,11 @@ public class BlockBruteforcerFeature extends Feature {
     @Subscribe
     private void onPacketReceive(PacketReceiveEvent event) {
         if (isOutsideWorld()) return;
-        if (event.getPacket() instanceof PlayerPositionLookS2CPacket) {
+        if (event.getPacket() instanceof ClientboundPlayerPositionPacket) {
             setEnabled(false);
             return;
         }
-        if (event.getPacket() instanceof BlockUpdateS2CPacket update) {
+        if (event.getPacket() instanceof ClientboundBlockUpdatePacket update) {
             BlockPos position = update.getPos();
             if (probedPositions.contains(position)) confirmedPositions.add(position);
         }
@@ -138,7 +138,7 @@ public class BlockBruteforcerFeature extends Feature {
         probing = true;
         pendingProbePositions.clear();
         probedPositions.clear();
-        BlockPos origin = client.player.getBlockPos();
+        BlockPos origin = client.player.blockPosition();
         scanOrigin = origin;
         int horizontal = radius.getValue();
         int above = up.getValue();
@@ -147,7 +147,7 @@ public class BlockBruteforcerFeature extends Feature {
             for (int x = -horizontal; x <= horizontal; ++x) {
                 for (int z = -horizontal; z <= horizontal; ++z) {
                     BlockPos position = new BlockPos(origin.getX() + x, origin.getY() + y, origin.getZ() + z);
-                    if (!client.world.isAir(position) && !probedPositions.contains(position)) {
+                    if (!client.level.isEmptyBlock(position) && !probedPositions.contains(position)) {
                         pendingProbePositions.add(position);
                     }
                 }
@@ -162,7 +162,7 @@ public class BlockBruteforcerFeature extends Feature {
             return;
         }
         // This is deliberately AND: the original proceeds when either provider exists.
-        if (client.getNetworkHandler() == null && client.interactionManager == null) {
+        if (client.getConnection() == null && client.gameMode == null) {
             probing = false;
             return;
         }
@@ -174,13 +174,13 @@ public class BlockBruteforcerFeature extends Feature {
             BlockPos position = pendingProbePositions.remove(0);
             probedPositions.add(position);
             if (mode.isSelected(START)) {
-                client.getNetworkHandler().sendPacket(new PlayerActionC2SPacket(
-                        PlayerActionC2SPacket.Action.START_DESTROY_BLOCK, position, Direction.UP));
+                client.getConnection().send(new ServerboundPlayerActionPacket(
+                        ServerboundPlayerActionPacket.Action.START_DESTROY_BLOCK, position, Direction.UP));
             } else if (mode.isSelected(ABORT)) {
-                client.getNetworkHandler().sendPacket(new PlayerActionC2SPacket(
-                        PlayerActionC2SPacket.Action.ABORT_DESTROY_BLOCK, position, Direction.UP));
+                client.getConnection().send(new ServerboundPlayerActionPacket(
+                        ServerboundPlayerActionPacket.Action.ABORT_DESTROY_BLOCK, position, Direction.UP));
             }
-            client.player.swingHand(Hand.MAIN_HAND);
+            client.player.swing(InteractionHand.MAIN_HAND);
         }
     }
 
@@ -197,7 +197,7 @@ public class BlockBruteforcerFeature extends Feature {
         double x1 = scanOrigin.getX() + horizontal + 1;
         double y1 = scanOrigin.getY() + above + 1;
         double z1 = scanOrigin.getZ() + horizontal + 1;
-        int color = ColorHelper.fromFloats(0.8F, 1.0F, 1.0F, 1.0F);
+        int color = ARGB.colorFromFloat(0.8F, 1.0F, 1.0F, 1.0F);
         geometry.drawLine(x0, y0, z0, x1, y0, z0, color);
         geometry.drawLine(x1, y0, z0, x1, y0, z1, color);
         geometry.drawLine(x1, y0, z1, x0, y0, z1, color);

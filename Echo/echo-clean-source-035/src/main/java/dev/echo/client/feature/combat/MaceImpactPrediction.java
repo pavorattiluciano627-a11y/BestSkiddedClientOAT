@@ -1,6 +1,6 @@
 package dev.echo.client.feature.combat;
 
-import net.minecraft.entity.LivingEntity;
+import net.minecraft.world.entity.LivingEntity;
 
 /** A target and the first simulated tick at which it can be struck.
  * @param target predicted target

@@ -1,5 +1,6 @@
 package dev.echo.client.render;
 
+import com.mojang.blaze3d.pipeline.RenderTarget;
 import com.mojang.blaze3d.textures.GpuTextureView;
 import dev.echo.client.Echo;
 import dev.echo.client.setting.ColorSetting;
@@ -22,9 +23,8 @@ import dev.echo.render.texture.TextureLayout;
 import dev.echo.render.texture.TextureView;
 import java.util.OptionalDouble;
 import java.util.OptionalInt;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.gl.Framebuffer;
-import net.minecraft.util.math.ColorHelper;
+import net.minecraft.client.Minecraft;
+import net.minecraft.util.ARGB;
 import org.lwjgl.system.MemoryStack;
 import org.lwjgl.system.MemoryUtil;
 
@@ -47,13 +47,13 @@ public final class TexturePasses {
     }
 
     /** Applies the material in place to the captured framebuffer's color attachment. */
-    public static void applyMaterial(EntityMaterialSettings material, Framebuffer target) {
+    public static void applyMaterial(EntityMaterialSettings material, RenderTarget target) {
         RenderDevice device = Echo.renderDevice;
         if (device == null || Echo.commandEncoder == null) {
             return;
         }
-        TextureView color = framebufferImport.get(device, target.getColorAttachmentView());
-        framebufferTargets = ensureTargets(device, framebufferTargets, target.textureWidth, target.textureHeight);
+        TextureView color = framebufferImport.get(device, target.getColorTextureView());
+        framebufferTargets = ensureTargets(device, framebufferTargets, target.width, target.height);
         renderMaterial(device, material, color, color, framebufferTargets, 0);
     }
 
@@ -141,13 +141,13 @@ public final class TexturePasses {
         commands.transitionTexture(view, 2, TextureAccess.COLOR_ATTACHMENT, TextureLayout.COLOR_ATTACHMENT);
     }
 
-    public static Framebuffer createFramebuffer(String name, int width, int height, boolean useDepth) {
+    public static RenderTarget createFramebuffer(String name, int width, int height, boolean useDepth) {
         return FramebufferOperations.create(name, width, height, useDepth);
     }
 
     /** Original processListener is a color blit, despite the old consumer name clearFramebuffer. */
-    public static void blitToMainFramebuffer(Framebuffer source) {
-        FramebufferOperations.blitColor(source, MinecraftClient.getInstance().getFramebuffer());
+    public static void blitToMainFramebuffer(RenderTarget source) {
+        FramebufferOperations.blitColor(source, Minecraft.getInstance().gameRenderer.mainRenderTarget());
     }
 
     public static void releaseResources() {
@@ -245,8 +245,8 @@ public final class TexturePasses {
     }
 
     private static void writeArgb(long address, int argb) {
-        NativeMemoryWrites.putFloat4(address, ColorHelper.getRed(argb) / 255.0F,
-                ColorHelper.getGreen(argb) / 255.0F, ColorHelper.getBlue(argb) / 255.0F,
-                ColorHelper.getAlpha(argb) / 255.0F);
+        NativeMemoryWrites.putFloat4(address, ARGB.red(argb) / 255.0F,
+                ARGB.green(argb) / 255.0F, ARGB.blue(argb) / 255.0F,
+                ARGB.alpha(argb) / 255.0F);
     }
 }

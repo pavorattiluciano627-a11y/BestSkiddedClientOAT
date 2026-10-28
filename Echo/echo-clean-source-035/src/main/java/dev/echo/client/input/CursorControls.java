@@ -1,7 +1,7 @@
 package dev.echo.client.input;
 
-import net.minecraft.client.util.InputUtil;
-import net.minecraft.client.util.Window;
+import com.mojang.blaze3d.platform.InputConstants;
+import com.mojang.blaze3d.platform.Window;
 import org.lwjgl.glfw.GLFW;
 
 /** Restores the normal cursor mode at the requested window coordinates. */
@@ -11,6 +11,6 @@ public final class CursorControls {
     }
 
     public static void showCursor(Window window, double x, double y) {
-        InputUtil.setCursorParameters(window, GLFW.GLFW_CURSOR_NORMAL, x, y);
+        InputConstants.grabOrReleaseMouse(window, GLFW.GLFW_CURSOR_NORMAL, x, y);
     }
 }

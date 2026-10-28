@@ -7,9 +7,9 @@ import dev.echo.client.ui.ArgbMath;
 import dev.echo.client.ui.UiBounds;
 import dev.echo.render.FontAsset;
 import dev.echo.render.texture.TextureView;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.network.ClientPlayerEntity;
-import net.minecraft.item.ItemStack;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.player.LocalPlayer;
+import net.minecraft.world.item.ItemStack;
 
 /**
  * Coordinate, opacity and drawing state for live item/player setting previews.
@@ -98,7 +98,7 @@ public final class ItemHudLayout {
     }
 
     public void drawItem(ItemStack item, UiBounds bounds) {
-        ClientPlayerEntity player = MinecraftClient.getInstance().player;
+        LocalPlayer player = Minecraft.getInstance().player;
         if (item.isEmpty() || player == null) {
             drawEmptyItem(bounds);
             return;

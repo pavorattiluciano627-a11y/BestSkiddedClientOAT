@@ -2,30 +2,30 @@ package dev.echo.client.events.interaction;
 
 import dev.echo.client.events.Event;
 import dev.echo.client.events.EventPhase;
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.util.Hand;
+import net.minecraft.world.InteractionHand;
+import net.minecraft.world.entity.player.Player;
 
 /** Interaction payload retains the player's identity and the selected hand. */
 public class HandInteractEvent extends Event {
-    private final PlayerEntity player;
-    private final Hand hand;
+    private final Player player;
+    private final InteractionHand hand;
 
-    public HandInteractEvent(EventPhase phase, PlayerEntity player, Hand hand) {
+    public HandInteractEvent(EventPhase phase, Player player, InteractionHand hand) {
         super(phase);
         this.player = player;
         this.hand = hand;
     }
 
-    public PlayerEntity getPlayer() {
+    public Player getPlayer() {
         return player;
     }
 
-    public Hand getHand() {
+    public InteractionHand getHand() {
         return hand;
     }
 
     public static class Pre extends HandInteractEvent {
-        public Pre(PlayerEntity player, Hand hand) {
+        public Pre(Player player, InteractionHand hand) {
             super(EventPhase.PRE, player, hand);
         }
     }

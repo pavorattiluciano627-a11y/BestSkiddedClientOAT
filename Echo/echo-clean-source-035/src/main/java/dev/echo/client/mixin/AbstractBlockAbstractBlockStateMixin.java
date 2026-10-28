@@ -5,47 +5,47 @@ import dev.echo.client.events.render.BlockCullingEvent;
 import dev.echo.client.events.render.BlockLightingEvent;
 import dev.echo.client.events.render.BlockRenderSeedEvent;
 import dev.echo.client.events.render.BlockRenderTypeEvent;
-import net.minecraft.block.AbstractBlock;
-import net.minecraft.block.Block;
-import net.minecraft.block.BlockRenderType;
-import net.minecraft.block.BlockState;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.shape.VoxelShape;
-import net.minecraft.util.shape.VoxelShapes;
+import net.minecraft.core.BlockPos;
+import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.RenderShape;
+import net.minecraft.world.level.block.state.BlockBehaviour;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.phys.shapes.Shapes;
+import net.minecraft.world.phys.shapes.VoxelShape;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
-@Mixin(AbstractBlock.AbstractBlockState.class)
+@Mixin(BlockBehaviour.BlockStateBase.class)
 public abstract class AbstractBlockAbstractBlockStateMixin {
     @Shadow public abstract Block getBlock();
-    @Shadow protected abstract BlockState asBlockState();
+    @Shadow protected abstract BlockState asState();
 
-    @Inject(method = "getRenderType", at = @At("HEAD"), cancellable = true)
-    private void onGetRenderTypeHead(CallbackInfoReturnable<BlockRenderType> callback) {
+    @Inject(method = "getRenderShape", at = @At("HEAD"), cancellable = true)
+    private void onGetRenderTypeHead(CallbackInfoReturnable<RenderShape> callback) {
         if (EventBus.hasSubscribers(BlockRenderTypeEvent.class)
                 && new BlockRenderTypeEvent(getBlock()).post()) {
-            callback.setReturnValue(BlockRenderType.INVISIBLE);
+            callback.setReturnValue(RenderShape.INVISIBLE);
         }
     }
 
-    @Inject(method = "getRenderingSeed", at = @At("HEAD"))
+    @Inject(method = "getSeed", at = @At("HEAD"))
     private void onGetRenderingSeedHead(BlockPos position, CallbackInfoReturnable<Long> callback) {
         if (EventBus.hasSubscribers(BlockRenderSeedEvent.class)) {
-            new BlockRenderSeedEvent(asBlockState(), position).post();
+            new BlockRenderSeedEvent(asState(), position).post();
         }
     }
 
-    @Inject(method = {"getCullingFace", "getCullingShape"}, at = @At("HEAD"), cancellable = true)
+    @Inject(method = {"getFaceOcclusionShape", "getOcclusionShape"}, at = @At("HEAD"), cancellable = true)
     private void onGetCullingFaceHead(CallbackInfoReturnable<VoxelShape> callback) {
         if (EventBus.hasSubscribers(BlockCullingEvent.class) && new BlockCullingEvent().post()) {
-            callback.setReturnValue(VoxelShapes.empty());
+            callback.setReturnValue(Shapes.empty());
         }
     }
 
-    @Inject(method = "hasEmissiveLighting", at = @At("HEAD"), cancellable = true)
+    @Inject(method = "emissiveRendering", at = @At("HEAD"), cancellable = true)
     private void onHasEmissiveLightingHead(CallbackInfoReturnable<Boolean> callback) {
         if (EventBus.hasSubscribers(BlockLightingEvent.class)) {
             BlockLightingEvent event = new BlockLightingEvent();
@@ -56,7 +56,7 @@ public abstract class AbstractBlockAbstractBlockStateMixin {
         }
     }
 
-    @Inject(method = "getAmbientOcclusionLightLevel", at = @At("HEAD"), cancellable = true)
+    @Inject(method = "getShadeBrightness", at = @At("HEAD"), cancellable = true)
     private void onGetAmbientOcclusionLightLevelHead(CallbackInfoReturnable<Float> callback) {
         if (EventBus.hasSubscribers(BlockLightingEvent.class)) {
             BlockLightingEvent event = new BlockLightingEvent();

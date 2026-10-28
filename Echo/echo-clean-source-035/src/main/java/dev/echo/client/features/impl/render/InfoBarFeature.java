@@ -34,7 +34,7 @@ public class InfoBarFeature extends EchoHudElement {
 
     @Override
     protected boolean shouldRender() {
-        return !client.debugHudEntryList.isF3Enabled();
+        return !client.debugEntries.isOverlayVisible();
     }
 
     @Override
@@ -125,7 +125,7 @@ public class InfoBarFeature extends EchoHudElement {
     }
 
     private int getLatency() {
-        if (client.player == null || client.getNetworkHandler() == null) {
+        if (client.player == null || client.getConnection() == null) {
             return -1;
         }
         return LatencyTracker.milliseconds();

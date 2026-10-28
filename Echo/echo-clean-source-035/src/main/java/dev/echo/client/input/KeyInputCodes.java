@@ -1,6 +1,6 @@
 package dev.echo.client.input;
 
-import net.minecraft.client.input.KeyInput;
+import net.minecraft.client.input.KeyEvent;
 
 /** Reads the physical scan code used by the original keyboard adapter. */
 public final class KeyInputCodes {
@@ -15,7 +15,7 @@ public final class KeyInputCodes {
      * @param input the Minecraft keyboard event
      * @return the event's physical scan code
      */
-    public static int scanCode(KeyInput input) {
+    public static int scanCode(KeyEvent input) {
         return input.scancode();
     }
 }

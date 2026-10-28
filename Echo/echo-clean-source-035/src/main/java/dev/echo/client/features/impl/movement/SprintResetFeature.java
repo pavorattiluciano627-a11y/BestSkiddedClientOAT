@@ -19,9 +19,9 @@ import dev.echo.client.setting.BooleanSetting;
 import dev.echo.client.setting.ChoiceSetting;
 import dev.echo.client.setting.IntSetting;
 import dev.echo.client.utils.targeting.TargetSelection;
-import net.minecraft.entity.LivingEntity;
-import net.minecraft.util.PlayerInput;
-import net.minecraft.util.math.Vec2f;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.player.Input;
+import net.minecraft.world.phys.Vec2;
 
 /** Applies a timed W-tap, S-tap, sprint suppression or sneak after an eligible attack. */
 public class SprintResetFeature extends Feature {
@@ -108,7 +108,7 @@ public class SprintResetFeature extends Feature {
         if (isOutsideWorld() || event.cancelled || event.getPlayer() != client.player) {
             return;
         }
-        if (lastResetTick > client.player.age) {
+        if (lastResetTick > client.player.tickCount) {
             resetSprintResetState();
         }
         if (MinecraftRenderState.getScreen() != null) {
@@ -116,7 +116,7 @@ public class SprintResetFeature extends Feature {
         }
         Mode mode = selectedMode();
         // The original DCMPL treats NaN as the positive comparison result.
-        boolean moving = mode == Mode.NO_STOP ? client.player.isSprinting() : !(client.player.forwardSpeed <= 0.0);
+        boolean moving = mode == Mode.NO_STOP ? client.player.isSprinting() : !(client.player.zza <= 0.0);
         if (!moving) {
             return;
         }
@@ -126,10 +126,10 @@ public class SprintResetFeature extends Feature {
         if (!isValidTarget(target)) {
             return;
         }
-        if (lastResetTick != -1 && client.player.age - lastResetTick < durationBetweenReset.getValue()) {
+        if (lastResetTick != -1 && client.player.tickCount - lastResetTick < durationBetweenReset.getValue()) {
             return;
         }
-        lastResetTick = client.player.age;
+        lastResetTick = client.player.tickCount;
         applyToCurrentInput(mode);
     }
 
@@ -138,13 +138,13 @@ public class SprintResetFeature extends Feature {
         if (isOutsideWorld()) {
             return;
         }
-        if (lastResetTick > client.player.age) {
+        if (lastResetTick > client.player.tickCount) {
             resetSprintResetState();
         }
         if (lastResetTick == -1) {
             return;
         }
-        if (MinecraftRenderState.getScreen() != null || client.player.isDead()) {
+        if (MinecraftRenderState.getScreen() != null || client.player.isDeadOrDying()) {
             resetSprintResetState();
             return;
         }
@@ -152,7 +152,7 @@ public class SprintResetFeature extends Feature {
     }
 
     private void applyReset(Mode mode, PlayerInputEvent input) {
-        int elapsed = client.player.age - lastResetTick;
+        int elapsed = client.player.tickCount - lastResetTick;
         int delay = mode.requiresOneTickDelay() ? Math.max(1, reactionTime.getValue()) : reactionTime.getValue();
         int end = delay + duration.getValue();
         if (elapsed >= end) {
@@ -164,12 +164,12 @@ public class SprintResetFeature extends Feature {
         if (elapsed < delay) {
             return;
         }
-        boolean skipAirborne = mode.stopsMovement() && groundOnly.getValue() && !client.player.isOnGround();
+        boolean skipAirborne = mode.stopsMovement() && groundOnly.getValue() && !client.player.onGround();
         switch (mode) {
             case W_TAP -> {
                 input.forward = skipAirborne && isForwardPressed();
                 if (!skipAirborne) {
-                    KeyStateOverrides.setPressed(client.options.forwardKey, false);
+                    KeyStateOverrides.setPressed(client.options.keyUp, false);
                 }
             }
             case S_TAP -> {
@@ -178,8 +178,8 @@ public class SprintResetFeature extends Feature {
                 } else {
                     input.forward = false;
                     input.backward = true;
-                    KeyStateOverrides.setPressed(client.options.forwardKey, false);
-                    KeyStateOverrides.setPressed(client.options.backKey, true);
+                    KeyStateOverrides.setPressed(client.options.keyUp, false);
+                    KeyStateOverrides.setPressed(client.options.keyDown, true);
                 }
             }
             case NO_STOP -> {
@@ -188,7 +188,7 @@ public class SprintResetFeature extends Feature {
             }
             case SNEAK -> {
                 input.sneak = true;
-                KeyStateOverrides.setPressed(client.options.sneakKey, true);
+                KeyStateOverrides.setPressed(client.options.keyShift, true);
             }
         }
     }
@@ -209,26 +209,26 @@ public class SprintResetFeature extends Feature {
             return;
         }
         InputAccessor accessor = (InputAccessor) client.player.input;
-        PlayerInput keys = accessor.getPlayerInput();
+        Input keys = accessor.getPlayerInput();
         PlayerInputEvent input = new PlayerInputEvent(keys.forward(), keys.backward(), keys.left(), keys.right(),
-            keys.jump(), keys.sneak(), keys.sprint());
+            keys.jump(), keys.shift(), keys.sprint());
         applyReset(mode, input);
-        accessor.setPlayerInput(new PlayerInput(input.forward, input.backward, input.left, input.right,
+        accessor.setPlayerInput(new Input(input.forward, input.backward, input.left, input.right,
             input.jump, input.sneak, input.sprint));
-        accessor.setMovementVector(new Vec2f(PlayerInputEvent.movementMultiplier(input.left, input.right),
+        accessor.setMovementVector(new Vec2(PlayerInputEvent.movementMultiplier(input.left, input.right),
             PlayerInputEvent.movementMultiplier(input.forward, input.backward)));
     }
 
     private boolean isForwardPressed() {
-        return KeybindingCache.isPressed(client.options.forwardKey);
+        return KeybindingCache.isPressed(client.options.keyUp);
     }
 
     private boolean isBackwardPressed() {
-        return KeybindingCache.isPressed(client.options.backKey);
+        return KeybindingCache.isPressed(client.options.keyDown);
     }
 
     private boolean isSneakPressed() {
-        return KeybindingCache.isPressed(client.options.sneakKey);
+        return KeybindingCache.isPressed(client.options.keyShift);
     }
 
     public static void appendBootstrapSettings(SprintResetFeature feature) {

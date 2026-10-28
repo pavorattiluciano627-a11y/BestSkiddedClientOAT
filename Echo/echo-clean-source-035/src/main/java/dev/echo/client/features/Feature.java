@@ -8,11 +8,11 @@ import dev.echo.client.input.InputKey;
 import dev.echo.client.setting.Setting;
 import java.lang.reflect.Field;
 import java.util.ArrayList;
-import net.minecraft.client.MinecraftClient;
+import net.minecraft.client.Minecraft;
 
 /** Metadata, settings, key activation, and listener lifecycle shared by features. */
 public class Feature implements MinecraftAccess {
-    protected static final MinecraftClient client = MinecraftClient.getInstance();
+    protected static final Minecraft client = Minecraft.getInstance();
 
     public ArrayList<Setting> settings;
     private boolean enabled;
@@ -196,6 +196,6 @@ public class Feature implements MinecraftAccess {
     }
 
     public boolean isOutsideWorld() {
-        return client.player == null || client.world == null;
+        return client.player == null || client.level == null;
     }
 }

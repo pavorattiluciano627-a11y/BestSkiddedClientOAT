@@ -21,9 +21,9 @@ import dev.echo.client.setting.KeybindSetting;
 import dev.echo.client.utils.ActionTimer;
 import dev.echo.client.utils.OwnerSet;
 import dev.echo.client.utils.items.InventoryItems;
-import net.minecraft.item.ItemStack;
-import net.minecraft.item.Items;
-import net.minecraft.util.math.Vec3d;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
+import net.minecraft.world.phys.Vec3;
 
 /** Coordinates ordinary and instant wind-charge/ender-pearl dive-bomb sequences. */
 public class DiveBombFeature extends Feature {
@@ -77,7 +77,7 @@ public class DiveBombFeature extends Feature {
         if (isOutsideWorld() || MinecraftRenderState.getScreen() != null) {
             return;
         }
-        if (autoJump.getValue() && throwActive && instantSequence == null && client.player.isOnGround()) {
+        if (autoJump.getValue() && throwActive && instantSequence == null && client.player.onGround()) {
             event.jump = true;
         }
         if (throwActive) {
@@ -108,7 +108,7 @@ public class DiveBombFeature extends Feature {
         if (!throwActive || !rotations().isAiming()) {
             return;
         }
-        float pitch = silentAim.getValue() ? rotations().effectiveRotation().pitch() : client.player.getPitch();
+        float pitch = silentAim.getValue() ? rotations().effectiveRotation().pitch() : client.player.getXRot();
         if (pitch >= -89.5F) {
             return;
         }
@@ -148,8 +148,8 @@ public class DiveBombFeature extends Feature {
     }
 
     private boolean hasItemCooldown() {
-        return client.player.getItemCooldownManager().isCoolingDown(new ItemStack(Items.ENDER_PEARL))
-                || client.player.getItemCooldownManager().isCoolingDown(new ItemStack(Items.WIND_CHARGE));
+        return client.player.getCooldowns().isOnCooldown(new ItemStack(Items.ENDER_PEARL))
+                || client.player.getCooldowns().isOnCooldown(new ItemStack(Items.WIND_CHARGE));
     }
 
     private void handleInstantPress() {
@@ -164,17 +164,17 @@ public class DiveBombFeature extends Feature {
         if (throwActive || instantSequence != null || hasItemCooldown()) {
             return;
         }
-        if (client.interactionManager == null || client.player.isSpectator()) {
+        if (client.gameMode == null || client.player.isSpectator()) {
             return;
         }
         int originalSlot = client.player.getInventory().getSelectedSlot();
-        boolean moveCharge = !client.player.getOffHandStack().isOf(Items.WIND_CHARGE);
+        boolean moveCharge = !client.player.getOffhandItem().is(Items.WIND_CHARGE);
         int chargeSlot = InventoryItems.findStackInHotbar(stack -> stack.getItem() == Items.WIND_CHARGE);
         int pearlSlot = InventoryItems.findStackInHotbar(stack -> stack.getItem() == Items.ENDER_PEARL);
         if (moveCharge && chargeSlot == -1) {
             return;
         }
-        if (!client.player.getMainHandStack().isOf(Items.ENDER_PEARL) && pearlSlot == -1) {
+        if (!client.player.getMainHandItem().is(Items.ENDER_PEARL) && pearlSlot == -1) {
             return;
         }
         if (rotations().snapshot().target() != null && !rotations().canRequest(this, RotationPriority.HIGH)) {
@@ -185,7 +185,7 @@ public class DiveBombFeature extends Feature {
         OwnerSet.add(this);
         instantSequence = new DiveBombSequence(client, originalSlot, chargeSlot, pearlSlot, moveCharge,
                 () -> ThrowInventoryOperations.swapHands(client), this::useItem,
-                () -> silentAim.getValue() ? rotations().effectiveRotation().pitch() : client.player.getPitch());
+                () -> silentAim.getValue() ? rotations().effectiveRotation().pitch() : client.player.getXRot());
     }
 
     private void finishInstantSequence() {
@@ -234,9 +234,9 @@ public class DiveBombFeature extends Feature {
         if (manager.isAiming() && manager.isSilentRotationActive()) {
             yaw = manager.effectiveRotation().yaw();
         } else {
-            yaw = silentAim.getValue() ? manager.effectiveRotation().yaw() : client.player.getYaw();
+            yaw = silentAim.getValue() ? manager.effectiveRotation().yaw() : client.player.getYRot();
         }
-        Vec3d aimPoint = client.player.getEyePos().add(Vec3d.fromPolar(-89.9F, yaw).multiply(10.0));
+        Vec3 aimPoint = client.player.getEyePosition().add(Vec3.directionFromRotation(-89.9F, yaw).scale(10.0));
         manager.aim(this, RotationPriority.HIGH, aimPoint, RotationSettings.uniform(
                 silentAim.getValue() ? RotationVisibility.SILENT : RotationVisibility.VISIBLE,
                 AimTransition.EASED, 450.0F));

@@ -2,7 +2,7 @@ package dev.echo.client.handlers;
 
 import dev.echo.client.features.Feature;
 import dev.echo.client.utils.Rotation;
-import net.minecraft.entity.LivingEntity;
+import net.minecraft.world.entity.LivingEntity;
 
 /**
  * Genuine client-services-02 record with only the reconciled Feature package

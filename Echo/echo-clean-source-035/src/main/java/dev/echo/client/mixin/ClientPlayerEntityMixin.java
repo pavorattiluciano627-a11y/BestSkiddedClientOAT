@@ -9,13 +9,13 @@ import dev.echo.client.events.lifecycle.PlayerTickEvent;
 import dev.echo.client.events.movement.MovementPacketEvent;
 import dev.echo.client.events.movement.MovementSpeedEvent;
 import dev.echo.client.handlers.PitchLimits;
-import net.minecraft.client.network.AbstractClientPlayerEntity;
-import net.minecraft.client.network.ClientPlayerEntity;
-import net.minecraft.client.world.ClientWorld;
-import net.minecraft.entity.Entity;
-import net.minecraft.util.Hand;
-import net.minecraft.util.hit.HitResult;
-import net.minecraft.util.math.Vec3d;
+import net.minecraft.client.multiplayer.ClientLevel;
+import net.minecraft.client.player.AbstractClientPlayer;
+import net.minecraft.client.player.LocalPlayer;
+import net.minecraft.world.InteractionHand;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.phys.HitResult;
+import net.minecraft.world.phys.Vec3;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
@@ -24,22 +24,22 @@ import org.spongepowered.asm.mixin.injection.Redirect;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
-@Mixin(ClientPlayerEntity.class)
-public abstract class ClientPlayerEntityMixin extends AbstractClientPlayerEntity {
+@Mixin(LocalPlayer.class)
+public abstract class ClientPlayerEntityMixin extends AbstractClientPlayer {
     @Unique private MovementPacketEvent echo$movementPacket;
 
-    public ClientPlayerEntityMixin(ClientWorld world, GameProfile profile) {
+    public ClientPlayerEntityMixin(ClientLevel world, GameProfile profile) {
         super(world, profile);
     }
 
-    @Inject(method = "sendMovementPackets", at = @At("HEAD"), cancellable = true)
+    @Inject(method = "sendPosition", at = @At("HEAD"), cancellable = true)
     private void beforeMovementPackets(CallbackInfo callback) {
         if (Echo.eventsDisabled) {
             return;
         }
-        float pitch = PitchLimits.clampDegrees(getPitch());
+        float pitch = PitchLimits.clampDegrees(getXRot());
         MovementPacketEvent.Pre event = new MovementPacketEvent.Pre(
-                getX(), getY(), getZ(), isOnGround(), getYaw(), pitch);
+                getX(), getY(), getZ(), onGround(), getYRot(), pitch);
         event.post();
         if (event.cancelled) {
             echo$movementPacket = null;
@@ -49,17 +49,17 @@ public abstract class ClientPlayerEntityMixin extends AbstractClientPlayerEntity
         }
     }
 
-    @Inject(method = "sendMovementPackets", at = @At("RETURN"))
+    @Inject(method = "sendPosition", at = @At("RETURN"))
     private void afterMovementPackets(CallbackInfo callback) {
         if (Echo.eventsDisabled) {
             return;
         }
-        new MovementPacketEvent.Post(getX(), getY(), getZ(), isOnGround(), getYaw(), getPitch()).post();
+        new MovementPacketEvent.Post(getX(), getY(), getZ(), onGround(), getYRot(), getXRot()).post();
         echo$movementPacket = null;
     }
 
-    @ModifyExpressionValue(method = "sendMovementPackets", at = @At(value = "INVOKE",
-            target = "Lnet/minecraft/client/network/ClientPlayerEntity;getX()D"))
+    @ModifyExpressionValue(method = "sendPosition", at = @At(value = "INVOKE",
+            target = "Lnet/minecraft/client/player/LocalPlayer;getX()D"))
     private double usePacketX(double original) {
         if (Echo.eventsDisabled) {
             return original;
@@ -67,8 +67,8 @@ public abstract class ClientPlayerEntityMixin extends AbstractClientPlayerEntity
         return echo$movementPacket != null ? echo$movementPacket.getX() : original;
     }
 
-    @ModifyExpressionValue(method = "sendMovementPackets", at = @At(value = "INVOKE",
-            target = "Lnet/minecraft/client/network/ClientPlayerEntity;getY()D"))
+    @ModifyExpressionValue(method = "sendPosition", at = @At(value = "INVOKE",
+            target = "Lnet/minecraft/client/player/LocalPlayer;getY()D"))
     private double usePacketY(double original) {
         if (Echo.eventsDisabled) {
             return original;
@@ -76,8 +76,8 @@ public abstract class ClientPlayerEntityMixin extends AbstractClientPlayerEntity
         return echo$movementPacket != null ? echo$movementPacket.getY() : original;
     }
 
-    @ModifyExpressionValue(method = "sendMovementPackets", at = @At(value = "INVOKE",
-            target = "Lnet/minecraft/client/network/ClientPlayerEntity;getZ()D"))
+    @ModifyExpressionValue(method = "sendPosition", at = @At(value = "INVOKE",
+            target = "Lnet/minecraft/client/player/LocalPlayer;getZ()D"))
     private double usePacketZ(double original) {
         if (Echo.eventsDisabled) {
             return original;
@@ -85,8 +85,8 @@ public abstract class ClientPlayerEntityMixin extends AbstractClientPlayerEntity
         return echo$movementPacket != null ? echo$movementPacket.getZ() : original;
     }
 
-    @ModifyExpressionValue(method = "sendMovementPackets", at = @At(value = "INVOKE",
-            target = "Lnet/minecraft/client/network/ClientPlayerEntity;getYaw()F"))
+    @ModifyExpressionValue(method = "sendPosition", at = @At(value = "INVOKE",
+            target = "Lnet/minecraft/client/player/LocalPlayer;getYRot()F"))
     private float usePacketYaw(float original) {
         if (Echo.eventsDisabled) {
             return original;
@@ -94,8 +94,8 @@ public abstract class ClientPlayerEntityMixin extends AbstractClientPlayerEntity
         return echo$movementPacket != null ? (float) echo$movementPacket.getYaw() : original;
     }
 
-    @ModifyExpressionValue(method = "sendMovementPackets", at = @At(value = "INVOKE",
-            target = "Lnet/minecraft/client/network/ClientPlayerEntity;getPitch()F"))
+    @ModifyExpressionValue(method = "sendPosition", at = @At(value = "INVOKE",
+            target = "Lnet/minecraft/client/player/LocalPlayer;getXRot()F"))
     private float usePacketPitch(float original) {
         if (Echo.eventsDisabled) {
             return original;
@@ -104,8 +104,8 @@ public abstract class ClientPlayerEntityMixin extends AbstractClientPlayerEntity
         return PitchLimits.clampDegrees(pitch);
     }
 
-    @ModifyExpressionValue(method = "sendMovementPackets", at = @At(value = "INVOKE",
-            target = "Lnet/minecraft/client/network/ClientPlayerEntity;isOnGround()Z"))
+    @ModifyExpressionValue(method = "sendPosition", at = @At(value = "INVOKE",
+            target = "Lnet/minecraft/client/player/LocalPlayer;onGround()Z"))
     private boolean usePacketOnGround(boolean original) {
         if (Echo.eventsDisabled) {
             return original;
@@ -113,23 +113,23 @@ public abstract class ClientPlayerEntityMixin extends AbstractClientPlayerEntity
         return echo$movementPacket != null ? echo$movementPacket.isOnGround() : original;
     }
 
-    @ModifyExpressionValue(method = "sendMovementPackets", at = @At(value = "INVOKE",
-            target = "Lnet/minecraft/client/network/ClientPlayerEntity;getEntityPos()Lnet/minecraft/util/math/Vec3d;"))
-    private Vec3d usePacketPosition(Vec3d original) {
+    @ModifyExpressionValue(method = "sendPosition", at = @At(value = "INVOKE",
+            target = "Lnet/minecraft/client/player/LocalPlayer;position()Lnet/minecraft/world/phys/Vec3;"))
+    private Vec3 usePacketPosition(Vec3 original) {
         if (Echo.eventsDisabled) {
             return original;
         }
         return echo$movementPacket != null
-                ? new Vec3d(echo$movementPacket.getX(), echo$movementPacket.getY(), echo$movementPacket.getZ())
+                ? new Vec3(echo$movementPacket.getX(), echo$movementPacket.getY(), echo$movementPacket.getZ())
                 : original;
     }
 
-    @Inject(method = "swingHand", at = @At("HEAD"), cancellable = true)
-    private void beforeHandSwing(Hand hand, CallbackInfo callback) {
+    @Inject(method = "swing", at = @At("HEAD"), cancellable = true)
+    private void beforeHandSwing(InteractionHand hand, CallbackInfo callback) {
         if (Echo.eventsDisabled) {
             return;
         }
-        HandSwingEvent event = new HandSwingEvent((ClientPlayerEntity) (Object) this, hand);
+        HandSwingEvent event = new HandSwingEvent((LocalPlayer) (Object) this, hand);
         event.post();
         if (event.cancelled) {
             callback.cancel();
@@ -148,8 +148,8 @@ public abstract class ClientPlayerEntityMixin extends AbstractClientPlayerEntity
         }
     }
 
-    @ModifyExpressionValue(method = "tickMovement", at = @At(value = "INVOKE",
-            target = "Lnet/minecraft/client/network/ClientPlayerEntity;isBlockedFromSprinting()Z"))
+    @ModifyExpressionValue(method = "aiStep", at = @At(value = "INVOKE",
+            target = "Lnet/minecraft/client/player/LocalPlayer;isSlowDueToUsingItem()Z"))
     private boolean modifySprintBlocking(boolean original) {
         if (Echo.eventsDisabled) {
             return original;
@@ -159,8 +159,8 @@ public abstract class ClientPlayerEntityMixin extends AbstractClientPlayerEntity
         return !event.cancelled && event.isBlockedFromSprinting();
     }
 
-    @ModifyExpressionValue(method = "applyMovementSpeedFactors", at = @At(value = "INVOKE",
-            target = "Lnet/minecraft/client/network/ClientPlayerEntity;getActiveItemSpeedMultiplier()F"))
+    @ModifyExpressionValue(method = "modifyInput", at = @At(value = "INVOKE",
+            target = "Lnet/minecraft/client/player/LocalPlayer;itemUseSpeedMultiplier()F"))
     private float modifyActiveItemSpeed(float original) {
         if (Echo.eventsDisabled) {
             return original;
@@ -170,8 +170,8 @@ public abstract class ClientPlayerEntityMixin extends AbstractClientPlayerEntity
         return event.cancelled ? 1.0F : event.getActiveItemSpeedMultiplier();
     }
 
-    @ModifyExpressionValue(method = "applyMovementSpeedFactors", at = @At(value = "INVOKE",
-            target = "Lnet/minecraft/client/network/ClientPlayerEntity;shouldSlowDown()Z"))
+    @ModifyExpressionValue(method = "modifyInput", at = @At(value = "INVOKE",
+            target = "Lnet/minecraft/client/player/LocalPlayer;isMovingSlowly()Z"))
     private boolean modifySneakingSlowdown(boolean original) {
         if (Echo.eventsDisabled) {
             return original;
@@ -181,13 +181,13 @@ public abstract class ClientPlayerEntityMixin extends AbstractClientPlayerEntity
         return !event.cancelled && event.shouldSlowDown();
     }
 
-    @Redirect(method = "tickMovement", at = @At(value = "INVOKE",
-            target = "Lnet/minecraft/client/network/ClientPlayerEntity;hasVehicle()Z", ordinal = 1))
-    private boolean modifyMovementVehicleCheck(ClientPlayerEntity player) {
+    @Redirect(method = "aiStep", at = @At(value = "INVOKE",
+            target = "Lnet/minecraft/client/player/LocalPlayer;isPassenger()Z", ordinal = 1))
+    private boolean modifyMovementVehicleCheck(LocalPlayer player) {
         if (Echo.eventsDisabled) {
-            return player.hasVehicle();
+            return player.isPassenger();
         }
-        if (player.hasVehicle()) {
+        if (player.isPassenger()) {
             return true;
         }
         MovementSpeedEvent event = new MovementSpeedEvent(1.0F, false, false, false);
@@ -195,13 +195,13 @@ public abstract class ClientPlayerEntityMixin extends AbstractClientPlayerEntity
         return event.hasVehicle();
     }
 
-    @Redirect(method = "applyMovementSpeedFactors", at = @At(value = "INVOKE",
-            target = "Lnet/minecraft/client/network/ClientPlayerEntity;hasVehicle()Z"))
-    private boolean modifySpeedVehicleCheck(ClientPlayerEntity player) {
+    @Redirect(method = "modifyInput", at = @At(value = "INVOKE",
+            target = "Lnet/minecraft/client/player/LocalPlayer;isPassenger()Z"))
+    private boolean modifySpeedVehicleCheck(LocalPlayer player) {
         if (Echo.eventsDisabled) {
-            return player.hasVehicle();
+            return player.isPassenger();
         }
-        if (player.hasVehicle()) {
+        if (player.isPassenger()) {
             return true;
         }
         MovementSpeedEvent event = new MovementSpeedEvent(1.0F, false, false, false);
@@ -209,7 +209,7 @@ public abstract class ClientPlayerEntityMixin extends AbstractClientPlayerEntity
         return event.hasVehicle();
     }
 
-    @Inject(method = "getCrosshairTarget", at = @At("RETURN"), cancellable = true)
+    @Inject(method = "raycastHitResult", at = @At("RETURN"), cancellable = true)
     private void updateCrosshairTarget(float tickProgress, Entity cameraEntity,
             CallbackInfoReturnable<HitResult> callback) {
         if (Echo.eventsDisabled) {

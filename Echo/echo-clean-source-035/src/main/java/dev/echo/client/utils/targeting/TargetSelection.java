@@ -6,11 +6,11 @@ import dev.echo.client.Echo;
 import dev.echo.client.MinecraftAccess;
 import dev.echo.client.features.internals.TargetsFeature;
 import dev.echo.client.setting.MultiChoiceSetting;
-import net.minecraft.entity.Entity;
-import net.minecraft.entity.LivingEntity;
-import net.minecraft.entity.decoration.ArmorStandEntity;
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.util.math.Vec3d;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.decoration.ArmorStand;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.phys.Vec3;
 
 /**
  * Shared combat-target filtering, retained target selection, and attack history.
@@ -31,7 +31,7 @@ public class TargetSelection implements MinecraftAccess {
             return;
         }
         lastAttackedTarget = living;
-        lastAttackTick = CLIENT.player.age;
+        lastAttackTick = CLIENT.player.tickCount;
         if (!isValidTarget(living)) {
             return;
         }
@@ -41,7 +41,7 @@ public class TargetSelection implements MinecraftAccess {
     /** Applies the original ordered validity, type, player, team, friend and bot checks. */
     public static boolean isValidTarget(LivingEntity entity) {
         if (entity == null || !entity.isAlive() || entity.isRemoved()
-                || entity.isDead() || entity.isSpectator() || CLIENT.player == null) {
+                || entity.isDeadOrDying() || entity.isSpectator() || CLIENT.player == null) {
             return false;
         }
         TargetsFeature targets = targets();
@@ -65,7 +65,7 @@ public class TargetSelection implements MinecraftAccess {
         if (EntityPredicates.isPlayer(entity)) {
             return isPlayerAllowed(entity, targets, hasSelection);
         }
-        if (entity instanceof ArmorStandEntity) {
+        if (entity instanceof ArmorStand) {
             return !hasSelection || types.isSelected(TargetsFeature.ARMOR_STANDS);
         }
         if (EntityPredicates.isHostile(entity)) {
@@ -100,13 +100,13 @@ public class TargetSelection implements MinecraftAccess {
     }
 
     /** Scans world iteration order; target resolution may update shared retained state. */
-    public static LivingEntity findNearestTarget(Vec3d origin, float tickDelta) {
-        if (origin == null || CLIENT.world == null || CLIENT.player == null) {
+    public static LivingEntity findNearestTarget(Vec3 origin, float tickDelta) {
+        if (origin == null || CLIENT.level == null || CLIENT.player == null) {
             return null;
         }
         LivingEntity nearest = null;
         double nearestDistanceSquared = Double.MAX_VALUE;
-        for (Entity entity : CLIENT.world.getEntities()) {
+        for (Entity entity : CLIENT.level.entitiesForRendering()) {
             if (!(entity instanceof LivingEntity living) || entity == CLIENT.player || !isValidTarget(living)) {
                 continue;
             }
@@ -114,7 +114,7 @@ public class TargetSelection implements MinecraftAccess {
             if (resolved == null) {
                 continue;
             }
-            double distanceSquared = origin.squaredDistanceTo(resolved.getLerpedPos(tickDelta));
+            double distanceSquared = origin.distanceToSqr(resolved.getPosition(tickDelta));
             if (distanceSquared < nearestDistanceSquared) {
                 nearestDistanceSquared = distanceSquared;
                 nearest = resolved;
@@ -145,7 +145,7 @@ public class TargetSelection implements MinecraftAccess {
         if (CLIENT.player == null || !isLastAttackedValid()) {
             return null;
         }
-        if (CLIENT.player.age - lastAttackTick > maximumAgeTicks) {
+        if (CLIENT.player.tickCount - lastAttackTick > maximumAgeTicks) {
             return null;
         }
         return lastAttackedTarget;
@@ -158,13 +158,13 @@ public class TargetSelection implements MinecraftAccess {
 
     /** Whether another dead player is strictly inside the supplied distance. */
     public static boolean hasDeadPlayerWithin(double distance) {
-        if (CLIENT.player == null || CLIENT.world == null) {
+        if (CLIENT.player == null || CLIENT.level == null) {
             return false;
         }
         double distanceSquared = distance * distance;
-        for (PlayerEntity player : CLIENT.world.getPlayers()) {
-            if (player != CLIENT.player && player.isDead()
-                    && CLIENT.player.squaredDistanceTo(player) < distanceSquared) {
+        for (Player player : CLIENT.level.players()) {
+            if (player != CLIENT.player && player.isDeadOrDying()
+                    && CLIENT.player.distanceToSqr(player) < distanceSquared) {
                 return true;
             }
         }
@@ -189,7 +189,7 @@ public class TargetSelection implements MinecraftAccess {
 
     private static boolean isLastAttackedValid() {
         if (lastAttackedTarget == null || CLIENT.player == null
-                || lastAttackedTarget.getEntityWorld() != CLIENT.world
+                || lastAttackedTarget.level() != CLIENT.level
                 || !lastAttackedTarget.isAlive() || lastAttackedTarget.isRemoved()) {
             return false;
         }
@@ -198,11 +198,11 @@ public class TargetSelection implements MinecraftAccess {
 
     private static boolean canKeepTarget(LivingEntity entity) {
         if (entity == null || CLIENT.player == null || !entity.isAlive() || entity.isRemoved()
-                || entity.getEntityWorld() != CLIENT.world) {
+                || entity.level() != CLIENT.level) {
             return false;
         }
         double range = keepTargetRange();
-        if (CLIENT.player.squaredDistanceTo(entity) > range * range) {
+        if (CLIENT.player.distanceToSqr(entity) > range * range) {
             return false;
         }
         return isValidTarget(entity);
@@ -241,7 +241,7 @@ public class TargetSelection implements MinecraftAccess {
     }
 
     private static boolean isBot(LivingEntity entity, TargetsFeature targets) {
-        return entity instanceof PlayerEntity player && CachedPlayerTargets.isBot(player, targets);
+        return entity instanceof Player player && CachedPlayerTargets.isBot(player, targets);
     }
 
     private static TargetsFeature targets() {

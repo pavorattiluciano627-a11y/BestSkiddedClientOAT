@@ -8,13 +8,13 @@ import dev.echo.client.utils.targeting.AimPointMode;
 import dev.echo.client.utils.targeting.AimPointSettings;
 import java.util.Optional;
 import java.util.concurrent.ThreadLocalRandom;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.entity.LivingEntity;
-import net.minecraft.util.hit.HitResult;
-import net.minecraft.util.math.Box;
-import net.minecraft.util.math.MathHelper;
-import net.minecraft.util.math.Vec3d;
-import net.minecraft.world.RaycastContext;
+import net.minecraft.client.Minecraft;
+import net.minecraft.util.Mth;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.level.ClipContext;
+import net.minecraft.world.phys.AABB;
+import net.minecraft.world.phys.HitResult;
+import net.minecraft.world.phys.Vec3;
 
 /**
  * Owned rotation request, transition state, and cached visible target point.
@@ -35,7 +35,7 @@ public final class RotationRequest {
     private float yawVelocity;
     private float pitchVelocity;
     private LivingEntity cachedTarget;
-    private Vec3d cachedLocalPoint;
+    private Vec3 cachedLocalPoint;
 
     RotationRequest(RotationManager manager, Feature owner, RotationPriority priority) {
         this.manager = manager;
@@ -44,7 +44,7 @@ public final class RotationRequest {
     }
 
     /** Sets a world-space aim point for this request. */
-    public boolean aim(Vec3d point, RotationSettings settings) {
+    public boolean aim(Vec3 point, RotationSettings settings) {
         return manager.aimAt(this, point, settings);
     }
 
@@ -110,34 +110,34 @@ public final class RotationRequest {
         cachedLocalPoint = null;
     }
 
-    Optional<Vec3d> targetPoint(LivingEntity entity, AimPointSettings targeting, float tickDelta) {
-        MinecraftClient client = MinecraftClient.getInstance();
-        if (entity == null || client.player == null || client.world == null) return Optional.empty();
-        Box box = interpolatedHitbox(entity, tickDelta);
-        Vec3d center = box.getCenter();
-        Vec3d selected = switch (targeting.mode()) {
-            case STRAIGHT -> new Vec3d(center.x, box.maxY - 0.1, center.z);
+    Optional<Vec3> targetPoint(LivingEntity entity, AimPointSettings targeting, float tickDelta) {
+        Minecraft client = Minecraft.getInstance();
+        if (entity == null || client.player == null || client.level == null) return Optional.empty();
+        AABB box = interpolatedHitbox(entity, tickDelta);
+        Vec3 center = box.getCenter();
+        Vec3 selected = switch (targeting.mode()) {
+            case STRAIGHT -> new Vec3(center.x, box.maxY - 0.1, center.z);
             case CLOSEST -> {
-                Vec3d eyes = client.player.getCameraPosVec(tickDelta);
-                yield new Vec3d(MathHelper.clamp(eyes.x, box.minX, box.maxX),
-                        MathHelper.clamp(eyes.y, box.minY, box.maxY), MathHelper.clamp(eyes.z, box.minZ, box.maxZ));
+                Vec3 eyes = client.player.getEyePosition(tickDelta);
+                yield new Vec3(Mth.clamp(eyes.x, box.minX, box.maxX),
+                        Mth.clamp(eyes.y, box.minY, box.maxY), Mth.clamp(eyes.z, box.minZ, box.maxZ));
             }
             case RANDOM -> RotationMath.randomPoint(box);
             case CENTER -> center;
-            case FEET -> new Vec3d(center.x, box.minY + 0.1, center.z);
+            case FEET -> new Vec3(center.x, box.minY + 0.1, center.z);
         };
         if (targeting.randomize()) selected = randomizePoint(selected, box, targeting.mode());
-        Vec3d preferred = center.lerp(selected, (double) targeting.pointWeight() / 100.0);
+        Vec3 preferred = center.lerp(selected, (double) targeting.pointWeight() / 100.0);
         if (visible(preferred, tickDelta)) {
             cachedTarget = null;
             cachedLocalPoint = null;
             return Optional.of(preferred);
         }
         if (cachedTarget == entity && cachedLocalPoint != null) {
-            Vec3d previous = cachedLocalPoint.add(box.minX, box.minY, box.minZ);
+            Vec3 previous = cachedLocalPoint.add(box.minX, box.minY, box.minZ);
             if (containsInclusive(previous, box) && visible(previous, tickDelta)) return Optional.of(previous);
         }
-        Vec3d alternative = closestVisibleGridPoint(box, preferred, tickDelta);
+        Vec3 alternative = closestVisibleGridPoint(box, preferred, tickDelta);
         if (alternative != null) {
             cachedTarget = entity;
             cachedLocalPoint = alternative.subtract(box.minX, box.minY, box.minZ);
@@ -148,16 +148,16 @@ public final class RotationRequest {
         return targeting.allowOccluded() ? Optional.of(preferred) : Optional.empty();
     }
 
-    private static Box interpolatedHitbox(LivingEntity entity, float tickDelta) {
-        EntityHitboxEvent event = new EntityHitboxEvent(entity, entity.getBoundingBox().expand(entity.getTargetingMargin()));
+    private static AABB interpolatedHitbox(LivingEntity entity, float tickDelta) {
+        EntityHitboxEvent event = new EntityHitboxEvent(entity, entity.getBoundingBox().inflate(entity.getPickRadius()));
         EventBus.post(event);
-        Vec3d interpolated = entity.getLerpedPos(tickDelta);
-        return event.getBoundingBox().offset(interpolated.x - entity.getX(),
+        Vec3 interpolated = entity.getPosition(tickDelta);
+        return event.getBoundingBox().move(interpolated.x - entity.getX(),
                 interpolated.y - entity.getY(), interpolated.z - entity.getZ());
     }
 
     private static Rotation eased(Rotation current, Rotation desired, float yawSpeed, float pitchSpeed, float elapsed) {
-        float yaw = MathHelper.wrapDegrees(desired.yaw() - current.yaw());
+        float yaw = Mth.wrapDegrees(desired.yaw() - current.yaw());
         float pitch = desired.pitch() - current.pitch();
         float yawStep = Math.min(Math.abs(yaw), Math.max(yawSpeed * elapsed * 0.2F,
                 Math.abs(yaw) * (1.0F - (float) Math.exp(-yawSpeed * elapsed * 0.1F))));
@@ -168,35 +168,35 @@ public final class RotationRequest {
     }
 
     private Rotation natural(Rotation current, Rotation desired, float yawSpeed, float pitchSpeed, float elapsed) {
-        elapsed = MathHelper.clamp(elapsed, 0.001F, 0.1F);
-        float yaw = MathHelper.wrapDegrees(desired.yaw() - current.yaw());
+        elapsed = Mth.clamp(elapsed, 0.001F, 0.1F);
+        float yaw = Mth.wrapDegrees(desired.yaw() - current.yaw());
         float pitch = desired.pitch() - current.pitch();
         yawVelocity = RotationMath.smoothVelocity(yawVelocity, yaw, yawSpeed, elapsed);
         pitchVelocity = RotationMath.smoothVelocity(pitchVelocity, pitch, pitchSpeed, elapsed);
         return new Rotation(current.yaw() + yawVelocity * elapsed, current.pitch() + pitchVelocity * elapsed);
     }
 
-    private static Vec3d randomizePoint(Vec3d point, Box box, AimPointMode mode) {
+    private static Vec3 randomizePoint(Vec3 point, AABB box, AimPointMode mode) {
         if (mode != AimPointMode.CLOSEST) return point.lerp(RotationMath.randomPoint(box), 0.5);
         ThreadLocalRandom random = ThreadLocalRandom.current();
-        Vec3d offset = new Vec3d(point.x + (random.nextDouble() - 0.5) * (box.maxX - box.minX) * 0.9,
+        Vec3 offset = new Vec3(point.x + (random.nextDouble() - 0.5) * (box.maxX - box.minX) * 0.9,
                 point.y + (random.nextDouble() - 0.5) * (box.maxY - box.minY) * 0.9,
                 point.z + (random.nextDouble() - 0.5) * (box.maxZ - box.minZ) * 0.9);
-        return point.lerp(new Vec3d(MathHelper.clamp(offset.x, box.minX, box.maxX),
-                MathHelper.clamp(offset.y, box.minY, box.maxY), MathHelper.clamp(offset.z, box.minZ, box.maxZ)), 0.5);
+        return point.lerp(new Vec3(Mth.clamp(offset.x, box.minX, box.maxX),
+                Mth.clamp(offset.y, box.minY, box.maxY), Mth.clamp(offset.z, box.minZ, box.maxZ)), 0.5);
     }
 
-    private static Vec3d closestVisibleGridPoint(Box box, Vec3d preferred, float tickDelta) {
-        Vec3d closest = null;
+    private static Vec3 closestVisibleGridPoint(AABB box, Vec3 preferred, float tickDelta) {
+        Vec3 closest = null;
         double distance = Double.MAX_VALUE;
         for (int x = 0; x < 3; x++) {
             for (int y = 0; y < 5; y++) {
                 for (int z = 0; z < 3; z++) {
-                    Vec3d point = new Vec3d(box.minX + (double) x / 2.0 * (box.maxX - box.minX),
+                    Vec3 point = new Vec3(box.minX + (double) x / 2.0 * (box.maxX - box.minX),
                             box.minY + (double) y / 4.0 * (box.maxY - box.minY),
                             box.minZ + (double) z / 2.0 * (box.maxZ - box.minZ));
-                    if (visible(point, tickDelta) && point.squaredDistanceTo(preferred) < distance) {
-                        distance = point.squaredDistanceTo(preferred);
+                    if (visible(point, tickDelta) && point.distanceToSqr(preferred) < distance) {
+                        distance = point.distanceToSqr(preferred);
                         closest = point;
                     }
                 }
@@ -205,15 +205,15 @@ public final class RotationRequest {
         return closest;
     }
 
-    private static boolean visible(Vec3d point, float tickDelta) {
-        MinecraftClient client = MinecraftClient.getInstance();
-        if (client.player == null || client.world == null) return true;
-        HitResult hit = client.world.raycast(new RaycastContext(client.player.getCameraPosVec(tickDelta), point,
-                RaycastContext.ShapeType.OUTLINE, RaycastContext.FluidHandling.NONE, client.player));
-        return hit == null || hit.getType() == HitResult.Type.MISS || hit.getPos().squaredDistanceTo(point) < 1.0E-6;
+    private static boolean visible(Vec3 point, float tickDelta) {
+        Minecraft client = Minecraft.getInstance();
+        if (client.player == null || client.level == null) return true;
+        HitResult hit = client.level.clip(new ClipContext(client.player.getEyePosition(tickDelta), point,
+                ClipContext.Block.OUTLINE, ClipContext.Fluid.NONE, client.player));
+        return hit == null || hit.getType() == HitResult.Type.MISS || hit.getLocation().distanceToSqr(point) < 1.0E-6;
     }
 
-    private static boolean containsInclusive(Vec3d point, Box box) {
+    private static boolean containsInclusive(Vec3 point, AABB box) {
         return point.x >= box.minX && point.x <= box.maxX && point.y >= box.minY
                 && point.y <= box.maxY && point.z >= box.minZ && point.z <= box.maxZ;
     }

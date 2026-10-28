@@ -63,9 +63,9 @@ public class TrailsFeature extends Feature {
         long nowMillis = System.currentTimeMillis();
         long lifetimeMillis = (long) (lifetime.getValue() * 1000.0f);
         float tickDelta = event.getTickProgress();
-        double x = RandomMath.lerp(client.player.lastX, client.player.getX(), (double) tickDelta);
-        double y = RandomMath.lerp(client.player.lastY, client.player.getY(), (double) tickDelta);
-        double z = RandomMath.lerp(client.player.lastZ, client.player.getZ(), (double) tickDelta);
+        double x = RandomMath.lerp(client.player.xo, client.player.getX(), (double) tickDelta);
+        double y = RandomMath.lerp(client.player.yo, client.player.getY(), (double) tickDelta);
+        double z = RandomMath.lerp(client.player.zo, client.player.getZ(), (double) tickDelta);
 
         while (!trailSamples.isEmpty() && nowMillis - trailSamples.peekLast().timeMillis() > lifetimeMillis) {
             trailSamples.removeLast();

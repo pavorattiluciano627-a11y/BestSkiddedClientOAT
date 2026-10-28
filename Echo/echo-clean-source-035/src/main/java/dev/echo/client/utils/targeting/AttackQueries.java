@@ -1,8 +1,8 @@
 package dev.echo.client.utils.targeting;
 
 import java.util.List;
-import net.minecraft.entity.LivingEntity;
-import net.minecraft.item.ItemStack;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.item.ItemStack;
 
 /** Item-use prediction bookkeeping shared by the original kinetic-weapon usage hook. */
 public final class AttackQueries {
@@ -19,7 +19,7 @@ public final class AttackQueries {
      */
     public static List<AttackEvaluation> findKineticWeaponTargets(LivingEntity user, ItemStack stack,
             int remainingUseTicks) {
-        int elapsedUseTicks = stack.getMaxUseTime(user) - remainingUseTicks;
+        int elapsedUseTicks = stack.getUseDuration(user) - remainingUseTicks;
         if (elapsedUseTicks <= previousElapsedUseTicks) {
             contactCache.clear();
         }

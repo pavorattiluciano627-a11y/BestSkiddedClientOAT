@@ -1,6 +1,6 @@
 package dev.echo.client.mixin;
 
-import net.minecraft.entity.projectile.FireworkRocketEntity;
+import net.minecraft.world.entity.projectile.FireworkRocketEntity;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.gen.Accessor;
 
@@ -9,6 +9,6 @@ public interface FireworkRocketEntityAccessor {
     @Accessor("life")
     int getLife();
 
-    @Accessor("lifeTime")
+    @Accessor("lifetime")
     int getLifeTime();
 }

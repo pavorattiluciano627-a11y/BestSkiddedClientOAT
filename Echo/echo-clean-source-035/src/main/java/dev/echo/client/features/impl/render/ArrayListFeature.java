@@ -77,7 +77,7 @@ public class ArrayListFeature extends EchoHudElement {
 
     @Override
     protected boolean shouldRender() {
-        return !client.debugHudEntryList.isF3Enabled();
+        return !client.debugEntries.isOverlayVisible();
     }
 
     @Override

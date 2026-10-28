@@ -1,6 +1,6 @@
 package dev.echo.client.render;
 
-import net.minecraft.util.math.ColorHelper;
+import net.minecraft.util.ARGB;
 import org.joml.Vector4i;
 
 /** Exact color and scissor operations extracted from the UI renderer. */
@@ -10,11 +10,11 @@ public final class UiRenderMath {
 
     /** Keeps alpha and rounds each quarter-brightness RGB channel independently. */
     public static int textShadowColor(int argb) {
-        return ColorHelper.getArgb(
-                ColorHelper.getAlpha(argb),
-                Math.round(ColorHelper.getRed(argb) * 0.25F),
-                Math.round(ColorHelper.getGreen(argb) * 0.25F),
-                Math.round(ColorHelper.getBlue(argb) * 0.25F));
+        return ARGB.color(
+                ARGB.alpha(argb),
+                Math.round(ARGB.red(argb) * 0.25F),
+                Math.round(ARGB.green(argb) * 0.25F),
+                Math.round(ARGB.blue(argb) * 0.25F));
     }
 
     /** The original UI uses a fixed two-pixel scale, independent of window scale. */

@@ -7,13 +7,13 @@ import dev.echo.client.features.Category;
 import dev.echo.client.features.Feature;
 import dev.echo.client.features.FeatureInfo;
 import dev.echo.client.mixin.ClientPlayerInteractionManagerAccessor;
-import net.minecraft.block.BlockState;
-import net.minecraft.enchantment.EnchantmentHelper;
-import net.minecraft.enchantment.Enchantments;
-import net.minecraft.entity.player.PlayerInventory;
-import net.minecraft.item.ItemStack;
-import net.minecraft.util.hit.BlockHitResult;
-import net.minecraft.util.math.BlockPos;
+import net.minecraft.core.BlockPos;
+import net.minecraft.world.entity.player.Inventory;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.enchantment.EnchantmentHelper;
+import net.minecraft.world.item.enchantment.Enchantments;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.phys.BlockHitResult;
 
 /** Two-stage tool selection. Conditional original linkage domain: analysis/receipt.json. */
 public class AttributeMineFeature extends Feature {
@@ -41,21 +41,21 @@ public class AttributeMineFeature extends Feature {
             --switchDelay;
             if (switchDelay <= 0) {
                 client.player.getInventory().setSelectedSlot(pendingToolSlot);
-                ((ClientPlayerInteractionManagerAccessor) client.interactionManager).invokeSyncSelectedSlot();
+                ((ClientPlayerInteractionManagerAccessor) client.gameMode).invokeSyncSelectedSlot();
                 pendingToolSlot = -1;
             }
             return;
         }
-        if (!client.options.attackKey.isPressed()) {
+        if (!client.options.keyAttack.isDown()) {
             lastTarget = null;
             return;
         }
-        if (!(client.crosshairTarget instanceof BlockHitResult hit)) {
+        if (!(client.hitResult instanceof BlockHitResult hit)) {
             lastTarget = null;
             return;
         }
         BlockPos position = hit.getBlockPos();
-        BlockState state = client.world.getBlockState(position);
+        BlockState state = client.level.getBlockState(position);
         if (state.isAir()) {
             lastTarget = null;
             return;
@@ -66,9 +66,9 @@ public class AttributeMineFeature extends Feature {
         // The original scans both even when no Efficiency enchantment is available.
         int fastestSlot = findFastestToolSlot(state);
         if (efficiencySlot == -1) return;
-        PlayerInventory inventory = client.player.getInventory();
+        Inventory inventory = client.player.getInventory();
         inventory.setSelectedSlot(efficiencySlot);
-        ((ClientPlayerInteractionManagerAccessor) client.interactionManager).invokeSyncSelectedSlot();
+        ((ClientPlayerInteractionManagerAccessor) client.gameMode).invokeSyncSelectedSlot();
         if (fastestSlot != -1 && fastestSlot != efficiencySlot) {
             pendingToolSlot = fastestSlot;
             switchDelay = 2;
@@ -76,15 +76,15 @@ public class AttributeMineFeature extends Feature {
     }
 
     private int findHighestEfficiencySlot() {
-        PlayerInventory inventory = client.player.getInventory();
+        Inventory inventory = client.player.getInventory();
         int bestSlot = -1;
         int bestLevel = 0;
-        var efficiency = client.world.getRegistryManager().getOptionalEntry(Enchantments.EFFICIENCY);
+        var efficiency = client.level.registryAccess().get(Enchantments.EFFICIENCY);
         if (efficiency.isEmpty()) return -1;
         for (int slot = 0; slot < 9; ++slot) {
-            ItemStack stack = inventory.getStack(slot);
+            ItemStack stack = inventory.getItem(slot);
             if (stack.isEmpty()) continue;
-            int level = EnchantmentHelper.getLevel(efficiency.get(), stack);
+            int level = EnchantmentHelper.getItemEnchantmentLevel(efficiency.get(), stack);
             if (level > bestLevel) {
                 bestLevel = level;
                 bestSlot = slot;
@@ -94,13 +94,13 @@ public class AttributeMineFeature extends Feature {
     }
 
     private int findFastestToolSlot(BlockState state) {
-        PlayerInventory inventory = client.player.getInventory();
+        Inventory inventory = client.player.getInventory();
         int bestSlot = -1;
         float bestSpeed = 1.0F;
         for (int slot = 0; slot < 9; ++slot) {
-            ItemStack stack = inventory.getStack(slot);
+            ItemStack stack = inventory.getItem(slot);
             if (stack.isEmpty()) continue;
-            float speed = stack.getMiningSpeedMultiplier(state);
+            float speed = stack.getDestroySpeed(state);
             if (speed > bestSpeed) {
                 bestSpeed = speed;
                 bestSlot = slot;

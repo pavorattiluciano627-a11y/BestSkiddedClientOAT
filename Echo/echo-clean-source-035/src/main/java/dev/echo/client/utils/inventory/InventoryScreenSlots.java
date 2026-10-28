@@ -1,22 +1,22 @@
 package dev.echo.client.utils.inventory;
 
+import com.mojang.blaze3d.platform.Window;
 import dev.echo.client.MinecraftAccess;
 import java.util.List;
 import java.util.function.Predicate;
-import net.minecraft.client.gui.screen.ingame.CreativeInventoryScreen;
-import net.minecraft.client.gui.screen.ingame.InventoryScreen;
-import net.minecraft.client.util.Window;
-import net.minecraft.entity.player.PlayerInventory;
-import net.minecraft.item.Item;
-import net.minecraft.screen.ScreenHandler;
-import net.minecraft.screen.slot.Slot;
+import net.minecraft.client.gui.screens.inventory.CreativeModeInventoryScreen;
+import net.minecraft.client.gui.screens.inventory.InventoryScreen;
+import net.minecraft.world.entity.player.Inventory;
+import net.minecraft.world.inventory.AbstractContainerMenu;
+import net.minecraft.world.inventory.Slot;
+import net.minecraft.world.item.Item;
 
 /**
  * Structured candidate for the inventory geometry family.
  * Analysis-only: promotion requires the dispatch and branch invariants in needs.json.
  */
 public final class InventoryScreenSlots implements MinecraftAccess {
-    public record ScreenLayout(ScreenHandler handler, int backgroundWidth, int backgroundHeight) {
+    public record ScreenLayout(AbstractContainerMenu handler, int backgroundWidth, int backgroundHeight) {
     }
 
     public record CursorTarget(int slotIndex, double windowX, double windowY, double distance) {
@@ -27,16 +27,16 @@ public final class InventoryScreenSlots implements MinecraftAccess {
 
     public static ScreenLayout layoutOf(Object screen) {
         if (screen instanceof InventoryScreen inventory) {
-            return new ScreenLayout(inventory.getScreenHandler(), 176, 166);
+            return new ScreenLayout(inventory.getMenu(), 176, 166);
         }
-        if (screen instanceof CreativeInventoryScreen creative) {
-            return new ScreenLayout(creative.getScreenHandler(), 195, 136);
+        if (screen instanceof CreativeModeInventoryScreen creative) {
+            return new ScreenLayout(creative.getMenu(), 195, 136);
         }
         return null;
     }
 
     public static boolean isPlayerInventoryScreen(Object screen) {
-        return screen instanceof InventoryScreen || screen instanceof CreativeInventoryScreen;
+        return screen instanceof InventoryScreen || screen instanceof CreativeModeInventoryScreen;
     }
 
     public static double[] centerInWindow(Slot slot, int left, int top, Window window) {
@@ -44,8 +44,8 @@ public final class InventoryScreenSlots implements MinecraftAccess {
     }
 
     public static int[] screenOrigin(ScreenLayout layout, Window window) {
-        int left = (window.getScaledWidth() - layout.backgroundWidth()) / 2;
-        int top = (window.getScaledHeight() - layout.backgroundHeight()) / 2;
+        int left = (window.getGuiScaledWidth() - layout.backgroundWidth()) / 2;
+        int top = (window.getGuiScaledHeight() - layout.backgroundHeight()) / 2;
         return new int[] {left, top};
     }
 
@@ -92,7 +92,7 @@ public final class InventoryScreenSlots implements MinecraftAccess {
             if (allowedSlot != null && !allowedSlot.test(slot)) {
                 continue;
             }
-            if (!slot.getStack().isOf(item)) {
+            if (!slot.getItem().is(item)) {
                 continue;
             }
             double[] center = centerInWindow(slot, left, top, window);
@@ -117,9 +117,9 @@ public final class InventoryScreenSlots implements MinecraftAccess {
     }
 
     private static boolean isEligibleSlot(Slot slot, boolean playerInventoryOnly) {
-        if (playerInventoryOnly && !(slot.inventory instanceof PlayerInventory)) {
+        if (playerInventoryOnly && !(slot.container instanceof Inventory)) {
             return false;
         }
-        return !(slot.inventory instanceof PlayerInventory) || slot.getIndex() != 40;
+        return !(slot.container instanceof Inventory) || slot.getContainerSlot() != 40;
     }
 }

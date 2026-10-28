@@ -4,13 +4,13 @@ import dev.echo.client.features.impl.utility.FastUseFeature;
 import dev.echo.client.setting.ItemListSetting;
 import dev.echo.client.setting.list.RegistryEntryGroup;
 import java.util.List;
-import net.minecraft.component.DataComponentTypes;
-import net.minecraft.item.BlockItem;
-import net.minecraft.item.EnderPearlItem;
-import net.minecraft.item.Item;
-import net.minecraft.item.ItemStack;
-import net.minecraft.item.Items;
-import net.minecraft.item.PotionItem;
+import net.minecraft.core.component.DataComponents;
+import net.minecraft.world.item.BlockItem;
+import net.minecraft.world.item.EnderpearlItem;
+import net.minecraft.world.item.Item;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
+import net.minecraft.world.item.PotionItem;
 
 /** The seven original Fast Use entry groups, in their original display order. */
 public class FastUseItemListSetting extends ItemListSetting {
@@ -36,7 +36,7 @@ public class FastUseItemListSetting extends ItemListSetting {
     }
 
     private static boolean isFood(Item item) {
-        return new ItemStack(item).contains(DataComponentTypes.FOOD);
+        return new ItemStack(item).has(DataComponents.FOOD);
     }
 
     private static boolean isPotion(Item item) {
@@ -44,7 +44,7 @@ public class FastUseItemListSetting extends ItemListSetting {
     }
 
     private static boolean isEnderPearl(Item item) {
-        return item instanceof EnderPearlItem;
+        return item instanceof EnderpearlItem;
     }
 
     private static boolean isThrowable(Item item) {

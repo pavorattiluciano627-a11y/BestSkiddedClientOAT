@@ -6,19 +6,19 @@ import dev.echo.client.utils.items.ItemGroups;
 import java.util.List;
 import java.util.function.Function;
 import java.util.function.Predicate;
-import net.minecraft.item.Item;
-import net.minecraft.item.ItemStack;
-import net.minecraft.item.Items;
-import net.minecraft.registry.Registries;
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.world.item.Item;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
 
 /** Item registry selection, with the original empty-selection main-hand policy. */
 public class ItemListSetting extends RegistryListSetting<Item> implements MinecraftAccess {
     public ItemListSetting(CharSequence label) {
-        super(label, () -> Registries.ITEM);
+        super(label, () -> BuiltInRegistries.ITEM);
     }
 
     public ItemListSetting(CharSequence label, Predicate<Object> visibleWhen) {
-        super(label, () -> Registries.ITEM, visibleWhen);
+        super(label, () -> BuiltInRegistries.ITEM, visibleWhen);
     }
 
     @Override
@@ -33,7 +33,7 @@ public class ItemListSetting extends RegistryListSetting<Item> implements Minecr
 
     @Override
     public Function<Item, String> getEntryLabel() {
-        return item -> new ItemStack(item).getName().getString();
+        return item -> new ItemStack(item).getHoverName().getString();
     }
 
     public boolean acceptsHeldItem() {
@@ -43,7 +43,7 @@ public class ItemListSetting extends RegistryListSetting<Item> implements Minecr
         if (CLIENT.player == null) {
             return false;
         }
-        ItemStack stack = CLIENT.player.getMainHandStack();
+        ItemStack stack = CLIENT.player.getMainHandItem();
         return isEntrySelected(stack.isEmpty() ? Items.AIR : stack.getItem());
     }
 }

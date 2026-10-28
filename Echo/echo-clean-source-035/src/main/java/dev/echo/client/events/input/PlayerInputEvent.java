@@ -1,7 +1,7 @@
 package dev.echo.client.events.input;
 
 import dev.echo.client.events.Event;
-import net.minecraft.util.PlayerInput;
+import net.minecraft.world.entity.player.Input;
 
 /** Mutable key states together with an immutable snapshot of the original input. */
 public class PlayerInputEvent extends Event {
@@ -16,7 +16,7 @@ public class PlayerInputEvent extends Event {
     public boolean sneak;
     public boolean sprint;
     public boolean allowMovementInFreecam;
-    public final PlayerInput originalInput;
+    public final Input originalInput;
 
     public PlayerInputEvent(boolean forward, boolean backward, boolean left, boolean right,
                             boolean jump, boolean sneak, boolean sprint) {
@@ -29,7 +29,7 @@ public class PlayerInputEvent extends Event {
         this.jump = jump;
         this.sneak = sneak;
         this.sprint = sprint;
-        this.originalInput = new PlayerInput(forward, backward, left, right, jump, sneak, sprint);
+        this.originalInput = new Input(forward, backward, left, right, jump, sneak, sprint);
         if (sentinel != null) {
             int nextCounter = Event.getEventCounterFallbackValue() + 1;
             Event.setEventCounter(nextCounter);

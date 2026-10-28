@@ -1,7 +1,7 @@
 package dev.echo.client.features.impl.utility;
 
-import net.minecraft.item.ItemStack;
-import net.minecraft.item.Items;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
 
 /** Exact item-identity predicate used by Elytra Swap's target-slot search. */
 public final class ElytraSwapItems {

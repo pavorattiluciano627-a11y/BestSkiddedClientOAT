@@ -10,17 +10,17 @@ import dev.echo.client.utils.ElapsedTimer;
 import dev.echo.client.utils.inventory.SlotAction;
 import dev.echo.client.utils.inventory.SlotPackets;
 import dev.echo.client.utils.items.InventoryItems;
-import net.minecraft.component.DataComponentTypes;
-import net.minecraft.item.ArrowItem;
-import net.minecraft.item.BlockItem;
-import net.minecraft.item.BowItem;
-import net.minecraft.item.EnderPearlItem;
-import net.minecraft.item.FishingRodItem;
-import net.minecraft.item.ItemStack;
-import net.minecraft.item.PotionItem;
-import net.minecraft.screen.GenericContainerScreenHandler;
-import net.minecraft.screen.ScreenHandler;
-import net.minecraft.screen.slot.Slot;
+import net.minecraft.core.component.DataComponents;
+import net.minecraft.world.inventory.AbstractContainerMenu;
+import net.minecraft.world.inventory.ChestMenu;
+import net.minecraft.world.inventory.Slot;
+import net.minecraft.world.item.ArrowItem;
+import net.minecraft.world.item.BlockItem;
+import net.minecraft.world.item.BowItem;
+import net.minecraft.world.item.EnderpearlItem;
+import net.minecraft.world.item.FishingRodItem;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.PotionItem;
 
 /** Ordered chest transfers preserving independent initial, transfer, and close timers. */
 public class ChestStealerFeature extends Feature {
@@ -50,14 +50,14 @@ public class ChestStealerFeature extends Feature {
 
     @Subscribe
     public void onClientTick(ClientTickEvent event) {
-        if (client.player == null || client.world == null) {
+        if (client.player == null || client.level == null) {
             return;
         }
         if (!isEnabled()) {
             return;
         }
-        ScreenHandler currentHandler = client.player.currentScreenHandler;
-        if (!(currentHandler instanceof GenericContainerScreenHandler container)) {
+        AbstractContainerMenu currentHandler = client.player.containerMenu;
+        if (!(currentHandler instanceof ChestMenu container)) {
             openDelayTimer.reset();
             transferDelayTimer.reset();
             closeDelayTimer.reset();
@@ -70,25 +70,25 @@ public class ChestStealerFeature extends Feature {
         }
         if (hasNoEligibleItems(container)) {
             if (hasTransferredItems && closeDelayTimer.hasElapsedMillis(closeDelay.getValue())) {
-                client.player.closeHandledScreen();
+                client.player.closeContainer();
             }
             return;
         }
 
-        int containerSize = container.getInventory().size();
+        int containerSize = container.getContainer().getContainerSize();
         for (int slotIndex = 0; slotIndex < containerSize; slotIndex++) {
             Slot slot = container.getSlot(slotIndex);
-            if (!slot.hasStack()) {
+            if (!slot.hasItem()) {
                 continue;
             }
-            ItemStack stack = slot.getStack();
+            ItemStack stack = slot.getItem();
             if (!isEligibleItem(stack)) {
                 continue;
             }
             if (!transferDelayTimer.hasElapsedMillis(takeDelay.getValue())) {
                 continue;
             }
-            SlotPackets.clickSlot(client.player.currentScreenHandler.syncId, slotIndex,
+            SlotPackets.clickSlot(client.player.containerMenu.containerId, slotIndex,
                     0, SlotAction.QUICK_MOVE, client.player);
             hasTransferredItems = true;
             transferDelayTimer.reset();
@@ -96,11 +96,11 @@ public class ChestStealerFeature extends Feature {
         }
     }
 
-    public boolean hasNoEligibleItems(GenericContainerScreenHandler container) {
-        int containerSize = container.getInventory().size();
+    public boolean hasNoEligibleItems(ChestMenu container) {
+        int containerSize = container.getContainer().getContainerSize();
         for (int slotIndex = 0; slotIndex < containerSize; slotIndex++) {
             Slot slot = container.getSlot(slotIndex);
-            if (slot.hasStack() && isEligibleItem(slot.getStack())) {
+            if (slot.hasItem() && isEligibleItem(slot.getItem())) {
                 return false;
             }
         }
@@ -112,13 +112,13 @@ public class ChestStealerFeature extends Feature {
             return true;
         }
         return InventoryItems.isAxe(stack)
-                || stack.contains(DataComponentTypes.FOOD)
+                || stack.has(DataComponents.FOOD)
                 || stack.getItem() instanceof BlockItem
                 || InventoryItems.isLegacySword(stack.getItem())
-                || stack.contains(DataComponentTypes.WEAPON)
-                || stack.contains(DataComponentTypes.TOOL)
-                || stack.contains(DataComponentTypes.EQUIPPABLE)
-                || stack.getItem() instanceof EnderPearlItem
+                || stack.has(DataComponents.WEAPON)
+                || stack.has(DataComponents.TOOL)
+                || stack.has(DataComponents.EQUIPPABLE)
+                || stack.getItem() instanceof EnderpearlItem
                 || stack.getItem() instanceof BowItem
                 || stack.getItem() instanceof ArrowItem
                 || stack.getItem() instanceof FishingRodItem

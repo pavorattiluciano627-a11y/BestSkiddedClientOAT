@@ -1,22 +1,22 @@
 package dev.echo.client.utils.placement;
 
 import dev.echo.client.MinecraftAccess;
-import net.minecraft.block.Block;
-import net.minecraft.block.BlockState;
-import net.minecraft.block.Blocks;
-import net.minecraft.block.RespawnAnchorBlock;
-import net.minecraft.block.ShapeContext;
-import net.minecraft.entity.Entity;
-import net.minecraft.entity.LivingEntity;
-import net.minecraft.item.BlockItem;
-import net.minecraft.item.ItemPlacementContext;
-import net.minecraft.item.ItemStack;
-import net.minecraft.util.ActionResult;
-import net.minecraft.util.Hand;
-import net.minecraft.util.hit.BlockHitResult;
-import net.minecraft.util.hit.HitResult;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.Box;
+import net.minecraft.core.BlockPos;
+import net.minecraft.world.InteractionHand;
+import net.minecraft.world.InteractionResult;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.item.BlockItem;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.context.BlockPlaceContext;
+import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.RespawnAnchorBlock;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.phys.AABB;
+import net.minecraft.world.phys.BlockHitResult;
+import net.minecraft.world.phys.HitResult;
+import net.minecraft.world.phys.shapes.CollisionContext;
 
 /**
  * Complete source unit for the recovered placement queries and main-hand interaction.
@@ -27,47 +27,47 @@ public final class PlacementWorldQueries implements MinecraftAccess {
     }
 
     public static boolean isBlock(BlockPos position, Block block) {
-        return CLIENT.world.getBlockState(position).getBlock() == block;
+        return CLIENT.level.getBlockState(position).getBlock() == block;
     }
 
     public static boolean isChargedRespawnAnchor(BlockPos position) {
         return isBlock(position, Blocks.RESPAWN_ANCHOR)
-                && CLIENT.world.getBlockState(position).get(RespawnAnchorBlock.CHARGES) != 0;
+                && CLIENT.level.getBlockState(position).getValue(RespawnAnchorBlock.CHARGE) != 0;
     }
 
     public static boolean isUnchargedRespawnAnchor(BlockPos position) {
         return isBlock(position, Blocks.RESPAWN_ANCHOR)
-                && CLIENT.world.getBlockState(position).get(RespawnAnchorBlock.CHARGES) == 0;
+                && CLIENT.level.getBlockState(position).getValue(RespawnAnchorBlock.CHARGE) == 0;
     }
 
     public static boolean isEndCrystalBase(BlockState state) {
-        return state != null && (state.isOf(Blocks.OBSIDIAN) || state.isOf(Blocks.BEDROCK));
+        return state != null && (state.is(Blocks.OBSIDIAN) || state.is(Blocks.BEDROCK));
     }
 
     public static BlockPos placementPosition(BlockHitResult hit) {
-        return new ItemPlacementContext(CLIENT.player, Hand.MAIN_HAND, CLIENT.player.getMainHandStack(), hit).getBlockPos();
+        return new BlockPlaceContext(CLIENT.player, InteractionHand.MAIN_HAND, CLIENT.player.getMainHandItem(), hit).getClickedPos();
     }
 
-    public static ActionResult interactMainHand(BlockHitResult hit, boolean swing) {
-        if (CLIENT.player == null || CLIENT.interactionManager == null) {
-            return ActionResult.PASS;
+    public static InteractionResult interactMainHand(BlockHitResult hit, boolean swing) {
+        if (CLIENT.player == null || CLIENT.gameMode == null) {
+            return InteractionResult.PASS;
         }
-        ActionResult result = CLIENT.interactionManager.interactBlock(CLIENT.player, Hand.MAIN_HAND, hit);
-        if (result.isAccepted() && swing && result instanceof ActionResult.Success success) {
-            ActionResult.SwingSource source = success.swingSource();
-            if (source == ActionResult.SwingSource.CLIENT || source == ActionResult.SwingSource.SERVER) {
-                CLIENT.player.swingHand(Hand.MAIN_HAND);
+        InteractionResult result = CLIENT.gameMode.useItemOn(CLIENT.player, InteractionHand.MAIN_HAND, hit);
+        if (result.consumesAction() && swing && result instanceof InteractionResult.Success success) {
+            InteractionResult.SwingSource source = success.swingSource();
+            if (source == InteractionResult.SwingSource.CLIENT || source == InteractionResult.SwingSource.SERVER) {
+                CLIENT.player.swing(InteractionHand.MAIN_HAND);
             }
         }
         return result;
     }
 
     public static boolean hasOtherLivingEntity(BlockPos position, BlockState state) {
-        if (CLIENT.world == null || position == null || state == null) {
+        if (CLIENT.level == null || position == null || state == null) {
             return false;
         }
         // The supplied state is only null-checked in the original method.
-        return !CLIENT.world.getEntitiesByClass(LivingEntity.class, new Box(position), PlacementWorldQueries::isOtherLivingEntity).isEmpty();
+        return !CLIENT.level.getEntitiesOfClass(LivingEntity.class, new AABB(position), PlacementWorldQueries::isOtherLivingEntity).isEmpty();
     }
 
     private static boolean isOtherLivingEntity(LivingEntity entity) {
@@ -75,25 +75,25 @@ public final class PlacementWorldQueries implements MinecraftAccess {
     }
 
     public static boolean hasOtherLivingEntity(BlockPos position, Block block) {
-        return hasOtherLivingEntity(position, block.getDefaultState());
+        return hasOtherLivingEntity(position, block.defaultBlockState());
     }
 
     public static boolean intersectsPlayer(BlockPos position) {
-        return CLIENT.player != null && position != null && CLIENT.player.getBoundingBox().intersects(new Box(position));
+        return CLIENT.player != null && position != null && CLIENT.player.getBoundingBox().intersects(new AABB(position));
     }
 
     public static boolean hasBlockingEntity(BlockPos position) {
-        if (position == null || CLIENT.world == null) {
+        if (position == null || CLIENT.level == null) {
             return false;
         }
-        return hasBlockingEntity(new Box(position));
+        return hasBlockingEntity(new AABB(position));
     }
 
-    public static boolean hasBlockingEntity(Box bounds) {
-        if (bounds == null || CLIENT.world == null) {
+    public static boolean hasBlockingEntity(AABB bounds) {
+        if (bounds == null || CLIENT.level == null) {
             return false;
         }
-        for (Entity entity : CLIENT.world.getOtherEntities(null, bounds)) {
+        for (Entity entity : CLIENT.level.getEntities(null, bounds)) {
             if (blocksPlacement(entity)) {
                 return true;
             }
@@ -102,42 +102,42 @@ public final class PlacementWorldQueries implements MinecraftAccess {
     }
 
     private static boolean blocksPlacement(Entity entity) {
-        return entity != null && entity != CLIENT.player && !entity.isRemoved() && entity.intersectionChecked;
+        return entity != null && entity != CLIENT.player && !entity.isRemoved() && entity.blocksBuilding;
     }
 
     public static BlockPos crosshairAdjacentPosition() {
-        HitResult target = CLIENT.crosshairTarget;
+        HitResult target = CLIENT.hitResult;
         if (target == null || target.getType() != HitResult.Type.BLOCK) {
             return null;
         }
         BlockHitResult blockHit = (BlockHitResult) target;
-        return blockHit.getBlockPos().offset(blockHit.getSide());
+        return blockHit.getBlockPos().relative(blockHit.getDirection());
     }
 
     public static boolean isReplaceable(BlockPos position) {
-        return position != null && CLIENT.world != null && CLIENT.world.getBlockState(position).isReplaceable();
+        return position != null && CLIENT.level != null && CLIENT.level.getBlockState(position).canBeReplaced();
     }
 
     public static boolean hasEntityInAirAbove(BlockPos position) {
-        if (CLIENT.world == null) {
+        if (CLIENT.level == null) {
             return false;
         }
-        BlockPos above = position.up();
-        if (!CLIENT.world.isAir(above)) {
+        BlockPos above = position.above();
+        if (!CLIENT.level.isEmptyBlock(above)) {
             return false;
         }
         double x = above.getX();
         double y = above.getY();
         double z = above.getZ();
-        return !CLIENT.world.getOtherEntities(null, new Box(x, y, z, x + 1.0, y + 2.0, z + 1.0)).isEmpty();
+        return !CLIENT.level.getEntities(null, new AABB(x, y, z, x + 1.0, y + 2.0, z + 1.0)).isEmpty();
     }
 
     public static boolean canPlaceStack(ItemStack stack, BlockHitResult hit) {
         if (!(stack.getItem() instanceof BlockItem blockItem)) {
             return true;
         }
-        ItemPlacementContext context = new ItemPlacementContext(CLIENT.player, Hand.MAIN_HAND, stack, hit);
-        BlockState state = blockItem.getBlock().getPlacementState(context);
-        return state != null && CLIENT.world.canPlace(state, context.getBlockPos(), ShapeContext.ofPlacement(CLIENT.player));
+        BlockPlaceContext context = new BlockPlaceContext(CLIENT.player, InteractionHand.MAIN_HAND, stack, hit);
+        BlockState state = blockItem.getBlock().getStateForPlacement(context);
+        return state != null && CLIENT.level.isUnobstructed(state, context.getClickedPos(), CollisionContext.placementContext(CLIENT.player));
     }
 }

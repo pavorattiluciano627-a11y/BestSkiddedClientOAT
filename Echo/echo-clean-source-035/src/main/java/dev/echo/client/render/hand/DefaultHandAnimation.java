@@ -1,9 +1,9 @@
 package dev.echo.client.render.hand;
 
-import net.minecraft.client.util.math.MatrixStack;
-import net.minecraft.util.Arm;
-import net.minecraft.util.math.MathHelper;
-import net.minecraft.util.math.RotationAxis;
+import com.mojang.blaze3d.vertex.PoseStack;
+import com.mojang.math.Axis;
+import net.minecraft.util.Mth;
+import net.minecraft.world.entity.HumanoidArm;
 
 public class DefaultHandAnimation extends HandAnimation {
     public DefaultHandAnimation() {
@@ -11,21 +11,21 @@ public class DefaultHandAnimation extends HandAnimation {
     }
 
     @Override
-    public void apply(float swingProgress, MatrixStack matrices, int direction, Arm arm) {
-        float x = -0.4F * MathHelper.sin(MathHelper.sqrt(swingProgress) * (float) Math.PI);
-        float y = 0.2F * MathHelper.sin(MathHelper.sqrt(swingProgress) * (float) (Math.PI * 2));
-        float z = -0.2F * MathHelper.sin(swingProgress * (float) Math.PI);
+    public void apply(float swingProgress, PoseStack matrices, int direction, HumanoidArm arm) {
+        float x = -0.4F * Mth.sin(Mth.sqrt(swingProgress) * (float) Math.PI);
+        float y = 0.2F * Mth.sin(Mth.sqrt(swingProgress) * (float) (Math.PI * 2));
+        float z = -0.2F * Mth.sin(swingProgress * (float) Math.PI);
         matrices.translate(direction * x, y, z);
         rotate(matrices, arm, swingProgress);
     }
 
-    private void rotate(MatrixStack matrices, Arm arm, float swingProgress) {
-        int side = arm == Arm.RIGHT ? 1 : -1;
-        float squaredWave = MathHelper.sin(swingProgress * swingProgress * (float) Math.PI);
-        matrices.multiply(RotationAxis.POSITIVE_Y.rotationDegrees(side * (45.0F + squaredWave * -20.0F)));
-        float wave = MathHelper.sin(MathHelper.sqrt(swingProgress) * (float) Math.PI);
-        matrices.multiply(RotationAxis.POSITIVE_Z.rotationDegrees(side * wave * -20.0F));
-        matrices.multiply(RotationAxis.POSITIVE_X.rotationDegrees(wave * -80.0F));
-        matrices.multiply(RotationAxis.POSITIVE_Y.rotationDegrees(side * -45.0F));
+    private void rotate(PoseStack matrices, HumanoidArm arm, float swingProgress) {
+        int side = arm == HumanoidArm.RIGHT ? 1 : -1;
+        float squaredWave = Mth.sin(swingProgress * swingProgress * (float) Math.PI);
+        matrices.mulPose(Axis.YP.rotationDegrees(side * (45.0F + squaredWave * -20.0F)));
+        float wave = Mth.sin(Mth.sqrt(swingProgress) * (float) Math.PI);
+        matrices.mulPose(Axis.ZP.rotationDegrees(side * wave * -20.0F));
+        matrices.mulPose(Axis.XP.rotationDegrees(wave * -80.0F));
+        matrices.mulPose(Axis.YP.rotationDegrees(side * -45.0F));
     }
 }

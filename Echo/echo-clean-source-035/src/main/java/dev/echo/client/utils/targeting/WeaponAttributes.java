@@ -3,16 +3,16 @@ package dev.echo.client.utils.targeting;
 import dev.echo.client.MinecraftAccess;
 import dev.echo.client.mixin.ClientPlayerInteractionManagerAccessor;
 import dev.echo.client.mixin.LivingEntityAccessor;
-import net.minecraft.component.DataComponentTypes;
-import net.minecraft.component.type.PiercingWeaponComponent;
-import net.minecraft.entity.EquipmentSlot;
-import net.minecraft.entity.attribute.EntityAttributeInstance;
-import net.minecraft.entity.attribute.EntityAttributeModifier;
-import net.minecraft.entity.attribute.EntityAttributes;
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.item.Item;
-import net.minecraft.item.ItemStack;
-import net.minecraft.util.Hand;
+import net.minecraft.core.component.DataComponents;
+import net.minecraft.world.InteractionHand;
+import net.minecraft.world.entity.EquipmentSlot;
+import net.minecraft.world.entity.ai.attributes.AttributeInstance;
+import net.minecraft.world.entity.ai.attributes.AttributeModifier;
+import net.minecraft.world.entity.ai.attributes.Attributes;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.Item;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.component.PiercingWeapon;
 
 /**
  * Prospective main-hand attack timing and the client's actual piercing action.
@@ -25,15 +25,15 @@ public final class WeaponAttributes implements MinecraftAccess {
     private WeaponAttributes() {}
 
     /** Records the original shared swing-age value; null leaves the prior value. */
-    public static void recordSwingTick(PlayerEntity player) {
+    public static void recordSwingTick(Player player) {
         if (player == null) {
             return;
         }
-        lastSwingTick = player.age;
+        lastSwingTick = player.tickCount;
     }
 
     /** Remaining cooldown for the supplied prospective stack, including fractional ticks. */
-    public static double remainingCooldownSeconds(PlayerEntity player, ItemStack stack, float tickDelta) {
+    public static double remainingCooldownSeconds(Player player, ItemStack stack, float tickDelta) {
         float delayTicks = projectedAttackDelayTicks(player, stack);
         if (delayTicks <= 0.0F) {
             return 0.0;
@@ -43,67 +43,67 @@ public final class WeaponAttributes implements MinecraftAccess {
         return Math.max(0.0, remainingTicks / 20.0);
     }
 
-    private static int elapsedCooldownTicks(PlayerEntity player) {
+    private static int elapsedCooldownTicks(Player player) {
         if (player == null) {
             return 0;
         }
         int ticksSinceEquipping = ((LivingEntityAccessor) player).getTicksSinceHandEquipping();
-        if (lastSwingTick < 0 || lastSwingTick > player.age) {
+        if (lastSwingTick < 0 || lastSwingTick > player.tickCount) {
             return ticksSinceEquipping;
         }
-        return Math.min(ticksSinceEquipping, player.age - lastSwingTick);
+        return Math.min(ticksSinceEquipping, player.tickCount - lastSwingTick);
     }
 
-    private static float projectedAttackDelayTicks(PlayerEntity player, ItemStack stack) {
+    private static float projectedAttackDelayTicks(Player player, ItemStack stack) {
         if (player == null || stack == null || stack.isEmpty()) {
             return 0.0F;
         }
-        EntityAttributeInstance attackSpeed = player.getAttributeInstance(EntityAttributes.ATTACK_SPEED);
+        AttributeInstance attackSpeed = player.getAttribute(Attributes.ATTACK_SPEED);
         if (attackSpeed == null) {
-            return player.getAttackCooldownProgressPerTick();
+            return player.getCurrentItemAttackStrengthDelay();
         }
         double[] additive = {0.0};
         double[] baseMultiplier = {0.0};
         double[] totalMultiplier = {1.0};
-        for (EntityAttributeModifier modifier : attackSpeed.getModifiers()) {
-            if (modifier.idMatches(Item.BASE_ATTACK_SPEED_MODIFIER_ID)) {
+        for (AttributeModifier modifier : attackSpeed.getModifiers()) {
+            if (modifier.is(Item.BASE_ATTACK_SPEED_ID)) {
                 continue;
             }
             accumulateModifier(modifier, additive, baseMultiplier, totalMultiplier);
         }
-        stack.applyAttributeModifiers(EquipmentSlot.MAINHAND, (attribute, modifier) -> {
-            if (attribute.equals(EntityAttributes.ATTACK_SPEED)) {
+        stack.forEachModifier(EquipmentSlot.MAINHAND, (attribute, modifier) -> {
+            if (attribute.equals(Attributes.ATTACK_SPEED)) {
                 accumulateModifier(modifier, additive, baseMultiplier, totalMultiplier);
             }
         });
         double projectedSpeed = (attackSpeed.getBaseValue() + additive[0])
                 * (1.0 + baseMultiplier[0]) * totalMultiplier[0];
-        projectedSpeed = EntityAttributes.ATTACK_SPEED.value().clamp(projectedSpeed);
+        projectedSpeed = Attributes.ATTACK_SPEED.value().sanitizeValue(projectedSpeed);
         if (projectedSpeed <= 0.0) {
             return 0.0F;
         }
         return (float) (20.0 / projectedSpeed);
     }
 
-    private static void accumulateModifier(EntityAttributeModifier modifier, double[] additive,
+    private static void accumulateModifier(AttributeModifier modifier, double[] additive,
                                            double[] baseMultiplier, double[] totalMultiplier) {
         switch (modifier.operation()) {
-            case ADD_VALUE -> additive[0] += modifier.value();
-            case ADD_MULTIPLIED_BASE -> baseMultiplier[0] += modifier.value();
-            case ADD_MULTIPLIED_TOTAL -> totalMultiplier[0] *= 1.0 + modifier.value();
+            case ADD_VALUE -> additive[0] += modifier.amount();
+            case ADD_MULTIPLIED_BASE -> baseMultiplier[0] += modifier.amount();
+            case ADD_MULTIPLIED_TOTAL -> totalMultiplier[0] *= 1.0 + modifier.amount();
         }
     }
 
     /** Invokes the vanilla piercing interaction, then swings the current main hand. */
     public static void performPiercingAttack() {
-        if (CLIENT.player == null || CLIENT.interactionManager == null) {
+        if (CLIENT.player == null || CLIENT.gameMode == null) {
             return;
         }
-        PiercingWeaponComponent weapon = CLIENT.player.getMainHandStack().get(DataComponentTypes.PIERCING_WEAPON);
+        PiercingWeapon weapon = CLIENT.player.getMainHandItem().get(DataComponents.PIERCING_WEAPON);
         if (weapon == null) {
             return;
         }
-        ((ClientPlayerInteractionManagerAccessor) CLIENT.interactionManager).invokeAttackWithPiercingWeapon(weapon);
-        CLIENT.player.swingHand(Hand.MAIN_HAND);
+        ((ClientPlayerInteractionManagerAccessor) CLIENT.gameMode).invokeAttackWithPiercingWeapon(weapon);
+        CLIENT.player.swing(InteractionHand.MAIN_HAND);
     }
 }

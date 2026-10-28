@@ -10,7 +10,7 @@ import dev.echo.render.pipeline.GraphicsPipeline;
 import dev.echo.render.pipeline.GraphicsPipelineInfo;
 import dev.echo.render.pipeline.PrimitiveTopology;
 import dev.echo.render.vertex.VertexFormat;
-import net.minecraft.util.math.Vec3d;
+import net.minecraft.world.phys.Vec3;
 
 /** Complete algorithm candidate; device interfaces and conditional targets require merge/proof. */
 public final class TracerBatch implements RenderBatch {
@@ -36,7 +36,7 @@ public final class TracerBatch implements RenderBatch {
     }
 
     /** Camera is the original world context's camera position, made explicit for integration. */
-    public void add(double x, double y, double z, int color, Vec3d camera) {
+    public void add(double x, double y, double z, int color, Vec3 camera) {
         if (count >= capacity) {
             grow();
         }

@@ -18,11 +18,12 @@ import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.input.CharInput;
-import net.minecraft.client.input.KeyInput;
-import net.minecraft.client.network.ServerInfo;
-import net.minecraft.text.Text;
+import net.minecraft.client.Minecraft;
+import dev.echo.client.input.CharacterInputModifiers;
+import net.minecraft.client.input.CharacterEvent;
+import net.minecraft.client.input.KeyEvent;
+import net.minecraft.client.multiplayer.ServerData;
+import net.minecraft.network.chat.Component;
 import org.lwjgl.glfw.GLFW;
 
 /** Original ContextStore local-profile panel, with conditional bindings recorded in the receipt. */
@@ -169,7 +170,7 @@ public class ConfigsPanel {
         return captured;
     }
 
-    public boolean charTyped(CharInput input) {
+    public boolean charTyped(CharacterEvent input) {
         if (!createPopupOpen || !nameFocused) return false;
         char character = (char) input.codepoint();
         if (Character.isISOControl(character)) return false;
@@ -179,7 +180,7 @@ public class ConfigsPanel {
         return true;
     }
 
-    public boolean keyPressed(KeyInput input) {
+    public boolean keyPressed(KeyEvent input) {
         if (!createPopupOpen) return false;
         if (input.key() == InputKey.ESCAPE.code()) {
             createPopupOpen = false;
@@ -385,9 +386,9 @@ public class ConfigsPanel {
             case LOAD -> Echo.featureConfig.load(action.configName);
         };
         if (success) {
-            ChatHudMessages.addMessage(Text.literal(Concat.strings(action.action == ConfigAction.SAVE ? SAVED_PREFIX : LOADED_PREFIX, action.configName).toString()));
+            ChatHudMessages.addMessage(Component.literal(Concat.strings(action.action == ConfigAction.SAVE ? SAVED_PREFIX : LOADED_PREFIX, action.configName).toString()));
         } else {
-            ChatHudMessages.addMessage(Text.literal(Concat.strings(FAILED_PREFIX, action.action == ConfigAction.SAVE ? SAVE_PREFIX : LOAD_PREFIX, action.configName).toString()));
+            ChatHudMessages.addMessage(Component.literal(Concat.strings(FAILED_PREFIX, action.action == ConfigAction.SAVE ? SAVE_PREFIX : LOAD_PREFIX, action.configName).toString()));
         }
         return true;
     }
@@ -431,20 +432,20 @@ public class ConfigsPanel {
     private void submitConfig() {
         String name = configName.trim();
         if (name.isEmpty()) {
-            ChatHudMessages.addMessage(Text.literal(NAME_REQUIRED));
+            ChatHudMessages.addMessage(Component.literal(NAME_REQUIRED));
             return;
         }
         if (Echo.featureConfig == null) return;
         boolean saved = Echo.featureConfig.save(name);
         if (!saved) {
-            ChatHudMessages.addMessage(Text.literal(Concat.strings(FAILED_SAVE_PREFIX, name).toString()));
+            ChatHudMessages.addMessage(Component.literal(Concat.strings(FAILED_SAVE_PREFIX, name).toString()));
             return;
         }
         createPopupOpen = false;
         nameFocused = false;
         configName = "";
         nameCursor = 0;
-        ChatHudMessages.addMessage(Text.literal(Concat.strings(SAVED_NEW_PREFIX, name).toString()));
+        ChatHudMessages.addMessage(Component.literal(Concat.strings(SAVED_NEW_PREFIX, name).toString()));
     }
 
     private float scrollSpeed() {
@@ -492,9 +493,9 @@ public class ConfigsPanel {
     }
 
     private TextureView currentServerIcon() {
-        ServerInfo server = MinecraftClient.getInstance().getCurrentServerEntry();
+        ServerData server = Minecraft.getInstance().getCurrentServer();
         if (server == null) return null;
-        byte[] bytes = server.getFavicon();
+        byte[] bytes = server.getIconBytes();
         if (bytes == null || bytes.length == 0) return null;
         if (serverIcon != null && Arrays.equals(serverIconBytes, bytes)) return serverIcon;
         serverIconBytes = bytes.clone();

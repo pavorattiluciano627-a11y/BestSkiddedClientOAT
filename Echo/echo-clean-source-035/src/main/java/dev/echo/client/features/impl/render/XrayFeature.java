@@ -20,17 +20,17 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
-import net.minecraft.block.Block;
-import net.minecraft.block.BlockState;
-import net.minecraft.client.world.ClientWorld;
-import net.minecraft.item.Item;
-import net.minecraft.item.ItemStack;
-import net.minecraft.item.Items;
-import net.minecraft.registry.Registries;
-import net.minecraft.registry.tag.ItemTags;
-import net.minecraft.registry.tag.TagKey;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.Direction;
+import net.minecraft.client.multiplayer.ClientLevel;
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.tags.ItemTags;
+import net.minecraft.tags.TagKey;
+import net.minecraft.world.item.Item;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
+import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.state.BlockState;
 
 /** Selected-block rendering, exposure testing and reversible chunk-culling state. */
 public class XrayFeature extends Feature {
@@ -78,8 +78,8 @@ public class XrayFeature extends Feature {
     @Override
     public void onEnable() {
         rebuildSelectedBlocks();
-        savedChunkCullingEnabled = Objects.requireNonNull(client, "object reference is null").chunkCullingEnabled;
-        Objects.requireNonNull(client, "object reference is null").chunkCullingEnabled = false;
+        savedChunkCullingEnabled = Objects.requireNonNull(client, "object reference is null").smartCull;
+        Objects.requireNonNull(client, "object reference is null").smartCull = false;
         super.onEnable();
         MinecraftRenderState.reloadWorldRenderer(client);
     }
@@ -87,7 +87,7 @@ public class XrayFeature extends Feature {
     @Override
     public void onDisable() {
         super.onDisable();
-        Objects.requireNonNull(client, "object reference is null").chunkCullingEnabled = savedChunkCullingEnabled;
+        Objects.requireNonNull(client, "object reference is null").smartCull = savedChunkCullingEnabled;
         MinecraftRenderState.reloadWorldRenderer(client);
     }
 
@@ -127,13 +127,13 @@ public class XrayFeature extends Feature {
     }
 
     private static RegistryEntryGroup<Item> oreGroup(String label, TagKey<Item> tag) {
-        return new RegistryEntryGroup<>(Concat.strings(label), item -> new ItemStack(item).isIn(tag));
+        return new RegistryEntryGroup<>(Concat.strings(label), item -> new ItemStack(item).is(tag));
     }
 
     private void rebuildSelectedBlocks() {
         initializeFreecamState();
         Set<Block> selected = new HashSet<>();
-        for (Block block : Registries.BLOCK) {
+        for (Block block : BuiltInRegistries.BLOCK) {
             if (blocks.isEntrySelected(block.asItem())) {
                 selected.add(block);
             }
@@ -143,13 +143,13 @@ public class XrayFeature extends Feature {
 
     private boolean hasExposedFace(BlockState state, BlockPos position) {
         initializeFreecamState();
-        ClientWorld world = client.world;
+        ClientLevel world = client.level;
         if (world == null) {
             return false;
         }
-        BlockPos.Mutable neighbor = new BlockPos.Mutable();
+        BlockPos.MutableBlockPos neighbor = new BlockPos.MutableBlockPos();
         for (Direction side : NEIGHBORS) {
-            if (Block.shouldDrawSide(state, world.getBlockState(neighbor.set(position, side)), side)) {
+            if (Block.shouldRenderFace(state, world.getBlockState(neighbor.setWithOffset(position, side)), side)) {
                 return true;
             }
         }

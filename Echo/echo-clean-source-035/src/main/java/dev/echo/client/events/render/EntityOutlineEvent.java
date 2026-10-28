@@ -1,7 +1,7 @@
 package dev.echo.client.events.render;
 
 import dev.echo.client.events.Event;
-import net.minecraft.entity.Entity;
+import net.minecraft.world.entity.Entity;
 
 /** Mutable outline decision, distinct from the inherited cancellation flag. */
 public class EntityOutlineEvent extends Event {

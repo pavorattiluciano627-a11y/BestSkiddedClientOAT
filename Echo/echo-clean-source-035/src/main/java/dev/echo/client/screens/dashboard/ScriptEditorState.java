@@ -1,6 +1,6 @@
 package dev.echo.client.screens.dashboard;
 
-import net.minecraft.client.MinecraftClient;
+import net.minecraft.client.Minecraft;
 
 /** V3's original editor state, with the direct field reads needed by the full renderer. */
 public final class ScriptEditorState {
@@ -47,7 +47,7 @@ public final class ScriptEditorState {
     public void clearSelection() { selectionAnchor = -1; }
 
     public void copySelection() {
-        if (hasSelection()) MinecraftClient.getInstance().keyboard.setClipboard(text.substring(selectionStart(), selectionEnd()));
+        if (hasSelection()) Minecraft.getInstance().keyboardHandler.setClipboard(text.substring(selectionStart(), selectionEnd()));
     }
 
     public void insert(String value) {

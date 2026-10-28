@@ -1,10 +1,10 @@
 package dev.echo.client.render.hand;
 
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.util.math.MatrixStack;
-import net.minecraft.util.Arm;
-import net.minecraft.util.math.MathHelper;
-import net.minecraft.util.math.RotationAxis;
+import com.mojang.blaze3d.vertex.PoseStack;
+import com.mojang.math.Axis;
+import net.minecraft.client.Minecraft;
+import net.minecraft.util.Mth;
+import net.minecraft.world.entity.HumanoidArm;
 
 /** Configured base swing with the original main-hand pose and double offhand swing. */
 public class CustomHandAnimation extends HandAnimation {
@@ -13,16 +13,16 @@ public class CustomHandAnimation extends HandAnimation {
     }
 
     @Override
-    public void apply(float swingProgress, MatrixStack matrices, int direction, Arm arm) {
+    public void apply(float swingProgress, PoseStack matrices, int direction, HumanoidArm arm) {
         applyConfiguredSwing(matrices, arm, swingProgress);
-        float wave = MathHelper.sin(MathHelper.sqrt(swingProgress) * (float) Math.PI);
-        if (arm != MinecraftClient.getInstance().player.getMainArm()) {
+        float wave = Mth.sin(Mth.sqrt(swingProgress) * (float) Math.PI);
+        if (arm != Minecraft.getInstance().player.getMainArm()) {
             // Do not combine these two samples: settings are read again for the second call.
             applyConfiguredSwing(matrices, arm, swingProgress);
             return;
         }
-        matrices.multiply(RotationAxis.POSITIVE_X.rotationDegrees(70.0F));
-        matrices.multiply(RotationAxis.POSITIVE_Y.rotationDegrees(-30.0F * (1.0F - wave) - 30.0F));
-        matrices.multiply(RotationAxis.POSITIVE_Z.rotationDegrees(110.0F));
+        matrices.mulPose(Axis.XP.rotationDegrees(70.0F));
+        matrices.mulPose(Axis.YP.rotationDegrees(-30.0F * (1.0F - wave) - 30.0F));
+        matrices.mulPose(Axis.ZP.rotationDegrees(110.0F));
     }
 }

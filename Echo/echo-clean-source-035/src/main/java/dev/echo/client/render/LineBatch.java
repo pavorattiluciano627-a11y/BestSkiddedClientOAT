@@ -10,7 +10,7 @@ import dev.echo.render.pipeline.GraphicsPipeline;
 import dev.echo.render.pipeline.GraphicsPipelineInfo;
 import dev.echo.render.pipeline.PrimitiveTopology;
 import dev.echo.render.vertex.VertexFormat;
-import net.minecraft.util.math.Vec3d;
+import net.minecraft.world.phys.Vec3;
 
 /** Complete algorithm candidate; device interfaces and conditional targets require merge/proof. */
 public final class LineBatch implements RenderBatch {
@@ -37,7 +37,7 @@ public final class LineBatch implements RenderBatch {
     }
 
     public void add(double x1, double y1, double z1, double x2, double y2, double z2,
-                    int color, Vec3d camera) {
+                    int color, Vec3 camera) {
         if (count >= capacity) {
             grow();
         }

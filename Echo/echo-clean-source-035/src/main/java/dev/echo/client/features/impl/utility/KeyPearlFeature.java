@@ -1,5 +1,6 @@
 package dev.echo.client.features.impl.utility;
 
+import com.mojang.blaze3d.platform.InputConstants;
 import dev.echo.client.events.Subscribe;
 import dev.echo.client.events.input.HandleInputEvent;
 import dev.echo.client.events.input.SelectedSlotEvent;
@@ -16,12 +17,11 @@ import dev.echo.client.utils.ActionTimer;
 import dev.echo.client.utils.Rotation;
 import dev.echo.client.utils.items.InventoryItems;
 import dev.echo.client.utils.targeting.CrosshairHits;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.gui.screen.Screen;
-import net.minecraft.client.util.InputUtil;
-import net.minecraft.item.EnderPearlItem;
-import net.minecraft.item.ItemStack;
-import net.minecraft.item.Items;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.world.item.EnderpearlItem;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
 
 /** Timed pearl selection/use/restoration with optional visible-rotation synchronization. */
 public class KeyPearlFeature extends Feature {
@@ -80,13 +80,13 @@ public class KeyPearlFeature extends Feature {
         } catch (ClassNotFoundException failure) {
             throw new IllegalStateException("Resolved class initialization failed", failure);
         }
-        if (MinecraftClient.getInstance().currentScreen != null) {
+        if (Minecraft.getInstance().gui.screen() != null) {
             return;
         }
         boolean pressed = activateKey.getKey().isPressed();
         if (pressed && !activateWasPressed) {
             slotBeforeThrow = client.player.getInventory().getSelectedSlot();
-            pearlSlot = InventoryItems.findStackInHotbar(stack -> stack.getItem() instanceof EnderPearlItem);
+            pearlSlot = InventoryItems.findStackInHotbar(stack -> stack.getItem() instanceof EnderpearlItem);
             throwInProgress = false;
             pearlThrown = false;
             sampledThrowDelay = sampleDelay(throwDelay);
@@ -95,15 +95,15 @@ public class KeyPearlFeature extends Feature {
                 InputKey key = activateKey.getKey();
                 if (!key.isMouse() && client.options != null) {
                     for (int slot = 0; slot < 9; slot++) {
-                        KeyBindingAccessor binding = (KeyBindingAccessor) client.options.hotbarKeys[slot];
-                        InputUtil.Key boundKey = binding.getBoundKey();
-                        if (boundKey != null && key.matches(boundKey.getCode())) {
+                        KeyBindingAccessor binding = (KeyBindingAccessor) client.options.keyHotbarSlots[slot];
+                        InputConstants.Key boundKey = binding.getBoundKey();
+                        if (boundKey != null && key.matches(boundKey.getValue())) {
                             binding.setTimesPressed(0);
                             break;
                         }
                     }
                 }
-                if (!client.player.getItemCooldownManager().isCoolingDown(createPearlIcon())) {
+                if (!client.player.getCooldowns().isOnCooldown(createPearlIcon())) {
                     throwInProgress = true;
                     if (swapBack.getValue()) {
                         if (!DeferredActionQueue.ensureSelected(this, pearlSlot, -1, true, null)) {
@@ -154,7 +154,7 @@ public class KeyPearlFeature extends Feature {
 
     private static void useSelectedItem() {
         try {
-            Class.forName(MinecraftClient.class.getName(), true, MinecraftClient.class.getClassLoader());
+            Class.forName(Minecraft.class.getName(), true, Minecraft.class.getClassLoader());
         } catch (ClassNotFoundException failure) {
             throw new IllegalStateException("Resolved class initialization failed", failure);
         }

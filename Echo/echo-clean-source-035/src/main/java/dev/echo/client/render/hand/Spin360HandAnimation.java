@@ -1,8 +1,8 @@
 package dev.echo.client.render.hand;
 
-import net.minecraft.client.util.math.MatrixStack;
-import net.minecraft.util.Arm;
-import net.minecraft.util.math.RotationAxis;
+import com.mojang.blaze3d.vertex.PoseStack;
+import com.mojang.math.Axis;
+import net.minecraft.world.entity.HumanoidArm;
 
 /** Alternating spin direction retained on the strategy instance across render calls. */
 public class Spin360HandAnimation extends HandAnimation {
@@ -14,9 +14,9 @@ public class Spin360HandAnimation extends HandAnimation {
     }
 
     @Override
-    public void apply(float swingProgress, MatrixStack matrices, int direction, Arm arm) {
+    public void apply(float swingProgress, PoseStack matrices, int direction, HumanoidArm arm) {
         HandPoseTransform.translate(matrices, arm, 0.0F);
-        matrices.multiply(RotationAxis.POSITIVE_X.rotationDegrees(swingProgress * (positiveRotation ? 360.0F : -360.0F)));
+        matrices.mulPose(Axis.XP.rotationDegrees(swingProgress * (positiveRotation ? 360.0F : -360.0F)));
         // Toggle after drawing on every call in the interval, not just its rising edge.
         if (swingProgress < 0.01F && swingProgress > 0.0F) {
             positiveRotation = !positiveRotation;

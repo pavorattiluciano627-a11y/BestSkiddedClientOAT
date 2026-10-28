@@ -34,18 +34,18 @@ import dev.echo.client.utils.trajectory.MovingTargetLaunch;
 import dev.echo.client.utils.trajectory.MovingTargetTrajectorySearch;
 import dev.echo.client.utils.trajectory.TargetPath;
 import java.util.List;
-import net.minecraft.entity.Entity;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.entity.projectile.ProjectileEntity;
-import net.minecraft.item.ItemStack;
-import net.minecraft.item.Items;
-import net.minecraft.network.packet.c2s.play.ClientTickEndC2SPacket;
-import net.minecraft.network.packet.c2s.play.PlayerMoveC2SPacket;
-import net.minecraft.network.packet.c2s.play.TeleportConfirmC2SPacket;
-import net.minecraft.util.math.Box;
-import net.minecraft.util.math.MathHelper;
-import net.minecraft.util.math.Vec3d;
+import net.minecraft.client.Minecraft;
+import net.minecraft.network.protocol.game.ServerboundAcceptTeleportationPacket;
+import net.minecraft.network.protocol.game.ServerboundClientTickEndPacket;
+import net.minecraft.network.protocol.game.ServerboundMovePlayerPacket;
+import net.minecraft.util.Mth;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.entity.projectile.Projectile;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
+import net.minecraft.world.phys.AABB;
+import net.minecraft.world.phys.Vec3;
 
 /** Selects a moving player, waits for a reliable launch, then restores the held slot. */
 public class PearlGrappleFeature extends Feature {
@@ -82,7 +82,7 @@ public class PearlGrappleFeature extends Feature {
     private static IntSetting maxPredictTicks;
     private static BooleanSetting silentRotations;
     private PearlGrapplePhase phase;
-    private PlayerEntity target;
+    private Player target;
     private int selectedAtPlayerTick;
     private int selectedAtTrackerTick;
     private boolean delayedForWindCharge;
@@ -91,8 +91,8 @@ public class PearlGrappleFeature extends Feature {
     private MovingTargetTrajectorySearch.Result targetMotion;
     private MovingTargetLaunch bestLaunch;
     private int pathUpdatedPlayerTick;
-    private Vec3d lastSentPosition;
-    private Vec3d sentVelocity;
+    private Vec3 lastSentPosition;
+    private Vec3 sentVelocity;
     private boolean sentOnGround;
     private boolean sentMovementThisTick;
 
@@ -108,7 +108,7 @@ public class PearlGrappleFeature extends Feature {
         phase = PearlGrapplePhase.SELECT;
         riseStartTrackerTick = -1;
         pathUpdatedPlayerTick = -1;
-        sentVelocity = Vec3d.ZERO;
+        sentVelocity = Vec3.ZERO;
         sentOnGround = true;
         maxPredictTicks.description(CatalogText.literal("How many ticks of pearl flight and target movement are simulated"));
     }
@@ -135,33 +135,33 @@ public class PearlGrappleFeature extends Feature {
         bestLaunch = null;
         pathUpdatedPlayerTick = -1;
         initializePearlClientType();
-        Vec3d position;
+        Vec3 position;
         if (client.player != null) {
             initializePearlClientType();
-            position = client.player.getEntityPos();
+            position = client.player.position();
         } else position = null;
         initializePearlVectorType();
         lastSentPosition = position;
         initializePearlClientType();
-        Vec3d movement;
+        Vec3 movement;
         if (client.player != null) {
             initializePearlClientType();
-            Vec3d current = client.player.getEntityPos();
+            Vec3 current = client.player.position();
             initializePearlClientType();
-            double previousX = client.player.lastX;
+            double previousX = client.player.xo;
             initializePearlClientType();
-            double previousY = client.player.lastY;
+            double previousY = client.player.yo;
             initializePearlClientType();
-            double previousZ = client.player.lastZ;
+            double previousZ = client.player.zo;
             movement = current.subtract(previousX, previousY, previousZ);
-        } else movement = Vec3d.ZERO;
+        } else movement = Vec3.ZERO;
         initializePearlVectorType();
         sentVelocity = movement;
         initializePearlClientType();
         boolean onGround;
         if (client.player != null) {
             initializePearlClientType();
-            onGround = client.player.isOnGround();
+            onGround = client.player.onGround();
         } else onGround = true;
         sentOnGround = onGround;
         sentMovementThisTick = false;
@@ -198,7 +198,7 @@ public class PearlGrappleFeature extends Feature {
     }
 
     private void select() {
-        int slot = InventoryItems.findStackInHotbar(stack -> stack.isOf(Items.ENDER_PEARL));
+        int slot = InventoryItems.findStackInHotbar(stack -> stack.is(Items.ENDER_PEARL));
         if (slot == -1) {
             fail(NO_PEARL);
             return;
@@ -217,7 +217,7 @@ public class PearlGrappleFeature extends Feature {
             setEnabled(false);
             return;
         }
-        selectedAtPlayerTick = client.player.age;
+        selectedAtPlayerTick = client.player.tickCount;
         selectedAtTrackerTick = EntityPositionTracker.currentTick();
         delayedForWindCharge = false;
         riseStartTrackerTick = -1;
@@ -225,8 +225,8 @@ public class PearlGrappleFeature extends Feature {
     }
 
     private void aim() {
-        int tick = client.player.age;
-        if (!client.player.getMainHandStack().isOf(Items.ENDER_PEARL)) {
+        int tick = client.player.tickCount;
+        if (!client.player.getMainHandItem().is(Items.ENDER_PEARL)) {
             fail(NO_PEARL);
             return;
         }
@@ -256,8 +256,8 @@ public class PearlGrappleFeature extends Feature {
         if (bestLaunch == null || (!targetMotion.reliable() && !force)) return null;
         MovingTargetLaunch launch = bestLaunch;
         if (!silentRotations.getValue()) {
-            float yaw = client.player.getYaw();
-            float pitch = client.player.getPitch();
+            float yaw = client.player.getYRot();
+            float pitch = client.player.getXRot();
             double fraction = MovingTargetTrajectorySearch.hitFraction(targetPath, yaw, pitch);
             double required = force ? 0.0 : Math.min(REQUIRED_HIT_FRACTION, bestLaunch.hitFraction() - MANUAL_HIT_TOLERANCE);
             if (fraction <= 0.0 || fraction < required) return null;
@@ -274,24 +274,24 @@ public class PearlGrappleFeature extends Feature {
             .filter(sample -> sample.tick() >= riseStartTrackerTick).count() < REQUIRED_RISE_SAMPLES;
     }
 
-    private boolean shouldWaitForWindCharge(PlayerEntity player) {
+    private boolean shouldWaitForWindCharge(Player player) {
         VelocitySample velocity = EntityPositionTracker.velocity(player);
         if (velocity != null && velocity.tick() >= selectedAtTrackerTick
-                && velocity.velocity().lengthSquared() > VELOCITY_PACKET_THRESHOLD_SQUARED) return false;
+                && velocity.velocity().lengthSqr() > VELOCITY_PACKET_THRESHOLD_SQUARED) return false;
         if (targetMotion != null && targetMotion.velocity().y > RISE_VELOCITY) {
             if (riseStartTrackerTick < 0) riseStartTrackerTick = EntityPositionTracker.currentTick();
             return false;
         }
-        boolean holdsWindCharge = player.getMainHandStack().isOf(Items.WIND_CHARGE)
-            || player.getOffHandStack().isOf(Items.WIND_CHARGE);
-        return holdsWindCharge && player.getPitch() >= WIND_CHARGE_PITCH;
+        boolean holdsWindCharge = player.getMainHandItem().is(Items.WIND_CHARGE)
+            || player.getOffhandItem().is(Items.WIND_CHARGE);
+        return holdsWindCharge && player.getXRot() >= WIND_CHARGE_PITCH;
     }
 
     private boolean requiresRobustPrediction() {
         double speed = LatencyTracker.milliseconds() > HIGH_LATENCY_MILLIS ? HIGH_LATENCY_SPEED : FAST_TARGET_SPEED;
         if (targetMotion.velocity().length() > speed) return true;
-        Vec3d velocity = targetMotion.velocity();
-        return sentVelocity.y < FAST_FALL_VELOCITY && !sentOnGround && velocity.horizontalLength() > Math.abs(velocity.y);
+        Vec3 velocity = targetMotion.velocity();
+        return sentVelocity.y < FAST_FALL_VELOCITY && !sentOnGround && velocity.horizontalDistance() > Math.abs(velocity.y);
     }
 
     private boolean remainsReliableWhenPerturbed(MovingTargetLaunch launch) {
@@ -300,7 +300,7 @@ public class PearlGrappleFeature extends Feature {
         double age = predictionAge(targetMotion);
         int ticks = maxPredictTicks.getValue();
         for (double offset : new double[] {-PREDICTION_PERTURBATION_TICKS, PREDICTION_PERTURBATION_TICKS}) {
-            Box[] boxes = MovingTargetTrajectorySearch.predictBoxes(target, targetMotion, age + offset, ticks);
+            AABB[] boxes = MovingTargetTrajectorySearch.predictBoxes(target, targetMotion, age + offset, ticks);
             TargetPath perturbed = targetPath.withTargetBoxes(boxes);
             if (MovingTargetTrajectorySearch.hitFraction(perturbed, launch.yaw(), launch.pitch()) < PERTURBED_HIT_FRACTION) return false;
         }
@@ -329,7 +329,7 @@ public class PearlGrappleFeature extends Feature {
     }
 
     private boolean isPearlCoolingDown() {
-        return client.player.getItemCooldownManager().isCoolingDown(new ItemStack(Items.ENDER_PEARL));
+        return client.player.getCooldowns().isOnCooldown(new ItemStack(Items.ENDER_PEARL));
     }
 
     @Subscribe
@@ -339,10 +339,10 @@ public class PearlGrappleFeature extends Feature {
             rotations().cancel(this);
             return;
         }
-        Vec3d point = client.player.getEyePos().add(Vec3d.fromPolar(bestLaunch.pitch(), bestLaunch.yaw()).multiply(AIM_POINT_DISTANCE));
-        float yawDelta = Math.abs(MathHelper.wrapDegrees(bestLaunch.yaw() - client.player.getYaw()));
-        float pitchDelta = Math.abs(bestLaunch.pitch() - client.player.getPitch());
-        float speed = MathHelper.clamp(Math.max(yawDelta, pitchDelta) / 0.1f, MIN_ROTATION_SPEED, MAX_ROTATION_SPEED);
+        Vec3 point = client.player.getEyePosition().add(Vec3.directionFromRotation(bestLaunch.pitch(), bestLaunch.yaw()).scale(AIM_POINT_DISTANCE));
+        float yawDelta = Math.abs(Mth.wrapDegrees(bestLaunch.yaw() - client.player.getYRot()));
+        float pitchDelta = Math.abs(bestLaunch.pitch() - client.player.getXRot());
+        float speed = Mth.clamp(Math.max(yawDelta, pitchDelta) / 0.1f, MIN_ROTATION_SPEED, MAX_ROTATION_SPEED);
         rotations().aim(this, RotationPriority.HIGH, point,
             RotationSettings.uniform(RotationVisibility.VISIBLE, AimTransition.NATURAL, speed));
     }
@@ -350,42 +350,42 @@ public class PearlGrappleFeature extends Feature {
     @Subscribe
     private void onPacketSend(PacketSendEvent event) {
         if (client.player == null) return;
-        if (event.getPacket() instanceof PlayerMoveC2SPacket movement) {
-            if (movement.changesPosition()) {
-                Vec3d position = new Vec3d(movement.getX(0.0), movement.getY(0.0), movement.getZ(0.0));
-                sentVelocity = lastSentPosition == null ? client.player.getVelocity() : position.subtract(lastSentPosition);
+        if (event.getPacket() instanceof ServerboundMovePlayerPacket movement) {
+            if (movement.hasPosition()) {
+                Vec3 position = new Vec3(movement.getX(0.0), movement.getY(0.0), movement.getZ(0.0));
+                sentVelocity = lastSentPosition == null ? client.player.getDeltaMovement() : position.subtract(lastSentPosition);
                 lastSentPosition = position;
             } else {
-                sentVelocity = Vec3d.ZERO;
+                sentVelocity = Vec3.ZERO;
             }
             sentOnGround = movement.isOnGround();
             sentMovementThisTick = true;
-        } else if (event.getPacket() instanceof ClientTickEndC2SPacket) {
-            if (!sentMovementThisTick) sentVelocity = Vec3d.ZERO;
+        } else if (event.getPacket() instanceof ServerboundClientTickEndPacket) {
+            if (!sentMovementThisTick) sentVelocity = Vec3.ZERO;
             sentMovementThisTick = false;
             if (phase == PearlGrapplePhase.AIM && isValidTarget(target)) {
                 targetMotion = estimateMotion(target);
                 targetPath = buildTargetPath(target, targetMotion);
                 bestLaunch = MovingTargetTrajectorySearch.findLaunch(targetPath);
-                pathUpdatedPlayerTick = client.player.age;
+                pathUpdatedPlayerTick = client.player.tickCount;
             }
-        } else if (event.getPacket() instanceof TeleportConfirmC2SPacket) {
+        } else if (event.getPacket() instanceof ServerboundAcceptTeleportationPacket) {
             lastSentPosition = null;
-            sentVelocity = Vec3d.ZERO;
+            sentVelocity = Vec3.ZERO;
         }
     }
 
-    private TargetPath buildTargetPath(PlayerEntity player, MovingTargetTrajectorySearch.Result motion) {
-        Vec3d origin = lastSentPosition != null ? lastSentPosition : client.player.getEntityPos();
-        Vec3d eye = origin.add(0.0, client.player.getStandingEyeHeight() - EYE_OFFSET, 0.0);
-        Vec3d inherited = new Vec3d(sentVelocity.x, sentOnGround ? 0.0 : sentVelocity.y, sentVelocity.z);
+    private TargetPath buildTargetPath(Player player, MovingTargetTrajectorySearch.Result motion) {
+        Vec3 origin = lastSentPosition != null ? lastSentPosition : client.player.position();
+        Vec3 eye = origin.add(0.0, client.player.getEyeHeight() - EYE_OFFSET, 0.0);
+        Vec3 inherited = new Vec3(sentVelocity.x, sentOnGround ? 0.0 : sentVelocity.y, sentVelocity.z);
         int ticks = maxPredictTicks.getValue();
         double age = predictionAge(motion);
-        Box[] boxes = MovingTargetTrajectorySearch.predictBoxes(player, motion, age, ticks);
+        AABB[] boxes = MovingTargetTrajectorySearch.predictBoxes(player, motion, age, ticks);
         return new TargetPath(eye, inherited, boxes, blockers(player));
     }
 
-    private static MovingTargetTrajectorySearch.Result estimateMotion(PlayerEntity player) {
+    private static MovingTargetTrajectorySearch.Result estimateMotion(Player player) {
         int tick = EntityPositionTracker.currentTick();
         VelocitySample velocity = EntityPositionTracker.velocity(player);
         List<PositionSample> history = EntityPositionTracker.positions(player);
@@ -396,17 +396,17 @@ public class PearlGrappleFeature extends Feature {
         return (double) (EntityPositionTracker.currentTick() + 1 - motion.tick()) + (double) LatencyTracker.milliseconds() / 50.0;
     }
 
-    private List<Box> blockers(PlayerEntity player) {
-        return client.world.getOtherEntities(client.player, client.player.getBoundingBox().expand(targetDistance()),
-            entity -> entity != player && entity.canBeHitByProjectile() && !(entity instanceof ProjectileEntity))
+    private List<AABB> blockers(Player player) {
+        return client.level.getEntities(client.player, client.player.getBoundingBox().inflate(targetDistance()),
+            entity -> entity != player && entity.canBeHitByProjectile() && !(entity instanceof Projectile))
             .stream().map(Entity::getBoundingBox).toList();
     }
 
-    private PlayerEntity selectTarget() {
-        PlayerEntity best = null;
+    private Player selectTarget() {
+        Player best = null;
         double bestFraction = -1.0;
         double bestDistance = Double.MAX_VALUE;
-        for (PlayerEntity player : client.world.getPlayers()) {
+        for (Player player : client.level.players()) {
             if (!isValidTarget(player)) continue;
             double playerDistance = client.player.distanceTo(player);
             MovingTargetTrajectorySearch.Result motion = estimateMotion(player);
@@ -422,13 +422,13 @@ public class PearlGrappleFeature extends Feature {
         return best;
     }
 
-    private boolean isValidTarget(PlayerEntity player) {
+    private boolean isValidTarget(Player player) {
         return player != null && player != client.player && TargetSelection.isValidTarget(player)
-            && client.player.distanceTo(player) <= targetDistance() && !player.hasVehicle()
-            && !player.isUsingRiptide() && !recentlyTeleported(player);
+            && client.player.distanceTo(player) <= targetDistance() && !player.isPassenger()
+            && !player.isAutoSpinAttack() && !recentlyTeleported(player);
     }
 
-    private static boolean recentlyTeleported(PlayerEntity player) {
+    private static boolean recentlyTeleported(Player player) {
         List<PositionSample> history = EntityPositionTracker.positions(player);
         for (int i = 1; i < history.size(); i++) {
             if (EntityPositionTracker.currentTick() - history.get(i).tick() > TELEPORT_SAMPLE_TICKS) continue;
@@ -440,17 +440,17 @@ public class PearlGrappleFeature extends Feature {
     private static float targetDistance() { return Math.min(distance.getValue(), MAX_TARGET_DISTANCE); }
 
     private static void initializePearlPlayerType() {
-        try { Class.forName(PlayerEntity.class.getName(), true, PlayerEntity.class.getClassLoader()); }
+        try { Class.forName(Player.class.getName(), true, Player.class.getClassLoader()); }
         catch (ClassNotFoundException failure) { throw new IllegalStateException("Resolved class initialization failed", failure); }
     }
 
     private static void initializePearlClientType() {
-        try { Class.forName(MinecraftClient.class.getName(), true, MinecraftClient.class.getClassLoader()); }
+        try { Class.forName(Minecraft.class.getName(), true, Minecraft.class.getClassLoader()); }
         catch (ClassNotFoundException failure) { throw new IllegalStateException("Resolved class initialization failed", failure); }
     }
 
     private static void initializePearlVectorType() {
-        try { Class.forName(Vec3d.class.getName(), true, Vec3d.class.getClassLoader()); }
+        try { Class.forName(Vec3.class.getName(), true, Vec3.class.getClassLoader()); }
         catch (ClassNotFoundException failure) { throw new IllegalStateException("Resolved class initialization failed", failure); }
     }
 

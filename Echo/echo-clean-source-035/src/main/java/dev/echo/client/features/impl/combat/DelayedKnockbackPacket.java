@@ -1,6 +1,6 @@
 package dev.echo.client.features.impl.combat;
 
-import net.minecraft.network.packet.Packet;
+import net.minecraft.network.protocol.Packet;
 
 /** A queued packet and its original enqueue time; identity equality is intentional. */
 final class DelayedKnockbackPacket {

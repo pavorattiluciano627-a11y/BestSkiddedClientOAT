@@ -1,5 +1,6 @@
 package dev.echo.render.effect;
 
+import com.mojang.blaze3d.pipeline.RenderTarget;
 import dev.echo.client.render.BackdropMode;
 import dev.echo.client.render.math.RenderMath;
 import dev.echo.render.command.CommandEncoder;
@@ -16,8 +17,7 @@ import dev.echo.render.texture.TextureInfo;
 import dev.echo.render.texture.TextureLayout;
 import dev.echo.render.texture.TextureView;
 import java.nio.FloatBuffer;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.gl.Framebuffer;
+import net.minecraft.client.Minecraft;
 import org.lwjgl.system.MemoryStack;
 import org.lwjgl.system.MemoryUtil;
 
@@ -40,8 +40,8 @@ public final class ComputeBackdropEffect implements BackdropPass {
         downsample = device.createComputePipeline(downInfo);
         upsample = device.createComputePipeline(upInfo);
         sampler = device.createSampler(SamplerInfo.builder().build());
-        Framebuffer framebuffer = MinecraftClient.getInstance().getFramebuffer();
-        allocateMipTexture(framebuffer.textureWidth, framebuffer.textureHeight);
+        RenderTarget framebuffer = Minecraft.getInstance().gameRenderer.mainRenderTarget();
+        allocateMipTexture(framebuffer.width, framebuffer.height);
     }
 
     private void allocateMipTexture(int width, int height) {

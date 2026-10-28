@@ -2,16 +2,16 @@ package dev.echo.client.utils.interaction;
 
 import dev.echo.client.Echo;
 import dev.echo.client.MinecraftAccess;
-import net.minecraft.entity.Entity;
-import net.minecraft.entity.LivingEntity;
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.entity.projectile.ProjectileUtil;
-import net.minecraft.entity.vehicle.AbstractBoatEntity;
-import net.minecraft.item.Items;
-import net.minecraft.util.Hand;
-import net.minecraft.util.hit.EntityHitResult;
-import net.minecraft.util.math.Box;
-import net.minecraft.util.math.Vec3d;
+import net.minecraft.world.InteractionHand;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.entity.projectile.ProjectileUtil;
+import net.minecraft.world.entity.vehicle.boat.AbstractBoat;
+import net.minecraft.world.item.Items;
+import net.minecraft.world.phys.AABB;
+import net.minecraft.world.phys.EntityHitResult;
+import net.minecraft.world.phys.Vec3;
 
 /** Live player interaction and target queries in the documented normal key/guard domain. */
 public final class EntityInteractions implements MinecraftAccess {
@@ -42,25 +42,25 @@ public final class EntityInteractions implements MinecraftAccess {
         if (CLIENT.player == null || !CLIENT.player.isUsingItem()) {
             return;
         }
-        if (CLIENT.player.getActiveHand() == Hand.OFF_HAND) {
-            CLIENT.interactionManager.stopUsingItem(CLIENT.player);
+        if (CLIENT.player.getUsedItemHand() == InteractionHand.OFF_HAND) {
+            CLIENT.gameMode.releaseUsingItem(CLIENT.player);
         } else {
-            CLIENT.player.clearActiveItem();
+            CLIENT.player.stopUsingItem();
         }
     }
 
     public static boolean isUsingOffhand() {
-        return CLIENT.player != null && CLIENT.player.isUsingItem() && CLIENT.player.getActiveHand() == Hand.OFF_HAND;
+        return CLIENT.player != null && CLIENT.player.isUsingItem() && CLIENT.player.getUsedItemHand() == InteractionHand.OFF_HAND;
     }
 
     public static boolean isBlockingOffhand() {
-        return CLIENT.player != null && CLIENT.player.isUsingItem() && CLIENT.player.getOffHandStack().getItem() == Items.SHIELD
-                && CLIENT.player.getActiveHand() == Hand.OFF_HAND;
+        return CLIENT.player != null && CLIENT.player.isUsingItem() && CLIENT.player.getOffhandItem().getItem() == Items.SHIELD
+                && CLIENT.player.getUsedItemHand() == InteractionHand.OFF_HAND;
     }
 
     public static boolean isBlockingMainHand() {
-        return CLIENT.player != null && CLIENT.player.isUsingItem() && CLIENT.player.getMainHandStack().getItem() == Items.SHIELD
-                && CLIENT.player.getActiveHand() == Hand.MAIN_HAND;
+        return CLIENT.player != null && CLIENT.player.isUsingItem() && CLIENT.player.getMainHandItem().getItem() == Items.SHIELD
+                && CLIENT.player.getUsedItemHand() == InteractionHand.MAIN_HAND;
     }
 
     public static boolean isBlocking() {
@@ -68,8 +68,8 @@ public final class EntityInteractions implements MinecraftAccess {
     }
 
     public static boolean holdsShield() {
-        return CLIENT.player != null && (CLIENT.player.getMainHandStack().getItem() == Items.SHIELD
-                || CLIENT.player.getOffHandStack().getItem() == Items.SHIELD);
+        return CLIENT.player != null && (CLIENT.player.getMainHandItem().getItem() == Items.SHIELD
+                || CLIENT.player.getOffhandItem().getItem() == Items.SHIELD);
     }
 
     public static boolean hasMovementInput() {
@@ -77,7 +77,7 @@ public final class EntityInteractions implements MinecraftAccess {
         if (counter != 0 && CLIENT.player == null) {
             return false;
         }
-        return CLIENT.player.input.getMovementInput().length() != 0.0F;
+        return CLIENT.player.input.getMoveVector().length() != 0.0F;
     }
 
     public static double predictedFallDistance() {
@@ -88,31 +88,31 @@ public final class EntityInteractions implements MinecraftAccess {
     }
 
     public static void setVelocityX(double x) {
-        CLIENT.player.setVelocity(x, CLIENT.player.getVelocity().y, CLIENT.player.getVelocity().z);
+        CLIENT.player.setDeltaMovement(x, CLIENT.player.getDeltaMovement().y, CLIENT.player.getDeltaMovement().z);
     }
 
     public static void setVelocityY(double y) {
-        CLIENT.player.setVelocity(CLIENT.player.getVelocity().x, y, CLIENT.player.getVelocity().z);
+        CLIENT.player.setDeltaMovement(CLIENT.player.getDeltaMovement().x, y, CLIENT.player.getDeltaMovement().z);
     }
 
     public static void setVelocityZ(double z) {
-        CLIENT.player.setVelocity(CLIENT.player.getVelocity().x, CLIENT.player.getVelocity().y, z);
+        CLIENT.player.setDeltaMovement(CLIENT.player.getDeltaMovement().x, CLIENT.player.getDeltaMovement().y, z);
     }
 
-    public static double predictedFallDistance(PlayerEntity player) {
+    public static double predictedFallDistance(Player player) {
         if (player == null) {
             return 0.0;
         }
-        double previousY = player.lastY;
+        double previousY = player.yo;
         double currentY = player.getY();
-        double verticalVelocity = player.getVelocity().y;
+        double verticalVelocity = player.getDeltaMovement().y;
         double fallDistance = player.fallDistance;
         double predictedVelocity = verticalVelocity + 0.08;
         if (predictedVelocity < -3.92) {
             predictedVelocity = -3.92;
         }
         double predictedY = currentY + predictedVelocity;
-        if (player.isGliding()) {
+        if (player.isFallFlying()) {
             predictedY += 1.2000000000000002;
         }
         double result = fallDistance + (previousY - predictedY);
@@ -124,16 +124,16 @@ public final class EntityInteractions implements MinecraftAccess {
     }
 
     public static Boolean hasNearbyEntity(LivingEntity entity) {
-        return entity != null && CLIENT.world != null
-                && !CLIENT.world.getOtherEntities(entity, entity.getBoundingBox().expand(0.2)).isEmpty();
+        return entity != null && CLIENT.level != null
+                && !CLIENT.level.getEntities(entity, entity.getBoundingBox().inflate(0.2)).isEmpty();
     }
 
     public static boolean hasNearbyBoat(LivingEntity entity) {
-        if (entity == null || CLIENT.world == null) {
+        if (entity == null || CLIENT.level == null) {
             return false;
         }
-        for (Entity nearby : CLIENT.world.getOtherEntities(entity, entity.getBoundingBox().expand(0.2))) {
-            if (nearby instanceof AbstractBoatEntity) {
+        for (Entity nearby : CLIENT.level.getEntities(entity, entity.getBoundingBox().inflate(0.2))) {
+            if (nearby instanceof AbstractBoat) {
                 return true;
             }
         }
@@ -141,18 +141,18 @@ public final class EntityInteractions implements MinecraftAccess {
     }
 
     public static LivingEntity getManualSelectTarget() {
-        if (CLIENT.player == null || CLIENT.world == null) {
+        if (CLIENT.player == null || CLIENT.level == null) {
             return null;
         }
-        float tickProgress = CLIENT.getRenderTickCounter().getTickProgress(false);
-        float yaw = CLIENT.player.getYaw(tickProgress);
-        float pitch = CLIENT.player.getPitch(tickProgress);
-        Vec3d start = CLIENT.player.getCameraPosVec(tickProgress);
-        Vec3d direction = CLIENT.player.getRotationVector(pitch, yaw);
-        double reach = CLIENT.player.getEntityInteractionRange();
-        Vec3d end = start.add(direction.multiply(reach));
-        Box searchBounds = CLIENT.player.getBoundingBox().stretch(direction.multiply(reach)).expand(1.0);
-        EntityHitResult hit = ProjectileUtil.raycast(CLIENT.player, start, end, searchBounds,
+        float tickProgress = CLIENT.getDeltaTracker().getGameTimeDeltaPartialTick(false);
+        float yaw = CLIENT.player.getViewYRot(tickProgress);
+        float pitch = CLIENT.player.getViewXRot(tickProgress);
+        Vec3 start = CLIENT.player.getEyePosition(tickProgress);
+        Vec3 direction = CLIENT.player.calculateViewVector(pitch, yaw);
+        double reach = CLIENT.player.entityInteractionRange();
+        Vec3 end = start.add(direction.scale(reach));
+        AABB searchBounds = CLIENT.player.getBoundingBox().expandTowards(direction.scale(reach)).inflate(1.0);
+        EntityHitResult hit = ProjectileUtil.getEntityHitResult(CLIENT.player, start, end, searchBounds,
                 EntityInteractions::isManualSelectionCandidate, reach * reach);
         if (hit == null) {
             return null;

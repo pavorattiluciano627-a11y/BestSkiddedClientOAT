@@ -12,15 +12,15 @@ import dev.echo.client.setting.IntSetting;
 import dev.echo.client.utils.inventory.InventoryScreenSlots;
 import dev.echo.client.utils.items.InventoryItems;
 import dev.echo.client.utils.targeting.ExplosionDamage;
-import net.minecraft.block.Blocks;
-import net.minecraft.block.RespawnAnchorBlock;
-import net.minecraft.entity.Entity;
-import net.minecraft.entity.decoration.EndCrystalEntity;
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.item.Items;
-import net.minecraft.network.packet.s2c.play.EntityStatusS2CPacket;
-import net.minecraft.util.math.BlockPos;
+import net.minecraft.core.BlockPos;
+import net.minecraft.network.protocol.game.ClientboundEntityEventPacket;
 import net.minecraft.world.attribute.EnvironmentAttributes;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.boss.enderdragon.EndCrystal;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.Items;
+import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.RespawnAnchorBlock;
 
 /** Main-hand totem selection, inventory restoration and predicted-explosion ownership. */
 public class TotemHandFeature extends Feature {
@@ -86,10 +86,10 @@ public class TotemHandFeature extends Feature {
     @Subscribe
     private void onPacket(PacketReceiveEvent event) {
         if (isOutsideWorld() || !onPop.getValue()) return;
-        if (!(event.getPacket() instanceof EntityStatusS2CPacket status)) return;
-        if (status.getStatus() != 35) return;
-        Entity entity = status.getEntity(client.world);
-        if (!(entity instanceof PlayerEntity) || entity != client.player) return;
+        if (!(event.getPacket() instanceof ClientboundEntityEventPacket status)) return;
+        if (status.getEventId() != 35) return;
+        Entity entity = status.getEntity(client.level);
+        if (!(entity instanceof Player) || entity != client.player) return;
         int slot = findTotemSlot();
         if (slot != -1) InventoryItems.selectHotbarSlot(slot);
     }
@@ -133,14 +133,14 @@ public class TotemHandFeature extends Feature {
     }
 
     private void updatePrediction() {
-        if (client.player.age == predictionTick) return;
-        predictionTick = client.player.age;
+        if (client.player.tickCount == predictionTick) return;
+        predictionTick = client.player.tickCount;
         if (!predictive.getValue() || client.player.isCreative() || client.player.isSpectator()
                 || !hasDangerousExplosion()) {
             clearPrediction();
             return;
         }
-        boolean holdingTotem = client.player.getMainHandStack().getItem() == Items.TOTEM_OF_UNDYING;
+        boolean holdingTotem = client.player.getMainHandItem().getItem() == Items.TOTEM_OF_UNDYING;
         predictedTotemSlot = holdingTotem ? -1 : findTotemSlot();
         protectingMainHand = holdingTotem || predictedTotemSlot != -1;
     }
@@ -150,7 +150,7 @@ public class TotemHandFeature extends Feature {
         if (isOutsideWorld() || !protectingMainHand) return;
         int slot = event.getSelectedSlot();
         if (slot < 0 || slot > 8) return;
-        if (client.player.getInventory().getStack(slot).getItem() == Items.TOTEM_OF_UNDYING) return;
+        if (client.player.getInventory().getItem(slot).getItem() == Items.TOTEM_OF_UNDYING) return;
         event.cancel();
     }
 
@@ -170,21 +170,21 @@ public class TotemHandFeature extends Feature {
         float threshold = killable.getValue()
                 ? client.player.getHealth() + client.player.getAbsorptionAmount() : minDamage.getValue();
         if (crystals.getValue()) {
-            for (Entity entity : client.world.getEntities()) {
-                if (!(entity instanceof EndCrystalEntity)) continue;
-                if (client.player.squaredDistanceTo(entity) > CRYSTAL_RANGE * CRYSTAL_RANGE) continue;
-                if (ExplosionDamage.crystalDamage(client.player, entity.getEntityPos()) >= threshold) return true;
+            for (Entity entity : client.level.entitiesForRendering()) {
+                if (!(entity instanceof EndCrystal)) continue;
+                if (client.player.distanceToSqr(entity) > CRYSTAL_RANGE * CRYSTAL_RANGE) continue;
+                if (ExplosionDamage.crystalDamage(client.player, entity.position()) >= threshold) return true;
             }
         }
         if (anchors.getValue()) {
-            BlockPos center = client.player.getBlockPos();
-            for (BlockPos pos : BlockPos.iterate(center.add(-ANCHOR_RANGE, -ANCHOR_RANGE, -ANCHOR_RANGE),
-                    center.add(ANCHOR_RANGE, ANCHOR_RANGE, ANCHOR_RANGE))) {
+            BlockPos center = client.player.blockPosition();
+            for (BlockPos pos : BlockPos.betweenClosed(center.offset(-ANCHOR_RANGE, -ANCHOR_RANGE, -ANCHOR_RANGE),
+                    center.offset(ANCHOR_RANGE, ANCHOR_RANGE, ANCHOR_RANGE))) {
                 // Two world reads preserve the original block-test/property-read order.
-                if (!client.world.getBlockState(pos).isOf(Blocks.RESPAWN_ANCHOR)) continue;
-                if (client.world.getBlockState(pos).get(RespawnAnchorBlock.CHARGES) == 0) continue;
-                if (client.world.getEnvironmentAttributes().getAttributeValue(
-                        EnvironmentAttributes.RESPAWN_ANCHOR_WORKS_GAMEPLAY, pos)) continue;
+                if (!client.level.getBlockState(pos).is(Blocks.RESPAWN_ANCHOR)) continue;
+                if (client.level.getBlockState(pos).getValue(RespawnAnchorBlock.CHARGE) == 0) continue;
+                if (client.level.environmentAttributes().getValue(
+                        EnvironmentAttributes.RESPAWN_ANCHOR_WORKS, pos)) continue;
                 if (ExplosionDamage.anchorDamage(client.player, pos, null) >= threshold) return true;
             }
         }

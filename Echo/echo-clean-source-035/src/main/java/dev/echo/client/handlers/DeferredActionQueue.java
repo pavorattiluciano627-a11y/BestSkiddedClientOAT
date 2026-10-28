@@ -9,12 +9,12 @@ import dev.echo.client.events.network.PacketSendEvent;
 import dev.echo.client.features.Feature;
 import java.util.ArrayDeque;
 import java.util.Deque;
-import net.minecraft.network.packet.Packet;
-import net.minecraft.network.packet.c2s.play.ClientTickEndC2SPacket;
-import net.minecraft.network.packet.c2s.play.PlayerActionC2SPacket;
-import net.minecraft.network.packet.c2s.play.PlayerMoveC2SPacket;
-import net.minecraft.network.packet.s2c.play.PlayerPositionLookS2CPacket;
-import net.minecraft.network.packet.s2c.play.PlayerRespawnS2CPacket;
+import net.minecraft.network.protocol.Packet;
+import net.minecraft.network.protocol.game.ClientboundPlayerPositionPacket;
+import net.minecraft.network.protocol.game.ClientboundRespawnPacket;
+import net.minecraft.network.protocol.game.ServerboundClientTickEndPacket;
+import net.minecraft.network.protocol.game.ServerboundMovePlayerPacket;
+import net.minecraft.network.protocol.game.ServerboundPlayerActionPacket;
 
 /**
  * LIFO hotbar ownership and phase/tick-driven completion callbacks.
@@ -53,7 +53,7 @@ public final class DeferredActionQueue extends ClientHandler {
         if (top != null && top.owner == owner) {
             top.selectedSlot = slot;
             top.restoreAll = restoreAll;
-            top.expiresAtTick = delayTicks < 0 ? Long.MAX_VALUE : (long) (CLIENT.player.age + delayTicks);
+            top.expiresAtTick = delayTicks < 0 ? Long.MAX_VALUE : (long) (CLIENT.player.tickCount + delayTicks);
             top.phase = delayTicks <= 0 ? ActionPhase.POST : ActionPhase.EARLY;
             top.callback = callback;
             setHotbarSlot(slot);
@@ -64,7 +64,7 @@ public final class DeferredActionQueue extends ClientHandler {
         if (current == slot) return false;
         DeferredFeatureAction oldest = actions.peekLast();
         int baseline = oldest == null ? current : oldest.baselineSlot;
-        long deadline = delayTicks < 0 ? Long.MAX_VALUE : (long) (CLIENT.player.age + delayTicks);
+        long deadline = delayTicks < 0 ? Long.MAX_VALUE : (long) (CLIENT.player.tickCount + delayTicks);
         ActionPhase phase = delayTicks <= 0 ? ActionPhase.POST : ActionPhase.EARLY;
         actions.push(new DeferredFeatureAction(owner, baseline, slot, restoreAll, deadline, phase, callback));
         setHotbarSlot(slot);
@@ -165,18 +165,18 @@ public final class DeferredActionQueue extends ClientHandler {
     @Subscribe
     private void onPacketSent(PacketSendEvent event) {
         Packet<?> packet = event.getPacket();
-        if (packet instanceof PlayerActionC2SPacket action && action.getAction() == PlayerActionC2SPacket.Action.STAB) {
+        if (packet instanceof ServerboundPlayerActionPacket action && action.getAction() == ServerboundPlayerActionPacket.Action.STAB) {
             switchingBlocked = true;
-        } else if (event.getPacket() instanceof PlayerMoveC2SPacket || event.getPacket() instanceof ClientTickEndC2SPacket) {
+        } else if (event.getPacket() instanceof ServerboundMovePlayerPacket || event.getPacket() instanceof ServerboundClientTickEndPacket) {
             switchingBlocked = false;
         }
     }
 
     @Subscribe
     private void onPacketReceived(PacketReceiveEvent event) {
-        if (event.getPacket() instanceof PlayerRespawnS2CPacket) {
+        if (event.getPacket() instanceof ClientboundRespawnPacket) {
             clear();
-        } else if (event.getPacket() instanceof PlayerPositionLookS2CPacket) {
+        } else if (event.getPacket() instanceof ClientboundPlayerPositionPacket) {
             CLIENT.execute(() -> { if (!hasFiniteDeadline()) clear(); });
         }
     }
@@ -190,7 +190,7 @@ public final class DeferredActionQueue extends ClientHandler {
         if (CLIENT.player == null) { clear(); return; }
         while (!actions.isEmpty()) {
             DeferredFeatureAction action = actions.peek();
-            if (!action.isDue(CLIENT.player.age, phase)) break;
+            if (!action.isDue(CLIENT.player.tickCount, phase)) break;
             actions.pop();
             if (action.restoreAll) {
                 restoreAndDrain(action);

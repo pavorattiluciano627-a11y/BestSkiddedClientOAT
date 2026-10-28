@@ -16,21 +16,21 @@ import dev.echo.client.setting.FloatSetting;
 import dev.echo.client.setting.Setting;
 import java.lang.invoke.MethodHandles;
 import java.util.Objects;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.option.GameOptions;
-import net.minecraft.client.option.KeyBinding;
-import net.minecraft.client.option.Perspective;
-import net.minecraft.network.packet.Packet;
-import net.minecraft.network.packet.s2c.play.DeathMessageS2CPacket;
-import net.minecraft.util.math.MathHelper;
-import net.minecraft.util.math.Vec3d;
+import net.minecraft.client.CameraType;
+import net.minecraft.client.KeyMapping;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.Options;
+import net.minecraft.network.protocol.Packet;
+import net.minecraft.network.protocol.game.ClientboundPlayerCombatKillPacket;
+import net.minecraft.util.Mth;
+import net.minecraft.world.phys.Vec3;
 
 /** Detached camera state and its original subscribers; see receipt for conditional domains. */
 public class FreecamFeature extends Feature {
-    private Vec3d cameraPosition;
+    private Vec3 cameraPosition;
     private float cameraYaw;
     private float cameraPitch;
-    private Perspective previousPerspective;
+    private CameraType previousPerspective;
     private static FloatSetting speed;
     private static boolean perspectiveRefreshBypassed;
     private static final String SPEED_TOOLTIP;
@@ -56,8 +56,8 @@ public class FreecamFeature extends Feature {
 
     @Override
     public void postInitialize() {
-        Perspective perspective = Perspective.FIRST_PERSON;
-        initializeReferencedClass(Perspective.class);
+        CameraType perspective = CameraType.FIRST_PERSON;
+        initializeReferencedClass(CameraType.class);
         previousPerspective = perspective;
         initializeReferencedClass(FloatSetting.class);
         FloatSetting speedSetting = speed;
@@ -70,36 +70,36 @@ public class FreecamFeature extends Feature {
         boolean bypass = isPerspectiveRefreshBypassed();
         super.onEnable();
         if (isOutsideWorld()) return;
-        initializeReferencedClass(MinecraftClient.class);
-        MinecraftClient currentClient = client;
+        initializeReferencedClass(Minecraft.class);
+        Minecraft currentClient = client;
         if (!bypass) {
             if (Objects.requireNonNull(currentClient, "object reference is null").player == null) {
                 setEnabled(false);
                 return;
             }
-            initializeReferencedClass(MinecraftClient.class);
-            Vec3d position = Objects.requireNonNull(
+            initializeReferencedClass(Minecraft.class);
+            Vec3 position = Objects.requireNonNull(
                     Objects.requireNonNull(client, "object reference is null").player,
-                    "object reference is null").getEyePos();
-            initializeReferencedClass(Vec3d.class);
+                    "object reference is null").getEyePosition();
+            initializeReferencedClass(Vec3.class);
             cameraPosition = position;
-            initializeReferencedClass(MinecraftClient.class);
+            initializeReferencedClass(Minecraft.class);
             currentClient = client;
         }
-        Perspective perspective = Objects.requireNonNull(
+        CameraType perspective = Objects.requireNonNull(
                 Objects.requireNonNull(currentClient, "object reference is null").options,
-                "object reference is null").getPerspective();
-        if (!bypass && perspective == null) perspective = Perspective.FIRST_PERSON;
-        initializeReferencedClass(Perspective.class);
+                "object reference is null").getCameraType();
+        if (!bypass && perspective == null) perspective = CameraType.FIRST_PERSON;
+        initializeReferencedClass(CameraType.class);
         previousPerspective = perspective;
-        initializeReferencedClass(MinecraftClient.class);
+        initializeReferencedClass(Minecraft.class);
         cameraYaw = Objects.requireNonNull(
                 Objects.requireNonNull(client, "object reference is null").player,
-                "object reference is null").getYaw();
-        initializeReferencedClass(MinecraftClient.class);
+                "object reference is null").getYRot();
+        initializeReferencedClass(Minecraft.class);
         cameraPitch = Objects.requireNonNull(
                 Objects.requireNonNull(client, "object reference is null").player,
-                "object reference is null").getPitch();
+                "object reference is null").getXRot();
     }
 
     /** NB-083: both state branches retained; structural checking is not unconditional admission. */
@@ -107,35 +107,35 @@ public class FreecamFeature extends Feature {
     public void onDisable() {
         boolean useStoredPerspective = isPerspectiveRefreshBypassed();
         super.onDisable();
-        initializeReferencedClass(Vec3d.class);
+        initializeReferencedClass(Vec3.class);
         cameraPosition = null;
-        initializeReferencedClass(MinecraftClient.class);
-        MinecraftClient currentClient = client;
+        initializeReferencedClass(Minecraft.class);
+        Minecraft currentClient = client;
         if (!useStoredPerspective) {
             if (currentClient == null) return;
-            initializeReferencedClass(MinecraftClient.class);
+            initializeReferencedClass(Minecraft.class);
             currentClient = client;
         }
         if (Objects.requireNonNull(currentClient, "object reference is null").options == null) return;
-        initializeReferencedClass(Perspective.class);
-        Perspective perspective = previousPerspective;
+        initializeReferencedClass(CameraType.class);
+        CameraType perspective = previousPerspective;
         if (!useStoredPerspective) {
             if (perspective == null) return;
-            initializeReferencedClass(MinecraftClient.class);
-            MinecraftClient perspectiveClient = client;
+            initializeReferencedClass(Minecraft.class);
+            Minecraft perspectiveClient = client;
             perspective = Objects.requireNonNull(
                     Objects.requireNonNull(perspectiveClient, "object reference is null").options,
-                    "object reference is null").getPerspective();
+                    "object reference is null").getCameraType();
         }
-        initializeReferencedClass(Perspective.class);
+        initializeReferencedClass(CameraType.class);
         if (perspective == previousPerspective) return;
         try {
-            initializeReferencedClass(MinecraftClient.class);
-            MinecraftClient restoreClient = client;
-            GameOptions options = Objects.requireNonNull(restoreClient, "object reference is null").options;
-            initializeReferencedClass(Perspective.class);
-            Perspective restore = previousPerspective;
-            Objects.requireNonNull(options, "object reference is null").setPerspective(restore);
+            initializeReferencedClass(Minecraft.class);
+            Minecraft restoreClient = client;
+            Options options = Objects.requireNonNull(restoreClient, "object reference is null").options;
+            initializeReferencedClass(CameraType.class);
+            CameraType restore = previousPerspective;
+            Objects.requireNonNull(options, "object reference is null").setCameraType(restore);
         } catch (Exception ignored) {
             // Only this final restoration region suppresses exceptions in the original.
         }
@@ -143,7 +143,7 @@ public class FreecamFeature extends Feature {
 
     public void rotateCamera(float yawDelta, float pitchDelta) {
         cameraYaw += yawDelta * 0.15F;
-        cameraPitch = MathHelper.clamp(cameraPitch + pitchDelta * 0.15F, -90.0F, 90.0F);
+        cameraPitch = Mth.clamp(cameraPitch + pitchDelta * 0.15F, -90.0F, 90.0F);
     }
 
     @Subscribe
@@ -156,7 +156,7 @@ public class FreecamFeature extends Feature {
     private void onWorldRender(WorldRenderEvent event) {
         boolean bypass = isPerspectiveRefreshBypassed();
         if (!bypass && isOutsideWorld()) return;
-        initializeReferencedClass(Vec3d.class);
+        initializeReferencedClass(Vec3.class);
         if (cameraPosition == null) return;
         initializeReferencedClass(FloatSetting.class);
         FloatSetting speedSetting = speed;
@@ -164,60 +164,60 @@ public class FreecamFeature extends Feature {
         float speedValue = speedSetting.getValue();
         initializeReferencedClass(WorldRenderEvent.class);
         float distance = speedValue * event.getDynamicDeltaTicks();
-        Vec3d forward = Vec3d.fromPolar(cameraPitch, cameraYaw);
-        Vec3d right = forward.crossProduct(new Vec3d(0.0, 1.0, 0.0)).normalize();
-        initializeReferencedClass(MinecraftClient.class);
-        KeyBinding backward = client.options.forwardKey;
+        Vec3 forward = Vec3.directionFromRotation(cameraPitch, cameraYaw);
+        Vec3 right = forward.cross(new Vec3(0.0, 1.0, 0.0)).normalize();
+        initializeReferencedClass(Minecraft.class);
+        KeyMapping backward = client.options.keyUp;
         if (!bypass) {
-            if (backward.isPressed()) {
-                initializeReferencedClass(Vec3d.class);
-                Vec3d position = cameraPosition.add(forward.multiply(distance));
-                initializeReferencedClass(Vec3d.class);
+            if (backward.isDown()) {
+                initializeReferencedClass(Vec3.class);
+                Vec3 position = cameraPosition.add(forward.scale(distance));
+                initializeReferencedClass(Vec3.class);
                 cameraPosition = position;
             }
-            initializeReferencedClass(MinecraftClient.class);
-            backward = client.options.backKey;
+            initializeReferencedClass(Minecraft.class);
+            backward = client.options.keyDown;
         }
-        if (backward.isPressed()) {
-            initializeReferencedClass(Vec3d.class);
-            Vec3d position = cameraPosition.subtract(forward.multiply(distance));
-            initializeReferencedClass(Vec3d.class);
+        if (backward.isDown()) {
+            initializeReferencedClass(Vec3.class);
+            Vec3 position = cameraPosition.subtract(forward.scale(distance));
+            initializeReferencedClass(Vec3.class);
             cameraPosition = position;
         }
-        initializeReferencedClass(MinecraftClient.class);
-        MinecraftClient lateralClient = client;
+        initializeReferencedClass(Minecraft.class);
+        Minecraft lateralClient = client;
         if (!bypass) {
-            if (lateralClient.options.leftKey.isPressed()) {
-                initializeReferencedClass(Vec3d.class);
-                Vec3d position = cameraPosition.subtract(right.multiply(distance));
-                initializeReferencedClass(Vec3d.class);
+            if (lateralClient.options.keyLeft.isDown()) {
+                initializeReferencedClass(Vec3.class);
+                Vec3 position = cameraPosition.subtract(right.scale(distance));
+                initializeReferencedClass(Vec3.class);
                 cameraPosition = position;
             }
-            initializeReferencedClass(MinecraftClient.class);
+            initializeReferencedClass(Minecraft.class);
             lateralClient = client;
         }
-        KeyBinding upward = lateralClient.options.rightKey;
+        KeyMapping upward = lateralClient.options.keyRight;
         if (!bypass) {
-            if (upward.isPressed()) {
-                initializeReferencedClass(Vec3d.class);
-                Vec3d position = cameraPosition.add(right.multiply(distance));
-                initializeReferencedClass(Vec3d.class);
+            if (upward.isDown()) {
+                initializeReferencedClass(Vec3.class);
+                Vec3 position = cameraPosition.add(right.scale(distance));
+                initializeReferencedClass(Vec3.class);
                 cameraPosition = position;
             }
-            initializeReferencedClass(MinecraftClient.class);
-            upward = client.options.jumpKey;
+            initializeReferencedClass(Minecraft.class);
+            upward = client.options.keyJump;
         }
-        if (upward.isPressed()) {
-            initializeReferencedClass(Vec3d.class);
-            Vec3d position = cameraPosition.add(0.0, distance, 0.0);
-            initializeReferencedClass(Vec3d.class);
+        if (upward.isDown()) {
+            initializeReferencedClass(Vec3.class);
+            Vec3 position = cameraPosition.add(0.0, distance, 0.0);
+            initializeReferencedClass(Vec3.class);
             cameraPosition = position;
         }
-        initializeReferencedClass(MinecraftClient.class);
-        if (client.options.sneakKey.isPressed()) {
-            initializeReferencedClass(Vec3d.class);
-            Vec3d position = cameraPosition.subtract(0.0, distance, 0.0);
-            initializeReferencedClass(Vec3d.class);
+        initializeReferencedClass(Minecraft.class);
+        if (client.options.keyShift.isDown()) {
+            initializeReferencedClass(Vec3.class);
+            Vec3 position = cameraPosition.subtract(0.0, distance, 0.0);
+            initializeReferencedClass(Vec3.class);
             cameraPosition = position;
         }
     }
@@ -233,30 +233,30 @@ public class FreecamFeature extends Feature {
         boolean checkPacketType = isPerspectiveRefreshEnabled();
         initializeReferencedClass(PacketReceiveEvent.class);
         Packet<?> packet = event.getPacket();
-        if (checkPacketType && !(packet instanceof DeathMessageS2CPacket)) return;
-        DeathMessageS2CPacket death = (DeathMessageS2CPacket) packet;
-        initializeReferencedClass(MinecraftClient.class);
+        if (checkPacketType && !(packet instanceof ClientboundPlayerCombatKillPacket)) return;
+        ClientboundPlayerCombatKillPacket death = (ClientboundPlayerCombatKillPacket) packet;
+        initializeReferencedClass(Minecraft.class);
         if (client.player == null) return;
         int playerId = death.playerId();
-        initializeReferencedClass(MinecraftClient.class);
+        initializeReferencedClass(Minecraft.class);
         if (playerId == client.player.getId()) setEnabled(false);
     }
 
     @Subscribe
     private void onClientTick(ClientTickEvent event) {
         boolean bypass = isPerspectiveRefreshBypassed();
-        initializeReferencedClass(MinecraftClient.class);
-        MinecraftClient currentClient = client;
+        initializeReferencedClass(Minecraft.class);
+        Minecraft currentClient = client;
         if (!bypass) {
-            if (currentClient.options.getPerspective() == Perspective.FIRST_PERSON) return;
-            initializeReferencedClass(MinecraftClient.class);
+            if (currentClient.options.getCameraType() == CameraType.FIRST_PERSON) return;
+            initializeReferencedClass(Minecraft.class);
             currentClient = client;
         }
-        currentClient.options.setPerspective(Perspective.FIRST_PERSON);
+        currentClient.options.setCameraType(CameraType.FIRST_PERSON);
     }
 
-    public Vec3d getCameraPosition() {
-        initializeReferencedClass(Vec3d.class);
+    public Vec3 getCameraPosition() {
+        initializeReferencedClass(Vec3.class);
         return cameraPosition;
     }
 

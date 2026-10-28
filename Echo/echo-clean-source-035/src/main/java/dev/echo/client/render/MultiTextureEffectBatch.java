@@ -23,7 +23,7 @@ import java.nio.FloatBuffer;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-import net.minecraft.client.MinecraftClient;
+import net.minecraft.client.Minecraft;
 import org.lwjgl.system.MemoryStack;
 import org.lwjgl.system.MemoryUtil;
 
@@ -168,8 +168,8 @@ public class MultiTextureEffectBatch implements EffectBatch {
         if (screenCoordinates) {
             try (MemoryStack stack = MemoryStack.stackPush()) {
                 FloatBuffer constants = stack.mallocFloat(3);
-                constants.put(0, MinecraftClient.getInstance().getWindow().getFramebufferWidth());
-                constants.put(1, MinecraftClient.getInstance().getWindow().getFramebufferHeight());
+                constants.put(0, Minecraft.getInstance().getWindow().getWidth());
+                constants.put(1, Minecraft.getInstance().getWindow().getHeight());
                 constants.put(2, pass.isYFlipped() ? 1.0f : 0.0f);
                 pass.setPushConstants(MemoryUtil.memAddress(constants), SCREEN_PUSH_CONSTANT_BYTES);
             }

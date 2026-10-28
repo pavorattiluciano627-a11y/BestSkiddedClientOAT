@@ -6,9 +6,9 @@ import dev.echo.client.utils.blocks.BlockGroups;
 import java.util.List;
 import java.util.function.Function;
 import java.util.function.Supplier;
-import net.minecraft.block.Block;
-import net.minecraft.item.ItemStack;
-import net.minecraft.registry.Registry;
+import net.minecraft.core.Registry;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.block.Block;
 
 /** Anti Trap's block selector with the shared block groups and localized item labels. */
 final class AntiTrapBlockSelectionSetting extends RegistryListSetting<Block> {
@@ -23,6 +23,6 @@ final class AntiTrapBlockSelectionSetting extends RegistryListSetting<Block> {
 
     @Override
     public Function<Block, String> getEntryLabel() {
-        return block -> new ItemStack(block.asItem()).getName().getString();
+        return block -> new ItemStack(block.asItem()).getHoverName().getString();
     }
 }

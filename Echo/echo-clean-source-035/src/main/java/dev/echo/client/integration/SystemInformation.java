@@ -1,5 +1,6 @@
 package dev.echo.client.integration;
 
+import com.mojang.blaze3d.platform.Window;
 import com.mojang.blaze3d.systems.GpuDevice;
 import com.mojang.blaze3d.systems.RenderSystem;
 import dev.echo.client.Echo;
@@ -13,8 +14,7 @@ import java.util.concurrent.Callable;
 import java.util.stream.Collectors;
 import net.fabricmc.loader.api.FabricLoader;
 import net.fabricmc.loader.api.ModContainer;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.util.Window;
+import net.minecraft.client.Minecraft;
 import oshi.SystemInfo;
 import oshi.hardware.CentralProcessor;
 import oshi.hardware.GraphicsCard;
@@ -86,10 +86,10 @@ public final class SystemInformation {
     private static void collectGraphics(List<String> rows) {
         try {
             GpuDevice device = RenderSystem.getDevice();
-            append(rows, "Graphics", "API", () -> device.getBackendName());
-            append(rows, "Graphics", "Renderer", () -> device.getRenderer());
-            append(rows, "Graphics", "Vendor", () -> device.getVendor());
-            append(rows, "Graphics", "Driver", () -> device.getVersion());
+            append(rows, "Graphics", "API", () -> device.getDeviceInfo().backendName());
+            append(rows, "Graphics", "Renderer", () -> device.getDeviceInfo().name());
+            append(rows, "Graphics", "Vendor", () -> device.getDeviceInfo().vendorName());
+            append(rows, "Graphics", "Driver", () -> device.getDeviceInfo().driverInfo());
         } catch (Throwable failure) {
             // The stream-proof row remains meaningful even if the device query fails.
         }
@@ -97,7 +97,7 @@ public final class SystemInformation {
     }
 
     private static void collectDisplay(List<String> rows) {
-        MinecraftClient client = MinecraftClient.getInstance();
+        Minecraft client = Minecraft.getInstance();
         Window window = client.getWindow();
         append(rows, "Display", "Framebuffer", () -> DisplaySettingsDiagnostics.framebufferSize(window));
         append(rows, "Display", "Window", () -> DisplaySettingsDiagnostics.windowSize(window));
@@ -114,7 +114,7 @@ public final class SystemInformation {
             InputKey key = Echo.featureManager.findFeature(ClickGUIFeature.class).getKey();
             return key == null ? "NONE" : key.toString();
         });
-        append(rows, "Client", "Language", () -> MinecraftClient.getInstance().options.language);
+        append(rows, "Client", "Language", () -> Minecraft.getInstance().options.languageCode);
         append(rows, "Client", "Class loader", DisplaySettingsDiagnostics::minecraftClassLoader);
         append(rows, "Client", "Mods", SystemInformation::modSummary, Integer.MAX_VALUE);
     }

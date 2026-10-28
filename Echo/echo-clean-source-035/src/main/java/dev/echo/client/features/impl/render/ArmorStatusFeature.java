@@ -8,8 +8,8 @@ import dev.echo.client.hud.HudElementType;
 import dev.echo.client.hud.HudLayout;
 import dev.echo.client.hud.HudRenderer;
 import dev.echo.render.FontAsset;
+import net.minecraft.world.item.ItemStack;
 import dev.echo.client.bootstrap.CatalogText;
-import net.minecraft.item.ItemStack;
 
 /** Four equipped armor cells and their three separators. */
 public class ArmorStatusFeature extends EchoHudElement {

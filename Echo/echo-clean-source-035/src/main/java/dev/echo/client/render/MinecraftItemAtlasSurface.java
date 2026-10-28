@@ -1,17 +1,17 @@
 package dev.echo.client.render;
 
-import com.mojang.blaze3d.systems.ProjectionType;
 import com.mojang.blaze3d.systems.RenderSystem;
+import com.mojang.blaze3d.ProjectionType;
+import com.mojang.blaze3d.platform.Lighting;
 import com.mojang.blaze3d.systems.GpuDevice;
 import com.mojang.blaze3d.textures.GpuTexture;
 import com.mojang.blaze3d.textures.GpuTextureView;
-import com.mojang.blaze3d.textures.TextureFormat;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.render.DiffuseLighting;
-import net.minecraft.client.render.OverlayTexture;
-import net.minecraft.client.render.ProjectionMatrix2;
-import net.minecraft.client.render.item.KeyedItemRenderState;
-import net.minecraft.client.util.math.MatrixStack;
+import com.mojang.blaze3d.GpuFormat;
+import com.mojang.blaze3d.vertex.PoseStack;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.renderer.ProjectionMatrixBuffer;
+import net.minecraft.client.renderer.item.TrackingItemStackRenderState;
+import net.minecraft.client.renderer.texture.OverlayTexture;
 
 /**
  * Minecraft-owned GPU part of the item atlas. Device-independent texture import
@@ -20,18 +20,18 @@ import net.minecraft.client.util.math.MatrixStack;
 public final class MinecraftItemAtlasSurface {
     public static final int SIZE = 2048;
 
-    private final MatrixStack matrices;
-    private final ProjectionMatrix2 projection;
+    private final PoseStack matrices;
+    private final ProjectionMatrixBuffer projection;
     private GpuTexture color;
     private GpuTextureView colorView;
     private GpuTexture depth;
     private GpuTextureView depthView;
 
     public MinecraftItemAtlasSurface() {
-        this(new MatrixStack(), new ProjectionMatrix2("echo items", -1000.0F, 1000.0F, true));
+        this(new PoseStack(), new ProjectionMatrixBuffer("echo items"));
     }
 
-    MinecraftItemAtlasSurface(MatrixStack matrices, ProjectionMatrix2 projection) {
+    MinecraftItemAtlasSurface(PoseStack matrices, ProjectionMatrixBuffer projection) {
         this.matrices = matrices;
         this.projection = projection;
     }
@@ -42,11 +42,12 @@ public final class MinecraftItemAtlasSurface {
     }
 
     void allocate(GpuDevice device) {
-        color = device.createTexture("echo items atlas", 12, TextureFormat.RGBA8, SIZE, SIZE, 1, 1);
+        color = device.createTexture("echo items atlas", 12, GpuFormat.RGBA8_UNORM, SIZE, SIZE, 1, 1);
         colorView = device.createTextureView(color);
-        depth = device.createTexture("echo items atlas depth", 8, TextureFormat.DEPTH32, SIZE, SIZE, 1, 1);
+        depth = device.createTexture("echo items atlas depth", 8, GpuFormat.D32_FLOAT, SIZE, SIZE, 1, 1);
         depthView = device.createTextureView(depth);
-        device.createCommandEncoder().clearColorAndDepthTextures(color, 0, depth, 1.0);
+        device.createCommandEncoder().clearColorAndDepthTextures(color,
+                new org.joml.Vector4f(0.0F, 0.0F, 0.0F, 0.0F), depth, 1.0);
     }
 
     public GpuTextureView colorView() {
@@ -61,29 +62,33 @@ public final class MinecraftItemAtlasSurface {
      * Draws a tile using the original output overrides and flush order. The
      * caller determines whether an existing animated tile needs clearing.
      */
-    public void renderTile(KeyedItemRenderState state, int x, int y, int tileSize, boolean clearExisting) {
+    public void renderTile(TrackingItemStackRenderState state, int x, int y, int tileSize, boolean clearExisting) {
         int bottom = y + tileSize;
         if (clearExisting) {
             RenderSystem.getDevice().createCommandEncoder().clearColorAndDepthTextures(
-                    color, 0, depth, 1.0, x, SIZE - bottom, tileSize, tileSize);
+                    color, new org.joml.Vector4f(0.0F, 0.0F, 0.0F, 0.0F), depth, 1.0,
+                    x, SIZE - bottom, tileSize, tileSize);
         }
-        matrices.push();
+        matrices.pushPose();
         matrices.translate(x + tileSize / 2.0F, y + tileSize / 2.0F, 0.0F);
         matrices.scale(tileSize, -tileSize, tileSize);
         RenderSystem.outputColorTextureOverride = colorView;
         RenderSystem.outputDepthTextureOverride = depthView;
-        RenderSystem.setProjectionMatrix(projection.set(SIZE, SIZE), ProjectionType.ORTHOGRAPHIC);
+        RenderSystem.setProjectionMatrix(projection.getBuffer(
+                new org.joml.Matrix4f().setOrtho(0.0F, SIZE, SIZE, 0.0F, 1000.0F, 21000.0F)),
+                ProjectionType.ORTHOGRAPHIC);
         RenderSystem.enableScissorForRenderTypeDraws(x, SIZE - bottom, tileSize, tileSize);
-        MinecraftClient client = MinecraftClient.getInstance();
-        client.gameRenderer.getDiffuseLighting().setShaderLights(
-                state.isSideLit() ? DiffuseLighting.Type.ITEMS_3D : DiffuseLighting.Type.ITEMS_FLAT);
-        state.render(matrices, client.gameRenderer.getEntityRenderCommandQueue(), 15728880, OverlayTexture.DEFAULT_UV, 0);
-        client.gameRenderer.getEntityRenderDispatcher().render();
-        client.getBufferBuilders().getEntityVertexConsumers().draw();
+        Minecraft client = Minecraft.getInstance();
+        client.gameRenderer.lighting().setupFor(
+                state.usesBlockLight() ? Lighting.Entry.ITEMS_3D : Lighting.Entry.ITEMS_FLAT);
+        state.submit(matrices, client.gameRenderer.handAndScreenSubmitNodeStorage, 15728880, OverlayTexture.NO_OVERLAY, 0);
+        client.gameRenderer.featureRenderDispatcher().renderAllFeatures(
+                client.gameRenderer.handAndScreenSubmitNodeStorage);
+        client.gameRenderer.renderBuffers().stagedVertexBuffer().endFrame();
         RenderSystem.disableScissorForRenderTypeDraws();
         RenderSystem.outputColorTextureOverride = null;
         RenderSystem.outputDepthTextureOverride = null;
-        matrices.pop();
+        matrices.popPose();
     }
 
     /**

@@ -3,8 +3,8 @@ package dev.echo.client.handlers;
 import dev.echo.client.events.Subscribe;
 import dev.echo.client.events.input.KeyPressedQueryEvent;
 import dev.echo.client.events.lifecycle.WorldTickContextEvent;
-import net.minecraft.client.option.GameOptions;
-import net.minecraft.client.option.StickyKeyBinding;
+import net.minecraft.client.Options;
+import net.minecraft.client.ToggleKeyMapping;
 
 /** Applies per-tick requests to force or suppress sprinting, including toggle-sprint keys. */
 public class SprintOverrideHandler extends ClientHandler {
@@ -30,17 +30,17 @@ public class SprintOverrideHandler extends ClientHandler {
     }
 
     private static void setSprintKeyPressed(boolean pressed) {
-        GameOptions options = CLIENT.options;
+        Options options = CLIENT.options;
         if (options == null) {
             return;
         }
-        if (options.sprintKey instanceof StickyKeyBinding && options.getSprintToggled().getValue()) {
-            if (options.sprintKey.isPressed() != pressed) {
-                options.sprintKey.setPressed(true);
+        if (options.keySprint instanceof ToggleKeyMapping && options.toggleSprint().get()) {
+            if (options.keySprint.isDown() != pressed) {
+                options.keySprint.setDown(true);
             }
             return;
         }
-        options.sprintKey.setPressed(pressed);
+        options.keySprint.setDown(pressed);
     }
 
     public static void resetOverrides() {

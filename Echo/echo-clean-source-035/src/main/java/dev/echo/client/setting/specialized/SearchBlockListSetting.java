@@ -6,8 +6,8 @@ import dev.echo.client.utils.blocks.BlockGroups;
 import java.util.List;
 import java.util.function.Function;
 import java.util.function.Supplier;
-import net.minecraft.block.Block;
-import net.minecraft.registry.Registry;
+import net.minecraft.core.Registry;
+import net.minecraft.world.level.block.Block;
 
 /** Search block selections with the shared block groups and item-stack display names. */
 public class SearchBlockListSetting extends RegistryListSetting<Block> {

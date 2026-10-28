@@ -1,7 +1,7 @@
 package dev.echo.client.events.network;
 
 import dev.echo.client.events.Event;
-import net.minecraft.network.packet.Packet;
+import net.minecraft.network.protocol.Packet;
 
 /** Intercepts an outgoing packet and allows its immediate flush to be suppressed. */
 public class PacketSendEvent extends Event {

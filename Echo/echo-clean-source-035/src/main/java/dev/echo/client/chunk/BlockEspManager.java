@@ -23,15 +23,15 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicReferenceArray;
 import java.util.stream.IntStream;
-import net.minecraft.block.Block;
-import net.minecraft.block.BlockState;
-import net.minecraft.registry.DefaultedRegistry;
-import net.minecraft.registry.Registries;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.ChunkPos;
-import net.minecraft.world.chunk.ChunkSection;
-import net.minecraft.world.chunk.PalettedContainer;
-import net.minecraft.world.chunk.WorldChunk;
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.DefaultedRegistry;
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.world.level.ChunkPos;
+import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.chunk.LevelChunk;
+import net.minecraft.world.level.chunk.LevelChunkSection;
+import net.minecraft.world.level.chunk.PalettedContainer;
 
 /** Owner-scoped block highlight registrations, asynchronous scans and cluster tracers. */
 public class BlockEspManager implements MinecraftAccess {
@@ -52,7 +52,7 @@ public class BlockEspManager implements MinecraftAccess {
 
     @Subscribe
     public void onChunkLoad(ChunkLoadEvent event) {
-        WorldChunk chunk = event.getChunk();
+        LevelChunk chunk = event.getChunk();
         chunks.removeChunk(chunk.getPos());
         scanExecutor.submit(() -> searchChunk(chunk));
     }
@@ -66,7 +66,7 @@ public class BlockEspManager implements MinecraftAccess {
     public void onBlockUpdate(BlockUpdateEvent event) {
         BlockPos position = event.getPosition();
         Block block = event.getState().getBlock();
-        int blockId = Registries.BLOCK.getRawId(block);
+        int blockId = BuiltInRegistries.BLOCK.getId(block);
         if (blockId != 0 && chunks.palette()[blockId] != 0) {
             chunks.setBlock(position.getX(), position.getY(), position.getZ(), blockId);
         } else {
@@ -166,14 +166,14 @@ public class BlockEspManager implements MinecraftAccess {
     public synchronized void rebuildPalette() {
         int[] palette = chunks.palette();
         Arrays.fill(palette, 0);
-        DefaultedRegistry<Block> registry = Registries.BLOCK;
+        DefaultedRegistry<Block> registry = BuiltInRegistries.BLOCK;
         boolean anyTracers = false;
         for (Map.Entry<Object, Object2IntMap<Block>> entry : registrations.entrySet()) {
             boolean tracer = tracers.getBoolean(entry.getKey());
             int flags = (outlines.getBoolean(entry.getKey()) ? OUTLINE_FLAG : 0) | (tracer ? TRACER_FLAG : 0);
             anyTracers |= tracer && !entry.getValue().isEmpty();
             for (Object2IntMap.Entry<Block> color : entry.getValue().object2IntEntrySet()) {
-                int blockId = registry.getRawId(color.getKey());
+                int blockId = registry.getId(color.getKey());
                 palette[blockId] = color.getIntValue() & 0xfcffffff | flags;
             }
         }
@@ -184,32 +184,32 @@ public class BlockEspManager implements MinecraftAccess {
     public void searchWorld() {
         chunks.clear();
         scanExecutor.submit(() -> {
-            AtomicReferenceArray<WorldChunk> loaded = CLIENT.world.getChunkManager().chunks.chunks;
+            AtomicReferenceArray<LevelChunk> loaded = CLIENT.level.getChunkSource().storage.chunks;
             chunks.clear();
             IntStream.range(0, loaded.length()).parallel().mapToObj(loaded::get)
                     .filter(Objects::nonNull).forEach(this::searchChunk);
         });
     }
 
-    public void searchChunk(WorldChunk chunk) {
-        ChunkSection[] sections = chunk.getSectionArray();
+    public void searchChunk(LevelChunk chunk) {
+        LevelChunkSection[] sections = chunk.getSections();
         ChunkPos position = chunk.getPos();
-        DefaultedRegistry<Block> registry = Registries.BLOCK;
+        DefaultedRegistry<Block> registry = BuiltInRegistries.BLOCK;
         int[] palette = chunks.palette();
         for (int sectionIndex = 0; sectionIndex < sections.length; sectionIndex++) {
-            ChunkSection section = sections[sectionIndex];
-            if (section == null || section.isEmpty()) {
+            LevelChunkSection section = sections[sectionIndex];
+            if (section == null || section.hasOnlyAir()) {
                 continue;
             }
-            PalettedContainer<BlockState> states = section.getBlockStateContainer();
-            if (!states.hasAny(state -> palette[registry.getRawId(state.getBlock())] != 0)) {
+            PalettedContainer<BlockState> states = section.getStates();
+            if (!states.maybeHas(state -> palette[registry.getId(state.getBlock())] != 0)) {
                 continue;
             }
             ChunkSectionData found = new ChunkSectionData(ChunkCoordinates.getX(position),
-                    chunk.sectionIndexToCoord(sectionIndex), ChunkCoordinates.getZ(position));
+                    chunk.getSectionYFromSectionIndex(sectionIndex), ChunkCoordinates.getZ(position));
             for (int index = 0; index < 4096; index++) {
                 BlockState state = states.get(index);
-                int blockId = registry.getRawId(state.getBlock());
+                int blockId = registry.getId(state.getBlock());
                 if (blockId != 0 && palette[blockId] != 0) {
                     found.append(index, blockId);
                 }

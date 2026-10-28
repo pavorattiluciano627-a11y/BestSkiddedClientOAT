@@ -2,6 +2,9 @@ package dev.echo.client.utils.inventory;
 
 import static dev.echo.client.MinecraftAccess.CLIENT;
 
+import com.mojang.blaze3d.platform.InputConstants;
+import net.minecraft.world.inventory.ContainerInput;
+import com.mojang.blaze3d.platform.Window;
 import dev.echo.client.events.EventPriority;
 import dev.echo.client.events.Subscribe;
 import dev.echo.client.events.input.PlayerInputEvent;
@@ -26,16 +29,14 @@ import java.util.function.BooleanSupplier;
 import java.util.function.IntPredicate;
 import java.util.function.IntSupplier;
 import java.util.function.Supplier;
-import net.minecraft.client.gui.screen.Screen;
-import net.minecraft.client.gui.screen.ingame.CreativeInventoryScreen;
-import net.minecraft.client.gui.screen.ingame.InventoryScreen;
-import net.minecraft.client.util.InputUtil;
-import net.minecraft.client.util.Window;
-import net.minecraft.entity.player.PlayerInventory;
-import net.minecraft.item.Item;
-import net.minecraft.network.packet.c2s.play.CloseHandledScreenC2SPacket;
-import net.minecraft.screen.slot.Slot;
-import net.minecraft.screen.slot.SlotActionType;
+import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.client.gui.screens.inventory.CreativeModeInventoryScreen;
+import net.minecraft.client.gui.screens.inventory.InventoryScreen;
+import net.minecraft.network.protocol.game.ServerboundContainerClosePacket;
+import net.minecraft.world.entity.player.Inventory;
+import net.minecraft.world.inventory.ClickAction;
+import net.minecraft.world.inventory.Slot;
+import net.minecraft.world.item.Item;
 import org.lwjgl.glfw.GLFW;
 
 /**
@@ -146,7 +147,7 @@ public final class InventoryActionScheduler {
 
     @Subscribe
     private void onClientTick(ClientTickEvent event) {
-        if (missingWorld() || CLIENT.interactionManager == null) { return; }
+        if (missingWorld() || CLIENT.gameMode == null) { return; }
         if (!enabledCondition.getAsBoolean()) {
             abortSilent();
             if (cursorBusy()) { cancelCursor(); }
@@ -247,8 +248,8 @@ public final class InventoryActionScheduler {
         Screen screen = MinecraftRenderState.getScreen();
         if (!(screen instanceof HandledScreenAccessor accessor)) { return -1; }
         Slot slot = accessor.getFocusedSlot();
-        if (slot == null || !slot.getStack().isOf(itemSupplier.get()) || !allowedScreenSlot(slot, target)) { return -1; }
-        return CLIENT.player.currentScreenHandler.slots.indexOf(slot);
+        if (slot == null || !slot.getItem().is(itemSupplier.get()) || !allowedScreenSlot(slot, target)) { return -1; }
+        return CLIENT.player.containerMenu.slots.indexOf(slot);
     }
     private int nearestSourceIndex(int target) {
         InventoryScreenSlots.CursorTarget nearest = nearestSource(target);
@@ -260,13 +261,13 @@ public final class InventoryActionScheduler {
         if (layout == null) { return null; }
         Window window = CLIENT.getWindow();
         int[] origin = InventoryScreenSlots.screenOrigin(layout, window);
-        double mouseX = CLIENT.mouse.getX(), mouseY = CLIENT.mouse.getY();
-        boolean creative = MinecraftRenderState.getScreen() instanceof CreativeInventoryScreen;
+        double mouseX = CLIENT.mouseHandler.xpos(), mouseY = CLIENT.mouseHandler.ypos();
+        boolean creative = MinecraftRenderState.getScreen() instanceof CreativeModeInventoryScreen;
         return InventoryScreenSlots.nearestItem(layout.handler().slots, itemSupplier.get(), creative,
                 origin[0], origin[1], window, mouseX, mouseY, slot -> allowedScreenSlot(slot, target));
     }
     private boolean allowedScreenSlot(Slot slot, int target) {
-        return !(slot.inventory instanceof PlayerInventory) || allowedInventorySlot(slot.getIndex(), target);
+        return !(slot.container instanceof Inventory) || allowedInventorySlot(slot.getContainerSlot(), target);
     }
     private boolean allowedInventorySlot(int slot, int target) {
         return slot >= (allowHotbarSource ? 0 : 9) && slot < 36 && slot != target && sourceSlotPredicate.test(slot);
@@ -274,7 +275,7 @@ public final class InventoryActionScheduler {
     private int firstSource(int target) {
         for (int screenSlot = 9; screenSlot < (allowHotbarSource ? 45 : 36); screenSlot++) {
             int inventorySlot = screenSlot >= 36 ? screenSlot - 36 : screenSlot;
-            if (allowedInventorySlot(inventorySlot, target) && CLIENT.player.getInventory().getStack(inventorySlot).isOf(itemSupplier.get())) {
+            if (allowedInventorySlot(inventorySlot, target) && CLIENT.player.getInventory().getItem(inventorySlot).is(itemSupplier.get())) {
                 return screenSlot;
             }
         }
@@ -283,28 +284,28 @@ public final class InventoryActionScheduler {
     private int randomSource(int target) {
         List<Integer> candidates = new ArrayList<>();
         for (int slot = 0; slot < 36; slot++) {
-            if (allowedInventorySlot(slot, target) && CLIENT.player.getInventory().getStack(slot).isOf(itemSupplier.get())) {
+            if (allowedInventorySlot(slot, target) && CLIENT.player.getInventory().getItem(slot).is(itemSupplier.get())) {
                 candidates.add(screenSlot(slot));
             }
         }
         return candidates.isEmpty() ? -1 : candidates.get(random.nextInt(candidates.size()));
     }
     private boolean hasBlockingScreen() { return MinecraftRenderState.getScreen() != null && !isInventoryScreen(); }
-    private boolean hasCursorStack() { return !CLIENT.player.currentScreenHandler.getCursorStack().isEmpty(); }
+    private boolean hasCursorStack() { return !CLIENT.player.containerMenu.getCarried().isEmpty(); }
     private boolean isInventoryScreen() {
         return MinecraftRenderState.getScreen() instanceof InventoryScreen
-                || MinecraftRenderState.getScreen() instanceof CreativeInventoryScreen;
+                || MinecraftRenderState.getScreen() instanceof CreativeModeInventoryScreen;
     }
-    private boolean missingWorld() { return CLIENT.player == null || CLIENT.world == null; }
+    private boolean missingWorld() { return CLIENT.player == null || CLIENT.level == null; }
 
     private void transfer(int source, int target) { transfer(source, target, true); }
     private void transfer(int source, int target, boolean scheduleClose) {
         Item item = itemSupplier.get();
         transferring = true;
         try {
-            int syncId = CLIENT.player.currentScreenHandler.syncId;
-            if (CLIENT.player != null && CLIENT.interactionManager != null) {
-                CLIENT.interactionManager.clickSlot(syncId, source, target, SlotActionType.SWAP, CLIENT.player);
+            int syncId = CLIENT.player.containerMenu.containerId;
+            if (CLIENT.player != null && CLIENT.gameMode != null) {
+                CLIENT.gameMode.handleContainerInput(syncId, source, target, ContainerInput.SWAP, CLIENT.player);
             }
         } finally {
             transferring = false;
@@ -322,8 +323,8 @@ public final class InventoryActionScheduler {
         if (layout == null || source < 0 || source >= layout.handler().slots.size()) { return; }
         Window window = CLIENT.getWindow();
         int[] origin = InventoryScreenSlots.screenOrigin(layout, window);
-        double mouseX = CLIENT.mouse.getX(), mouseY = CLIENT.mouse.getY();
-        boolean creative = MinecraftRenderState.getScreen() instanceof CreativeInventoryScreen;
+        double mouseX = CLIENT.mouseHandler.xpos(), mouseY = CLIENT.mouseHandler.ypos();
+        boolean creative = MinecraftRenderState.getScreen() instanceof CreativeModeInventoryScreen;
         double maximum = InventoryScreenSlots.farthestDistance(layout.handler().slots, creative,
                 origin[0], origin[1], window, mouseX, mouseY, slot -> allowedScreenSlot(slot, target));
         double[] center = InventoryScreenSlots.centerInWindow(layout.handler().slots.get(source), origin[0], origin[1], window);
@@ -333,10 +334,10 @@ public final class InventoryActionScheduler {
         cursorStartedAt = System.currentTimeMillis();
         cursorSource = source; cursorTarget = target;
         cursorMoving = true; cursorClickPending = false;
-        CLIENT.execute(() -> CLIENT.mouse.unlockCursor());
+        CLIENT.execute(() -> CLIENT.mouseHandler.releaseMouse());
     }
     private void updateCursor() {
-        if (CLIENT.player == null || CLIENT.player.isDead() || !isCursorSelection() || !isInventoryScreen()) {
+        if (CLIENT.player == null || CLIENT.player.isDeadOrDying() || !isCursorSelection() || !isInventoryScreen()) {
             cancelCursor(); return;
         }
         long elapsed = System.currentTimeMillis() - cursorStartedAt;
@@ -344,22 +345,22 @@ public final class InventoryActionScheduler {
         double eased = RandomMath.smoothStep(fraction, 0.0, 1.0);
         double x = cursorStartX + (cursorEndX - cursorStartX) * eased;
         double y = cursorStartY + (cursorEndY - cursorStartY) * eased;
-        InputUtil.setCursorParameters(CLIENT.getWindow(), GLFW.GLFW_CURSOR_NORMAL, x, y);
+        InputConstants.grabOrReleaseMouse(CLIENT.getWindow(), GLFW.GLFW_CURSOR_NORMAL, x, y);
         if (fraction < 1.0) { return; }
         cursorMoving = false; cursorClickPending = true;
     }
     private void completeCursorTransfer() {
         InventoryScreenSlots.ScreenLayout layout = InventoryScreenSlots.layoutOf(MinecraftRenderState.getScreen());
-        if (layout == null || CLIENT.interactionManager == null || cursorSource < 0 || cursorSource >= layout.handler().slots.size()
+        if (layout == null || CLIENT.gameMode == null || cursorSource < 0 || cursorSource >= layout.handler().slots.size()
                 || !targetNeedsItem(cursorTarget)) { cancelCursor(); return; }
         Slot source = layout.handler().slots.get(cursorSource);
-        if (!source.getStack().isOf(itemSupplier.get())) { cancelCursor(); return; }
+        if (!source.getItem().is(itemSupplier.get())) { cancelCursor(); return; }
         transfer(cursorSource, cursorTarget);
         cancelCursor();
     }
     private boolean targetNeedsItem(int target) {
-        if (target == 40) { return !CLIENT.player.getOffHandStack().isOf(itemSupplier.get()); }
-        return target >= 0 && target <= 8 && !CLIENT.player.getInventory().getStack(target).isOf(itemSupplier.get());
+        if (target == 40) { return !CLIENT.player.getOffhandItem().is(itemSupplier.get()); }
+        return target >= 0 && target <= 8 && !CLIENT.player.getInventory().getItem(target).is(itemSupplier.get());
     }
     private int screenSlot(int inventorySlot) { return inventorySlot < 9 ? inventorySlot + 36 : inventorySlot; }
     private long sampleTransferDelay() { return Math.max(0L, (long) transferDelay.sampleGaussian()); }
@@ -381,12 +382,12 @@ public final class InventoryActionScheduler {
     }
     private void closeInventory() {
         if (CLIENT.player == null) { autoClosePending = false; return; }
-        if (isInventoryScreen()) { CLIENT.player.closeHandledScreen(); }
-        else { sendClosePacket(CLIENT.player.currentScreenHandler.syncId); }
+        if (isInventoryScreen()) { CLIENT.player.closeContainer(); }
+        else { sendClosePacket(CLIENT.player.containerMenu.containerId); }
         autoClosePending = false;
     }
     private static void sendClosePacket(int syncId) {
-        if (CLIENT.getNetworkHandler() != null) { CLIENT.getNetworkHandler().sendPacket(new CloseHandledScreenC2SPacket(syncId)); }
+        if (CLIENT.getConnection() != null) { CLIENT.getConnection().send(new ServerboundContainerClosePacket(syncId)); }
     }
     private void queueSilent(int source, int target) {
         if (isActive()) { return; }
@@ -398,7 +399,7 @@ public final class InventoryActionScheduler {
     private void advanceSilent() {
         if (state == InventoryActionState.WAIT_BEFORE_OPEN) {
             if (!silentTimer.hasElapsedMillis((double) stateDelay)) { return; }
-            CLIENT.player.openRidingInventory();
+            CLIENT.player.sendOpenInventory();
             state = InventoryActionState.WAIT_AFTER_OPEN;
             afterOpenTimer.reset();
             return;
@@ -415,18 +416,18 @@ public final class InventoryActionScheduler {
         }
         if (state == InventoryActionState.WAIT_BEFORE_CLOSE) {
             if (!silentTimer.hasElapsedMillis((double) stateDelay)) { return; }
-            sendClosePacket(CLIENT.player.currentScreenHandler.syncId);
+            sendClosePacket(CLIENT.player.containerMenu.containerId);
             resetSilentState();
         }
     }
     private boolean pendingTransferValid() {
         if (pendingTarget != targetSlotSupplier.getAsInt() || !targetNeedsItem(pendingTarget)
-                || pendingSource < 0 || pendingSource >= CLIENT.player.currentScreenHandler.slots.size()) { return false; }
-        return CLIENT.player.currentScreenHandler.slots.get(pendingSource).getStack().isOf(itemSupplier.get());
+                || pendingSource < 0 || pendingSource >= CLIENT.player.containerMenu.slots.size()) { return false; }
+        return CLIENT.player.containerMenu.slots.get(pendingSource).getItem().is(itemSupplier.get());
     }
     private void abortSilent() {
         if (state == InventoryActionState.WAIT_AFTER_OPEN || state == InventoryActionState.WAIT_BEFORE_CLOSE) {
-            sendClosePacket(CLIENT.player.currentScreenHandler.syncId);
+            sendClosePacket(CLIENT.player.containerMenu.containerId);
         }
         resetSilentState();
     }

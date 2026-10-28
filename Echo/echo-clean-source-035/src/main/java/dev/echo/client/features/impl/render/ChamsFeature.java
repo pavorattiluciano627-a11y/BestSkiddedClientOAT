@@ -20,10 +20,10 @@ import dev.echo.client.setting.CustomWidgetSetting;
 import dev.echo.client.setting.EntityTypeListSetting;
 import dev.echo.client.setting.FloatSetting;
 import dev.echo.client.utils.targeting.TargetSelection;
-import net.minecraft.entity.Entity;
-import net.minecraft.entity.LivingEntity;
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.text.TextColor;
+import net.minecraft.network.chat.TextColor;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.player.Player;
 
 /** Entity-outline capture, material settings and speed-scaled animation phase. */
 public class ChamsFeature extends Feature implements EntityMaterialSettings {
@@ -129,7 +129,7 @@ public class ChamsFeature extends Feature implements EntityMaterialSettings {
         if (entity == client.player) {
             return renderSelf.getValue();
         }
-        if (entity instanceof PlayerEntity player && TargetsFeature.antiBot.getValue()
+        if (entity instanceof Player player && TargetsFeature.antiBot.getValue()
                 && TargetSelection.isBot(player)) {
             return false;
         }
@@ -147,7 +147,7 @@ public class ChamsFeature extends Feature implements EntityMaterialSettings {
 
     private static int previewTeamColor() {
         TextColor nameColor = client.player == null ? null : TargetsFeature.getNameColor(client.player);
-        return nameColor == null ? -1 : 0xff000000 | nameColor.getRgb();
+        return nameColor == null ? -1 : 0xff000000 | nameColor.getValue();
     }
 
     public static void appendBootstrapSettings(ChamsFeature feature) {

@@ -6,9 +6,9 @@ import dev.echo.client.events.input.KeybindingEvent;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
-import net.minecraft.text.OrderedText;
-import net.minecraft.text.StringVisitable;
-import net.minecraft.text.Style;
+import net.minecraft.network.chat.FormattedText;
+import net.minecraft.network.chat.Style;
+import net.minecraft.util.FormattedCharSequence;
 
 /**
  * Mutable text selection and style-preserving text transformations.
@@ -49,12 +49,12 @@ public class TextTransformEvent extends Event {
      * @param text original styled text
      * @return collected segments when marked changed, otherwise the original object
      */
-    public static StringVisitable transform(StringVisitable text) {
+    public static FormattedText transform(FormattedText text) {
         String[] sentinel = KeybindingEvent.getInputSentinel();
         if (shouldSkipTransformation()) {
             return text;
         }
-        List<StringVisitable> fragments = new ArrayList<>();
+        List<FormattedText> fragments = new ArrayList<>();
         boolean[] changed = {false};
         if (sentinel != null) {
             return text;
@@ -64,10 +64,10 @@ public class TextTransformEvent extends Event {
             String transformed = transform(string);
             boolean equal = transformed.equals(string);
             changed[0] |= segmentSentinel != null ? equal : !equal;
-            fragments.add(StringVisitable.styled(transformed, style));
+            fragments.add(FormattedText.of(transformed, style));
             return Optional.empty();
         }, Style.EMPTY);
-        return changed[0] ? StringVisitable.concat(fragments) : text;
+        return changed[0] ? FormattedText.composite(fragments) : text;
     }
 
     /**
@@ -76,7 +76,7 @@ public class TextTransformEvent extends Event {
      * @param text original ordered text
      * @return transformed runs, or the original object when contents are unchanged
      */
-    public static OrderedText transform(OrderedText text) {
+    public static FormattedCharSequence transform(FormattedCharSequence text) {
         String[] sentinel = KeybindingEvent.getInputSentinel();
         if (shouldSkipTransformation()) {
             return text;
@@ -98,7 +98,7 @@ public class TextTransformEvent extends Event {
         });
 
         boolean changed = false;
-        List<OrderedText> transformedRuns = new ArrayList<>(runs.size());
+        List<FormattedCharSequence> transformedRuns = new ArrayList<>(runs.size());
         for (int index = 0; index < runs.size(); index++) {
             if (sentinel != null) {
                 return text;
@@ -106,8 +106,8 @@ public class TextTransformEvent extends Event {
             StringBuilder run = runs.get(index);
             String transformed = transform(run.toString());
             changed |= !transformed.contentEquals(run);
-            transformedRuns.add(OrderedText.styledForwardsVisitedString(transformed, (Style) styles.get(index)));
+            transformedRuns.add(FormattedCharSequence.forward(transformed, (Style) styles.get(index)));
         }
-        return changed ? OrderedText.concat(transformedRuns) : text;
+        return changed ? FormattedCharSequence.composite(transformedRuns) : text;
     }
 }

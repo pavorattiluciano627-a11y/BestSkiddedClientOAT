@@ -2,9 +2,9 @@ package dev.echo.client.features;
 
 import dev.echo.client.setting.ChoiceSetting;
 import dev.echo.client.setting.FloatSetting;
+import net.minecraft.client.Minecraft;
+import net.minecraft.util.Mth;
 import dev.echo.client.bootstrap.CatalogText;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.util.math.MathHelper;
 
 /** Screen-relative HUD positioning with legacy edge anchors and nine-point anchors. */
 public abstract class HudFeature extends Feature {
@@ -68,7 +68,7 @@ public abstract class HudFeature extends Feature {
         } else {
             x = relativeX.getValue() * screenWidth;
         }
-        return MathHelper.clamp(x, 0.0f, screenWidth - width);
+        return Mth.clamp(x, 0.0f, screenWidth - width);
     }
 
     public float getY() {
@@ -89,7 +89,7 @@ public abstract class HudFeature extends Feature {
         } else {
             y = relativeY.getValue() * screenHeight;
         }
-        return MathHelper.clamp(y, 0.0f, screenHeight - height);
+        return Mth.clamp(y, 0.0f, screenHeight - height);
     }
 
     public float getHorizontalAnchor() {
@@ -166,11 +166,11 @@ public abstract class HudFeature extends Feature {
     public ChoiceSetting getAnchor() { return anchor; }
 
     private static int viewportWidth() {
-        return (int) Math.ceil(MinecraftClient.getInstance().getWindow().getFramebufferWidth() / 2.0);
+        return (int) Math.ceil(Minecraft.getInstance().getWindow().getWidth() / 2.0);
     }
 
     private static int viewportHeight() {
-        return (int) Math.ceil(MinecraftClient.getInstance().getWindow().getFramebufferHeight() / 2.0);
+        return (int) Math.ceil(Minecraft.getInstance().getWindow().getHeight() / 2.0);
     }
 
     /** Appends this declaring class's settings in the recorded classfile order. */

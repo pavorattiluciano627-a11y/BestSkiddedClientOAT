@@ -2,8 +2,8 @@ package dev.echo.client.events.interaction;
 
 import dev.echo.client.events.Event;
 import dev.echo.client.events.EventPhase;
-import net.minecraft.entity.Entity;
-import net.minecraft.entity.player.PlayerEntity;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.player.Player;
 
 /**
  * Player and target references for the pre-attack and post-attack notifications.
@@ -11,7 +11,7 @@ import net.minecraft.entity.player.PlayerEntity;
  * binding/cache applicability and its production removal remain separate obligations.
  */
 public class EntityAttackEvent extends Event {
-    private final PlayerEntity player;
+    private final Player player;
     private final Entity target;
     private static String[] attackSentinel;
 
@@ -27,14 +27,14 @@ public class EntityAttackEvent extends Event {
      * @param player attacking player
      * @param target entity being attacked
      */
-    public EntityAttackEvent(EventPhase phase, PlayerEntity player, Entity target) {
+    public EntityAttackEvent(EventPhase phase, Player player, Entity target) {
         super(phase);
         this.player = player;
         this.target = target;
     }
 
     /** @return the attacking player */
-    public PlayerEntity getPlayer() {
+    public Player getPlayer() {
         return player;
     }
 
@@ -63,7 +63,7 @@ public class EntityAttackEvent extends Event {
          * @param player attacking player
          * @param target attacked entity
          */
-        public Pre(PlayerEntity player, Entity target) {
+        public Pre(Player player, Entity target) {
             super(EventPhase.PRE, player, target);
         }
     }
@@ -75,7 +75,7 @@ public class EntityAttackEvent extends Event {
          * @param player attacking player
          * @param target attacked entity
          */
-        public Post(PlayerEntity player, Entity target) {
+        public Post(Player player, Entity target) {
             super(EventPhase.POST, player, target);
         }
     }

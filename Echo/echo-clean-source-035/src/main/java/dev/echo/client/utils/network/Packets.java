@@ -1,8 +1,8 @@
 package dev.echo.client.utils.network;
 
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.network.packet.Packet;
 import dev.echo.client.MinecraftAccess;
+import net.minecraft.client.Minecraft;
+import net.minecraft.network.protocol.Packet;
 
 /** Packet sending and fixed-point relative-coordinate decoding. */
 public final class Packets implements MinecraftAccess {
@@ -17,11 +17,11 @@ public final class Packets implements MinecraftAccess {
      * @param packet the packet to send
      */
     public static void send(Packet<?> packet) {
-        MinecraftClient client = CLIENT;
-        if (client.getNetworkHandler() == null) {
+        Minecraft client = CLIENT;
+        if (client.getConnection() == null) {
             return;
         }
-        client.getNetworkHandler().sendPacket(packet);
+        client.getConnection().send(packet);
     }
 
     /**

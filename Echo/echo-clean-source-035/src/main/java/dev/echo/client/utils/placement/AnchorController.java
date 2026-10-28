@@ -14,21 +14,21 @@ import dev.echo.client.utils.RandomMath;
 import dev.echo.client.utils.items.InventoryItems;
 import java.util.List;
 import java.util.function.Predicate;
-import net.minecraft.block.Blocks;
-import net.minecraft.block.RespawnAnchorBlock;
-import net.minecraft.entity.Entity;
-import net.minecraft.item.Item;
-import net.minecraft.item.ItemPlacementContext;
-import net.minecraft.item.ItemStack;
-import net.minecraft.item.Items;
-import net.minecraft.network.packet.s2c.play.BlockUpdateS2CPacket;
-import net.minecraft.util.ActionResult;
-import net.minecraft.util.Hand;
-import net.minecraft.util.hit.BlockHitResult;
-import net.minecraft.util.hit.HitResult;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.Box;
-import net.minecraft.util.math.Vec3d;
+import net.minecraft.core.BlockPos;
+import net.minecraft.network.protocol.game.ClientboundBlockUpdatePacket;
+import net.minecraft.world.InteractionHand;
+import net.minecraft.world.InteractionResult;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.item.Item;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
+import net.minecraft.world.item.context.BlockPlaceContext;
+import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.RespawnAnchorBlock;
+import net.minecraft.world.phys.AABB;
+import net.minecraft.world.phys.BlockHitResult;
+import net.minecraft.world.phys.HitResult;
+import net.minecraft.world.phys.Vec3;
 
 /**
  * Classic anchor placement, charging and detonation controller. Direct operations
@@ -77,7 +77,7 @@ public class AnchorController implements MinecraftAccess {
     private volatile BlockPos pendingPlacement;
     private volatile BlockPos rejectedPlacement;
     private int placementTick;
-    private Vec3d lastExplosionPosition;
+    private Vec3 lastExplosionPosition;
     private int lastExplosionTick;
 
     public AnchorController(Predicate<Object> visibleWhen) {
@@ -140,7 +140,7 @@ public class AnchorController implements MinecraftAccess {
 
     /** Returns whether the original item-use attempt was cancelled by this controller. */
     public boolean onItemUse(ItemUseEvent.Pre event) {
-        if (event.getPlayer() != CLIENT.player || event.getHand() != Hand.MAIN_HAND) {
+        if (event.getPlayer() != CLIENT.player || event.getHand() != InteractionHand.MAIN_HAND) {
             return false;
         }
         if (interacting || !isAllowedHeldItem()) {
@@ -157,12 +157,12 @@ public class AnchorController implements MinecraftAccess {
             event.cancel();
             return true;
         }
-        if (event.getStack().isOf(Items.RESPAWN_ANCHOR)
+        if (event.getStack().is(Items.RESPAWN_ANCHOR)
                 && !PlacementWorldQueries.isBlock(hit.getBlockPos(), Blocks.RESPAWN_ANCHOR)) {
             resetDelays();
-            pendingPlacement = placementPosition(hit).toImmutable();
+            pendingPlacement = placementPosition(hit).immutable();
             rejectedPlacement = null;
-            placementTick = CLIENT.player.age;
+            placementTick = CLIENT.player.tickCount;
             pendingSafetyAnchor = safeAnchor.getValue() ? placementPosition(hit) : null;
             safetyAnchor = null;
             safetyBlockPlaced = false;
@@ -183,7 +183,7 @@ public class AnchorController implements MinecraftAccess {
     }
 
     public void onItemUseComplete(ItemUseEvent.Post event) {
-        if (event.getPlayer() != CLIENT.player || event.getHand() != Hand.MAIN_HAND || pendingSafetyAnchor == null) {
+        if (event.getPlayer() != CLIENT.player || event.getHand() != InteractionHand.MAIN_HAND || pendingSafetyAnchor == null) {
             return;
         }
         safetyAnchor = pendingSafetyAnchor;
@@ -193,21 +193,21 @@ public class AnchorController implements MinecraftAccess {
         pendingSafetyAnchor = null;
     }
 
-    public void onBlockUpdate(BlockUpdateS2CPacket packet) {
+    public void onBlockUpdate(ClientboundBlockUpdatePacket packet) {
         BlockPos position = packet.getPos();
         if (!position.equals(pendingPlacement) && !position.equals(rejectedPlacement)) {
             return;
         }
-        boolean anchorPresent = packet.getState().isOf(Blocks.RESPAWN_ANCHOR);
+        boolean anchorPresent = packet.getBlockState().is(Blocks.RESPAWN_ANCHOR);
         CLIENT.execute(() -> applyBlockUpdate(position, anchorPresent));
     }
 
-    public void onExplosion(Vec3d position) {
+    public void onExplosion(Vec3 position) {
         CLIENT.execute(() -> rememberExplosion(position));
     }
 
     private boolean shouldDelayCharging(BlockPos position) {
-        if (CLIENT.player.age - placementTick > PLACEMENT_CONFIRMATION_TICKS) {
+        if (CLIENT.player.tickCount - placementTick > PLACEMENT_CONFIRMATION_TICKS) {
             pendingPlacement = null;
             rejectedPlacement = null;
             return false;
@@ -221,18 +221,18 @@ public class AnchorController implements MinecraftAccess {
 
     private boolean isNearRecentExplosion(BlockPos position) {
         return lastExplosionPosition != null
-                && CLIENT.player.age - lastExplosionTick <= EXPLOSION_EFFECT_WINDOW_TICKS
-                && lastExplosionPosition.squaredDistanceTo(Vec3d.ofCenter(position)) <= 36.0;
+                && CLIENT.player.tickCount - lastExplosionTick <= EXPLOSION_EFFECT_WINDOW_TICKS
+                && lastExplosionPosition.distanceToSqr(Vec3.atCenterOf(position)) <= 36.0;
     }
 
     static boolean wouldIntersectMovingEntity(BlockPos position) {
-        Box placement = new Box(position);
-        for (Entity entity : CLIENT.world.getOtherEntities(CLIENT.player, placement.expand(3.0))) {
+        AABB placement = new AABB(position);
+        for (Entity entity : CLIENT.level.getEntities(CLIENT.player, placement.inflate(3.0))) {
             if (!entity.isAlive() || entity.isSpectator()) {
                 continue;
             }
-            Vec3d displacement = entity.getEntityPos().subtract(entity.lastX, entity.lastY, entity.lastZ);
-            if (entity.getBoundingBox().expand(1.0 + displacement.length() * 5.0).intersects(placement)) {
+            Vec3 displacement = entity.position().subtract(entity.xo, entity.yo, entity.zo);
+            if (entity.getBoundingBox().inflate(1.0 + displacement.length() * 5.0).intersects(placement)) {
                 return true;
             }
         }
@@ -247,20 +247,20 @@ public class AnchorController implements MinecraftAccess {
     }
 
     public void onInputPre() {
-        if (MinecraftRenderState.getScreen() != null || CLIENT.player == null || CLIENT.world == null) {
+        if (MinecraftRenderState.getScreen() != null || CLIENT.player == null || CLIENT.level == null) {
             return;
         }
         if (recentExplodedAnchor != null && !PlacementWorldQueries.isBlock(recentExplodedAnchor, Blocks.RESPAWN_ANCHOR)) {
             recentExplodedAnchor = null;
         }
-        if (!KeybindingCache.isPressed(CLIENT.options.useKey)) {
+        if (!KeybindingCache.isPressed(CLIENT.options.keyUse)) {
             selectedAutomationSlot = -1;
             resetSafety();
         } else if (safetyAnchor != null && !hasUnchargedSafetyAnchor()) {
             resetSafety();
         }
         if (hasUnchargedSafetyAnchor() && !safetyBlockPlaced
-                && CLIENT.crosshairTarget instanceof BlockHitResult hit && hit.getType() == HitResult.Type.BLOCK
+                && CLIENT.hitResult instanceof BlockHitResult hit && hit.getType() == HitResult.Type.BLOCK
                 && !PlacementWorldQueries.isBlock(hit.getBlockPos(), Blocks.RESPAWN_ANCHOR)) {
             if (safetyTicks++ >= sampleDelay(safeBlockDelay)) {
                 placeSafetyBlock(hit);
@@ -270,10 +270,10 @@ public class AnchorController implements MinecraftAccess {
         switchTicks++;
         glowstoneTicks++;
         explodeTicks++;
-        if (!(CLIENT.crosshairTarget instanceof BlockHitResult hit) || hit.getType() != HitResult.Type.BLOCK) {
+        if (!(CLIENT.hitResult instanceof BlockHitResult hit) || hit.getType() != HitResult.Type.BLOCK) {
             return;
         }
-        if (!KeybindingCache.isPressed(CLIENT.options.useKey) || !isAllowedHeldItem()) {
+        if (!KeybindingCache.isPressed(CLIENT.options.keyUse) || !isAllowedHeldItem()) {
             return;
         }
         if (!PlacementWorldQueries.isBlock(hit.getBlockPos(), Blocks.RESPAWN_ANCHOR)) {
@@ -282,7 +282,7 @@ public class AnchorController implements MinecraftAccess {
             }
             return;
         }
-        if (hit.getBlockPos().equals(recentExplodedAnchor) && CLIENT.player.age - recentDetonationTick <= DETONATION_RETRY_TICKS) {
+        if (hit.getBlockPos().equals(recentExplodedAnchor) && CLIENT.player.tickCount - recentDetonationTick <= DETONATION_RETRY_TICKS) {
             suppressUseKey();
             return;
         }
@@ -301,7 +301,7 @@ public class AnchorController implements MinecraftAccess {
         if (switchTicks < sampleDelay(switchDelay)) {
             return;
         }
-        if (!CLIENT.player.getMainHandStack().isOf(Items.GLOWSTONE)) {
+        if (!CLIENT.player.getMainHandItem().is(Items.GLOWSTONE)) {
             if (!passesChance(switchChance.getValue())) {
                 return;
             }
@@ -309,7 +309,7 @@ public class AnchorController implements MinecraftAccess {
             InventoryItems.selectItemFromHotbar(Items.GLOWSTONE);
             selectedAutomationSlot = CLIENT.player.getInventory().getSelectedSlot();
         }
-        if (!autoCharge.getValue() || !CLIENT.player.getMainHandStack().isOf(Items.GLOWSTONE)) {
+        if (!autoCharge.getValue() || !CLIENT.player.getMainHandItem().is(Items.GLOWSTONE)) {
             return;
         }
         if (glowstoneTicks < sampleDelay(glowstoneDelay) || shouldDelayCharging(hit.getBlockPos())) {
@@ -343,7 +343,7 @@ public class AnchorController implements MinecraftAccess {
         explodeTicks = 0;
         interact(hit);
         recentExplodedAnchor = hit.getBlockPos();
-        recentDetonationTick = CLIENT.player.age;
+        recentDetonationTick = CLIENT.player.tickCount;
     }
 
     public void onInputPost() {
@@ -351,14 +351,14 @@ public class AnchorController implements MinecraftAccess {
             return;
         }
         restoreUseKey = false;
-        if (MinecraftRenderState.getScreen() == null && KeybindingCache.isPressed(CLIENT.options.useKey)) {
-            CLIENT.options.useKey.setPressed(true);
+        if (MinecraftRenderState.getScreen() == null && KeybindingCache.isPressed(CLIENT.options.keyUse)) {
+            CLIENT.options.keyUse.setDown(true);
         }
     }
 
     private void suppressUseKey() {
         restoreUseKey = true;
-        CLIENT.options.useKey.setPressed(false);
+        CLIENT.options.keyUse.setDown(false);
     }
 
     private void interact(BlockHitResult hit) {
@@ -376,14 +376,14 @@ public class AnchorController implements MinecraftAccess {
         }
         InventoryItems.selectHotbarSlot(slot);
         selectedAutomationSlot = slot;
-        if (!CLIENT.player.getMainHandStack().isOf(Items.GLOWSTONE)) {
+        if (!CLIENT.player.getMainHandItem().is(Items.GLOWSTONE)) {
             return;
         }
         interacting = true;
         suppressUseKey();
-        ActionResult result = PlacementWorldQueries.interactMainHand(hit, true);
+        InteractionResult result = PlacementWorldQueries.interactMainHand(hit, true);
         interacting = false;
-        safetyBlockPlaced = result.isAccepted();
+        safetyBlockPlaced = result.consumesAction();
     }
 
     public boolean isInteracting() {
@@ -402,12 +402,12 @@ public class AnchorController implements MinecraftAccess {
     }
 
     static BlockPos placementPosition(BlockHitResult hit) {
-        return new ItemPlacementContext(CLIENT.player, Hand.MAIN_HAND,
-                CLIENT.player.getMainHandStack(), hit).getBlockPos();
+        return new BlockPlaceContext(CLIENT.player, InteractionHand.MAIN_HAND,
+                CLIENT.player.getMainHandItem(), hit).getClickedPos();
     }
 
     private boolean needsMoreCharges(BlockPos position) {
-        int currentCharges = CLIENT.world.getBlockState(position).get(RespawnAnchorBlock.CHARGES);
+        int currentCharges = CLIENT.level.getBlockState(position).getValue(RespawnAnchorBlock.CHARGE);
         if (currentCharges == 0) {
             chargeTarget = null;
             return true;
@@ -416,7 +416,7 @@ public class AnchorController implements MinecraftAccess {
             return false;
         }
         if (!position.equals(chargeTarget)) {
-            chargeTarget = position.toImmutable();
+            chargeTarget = position.immutable();
             int minimum = Math.round(charges.getLower());
             int maximum = Math.round(charges.getUpper());
             targetCharges = Math.clamp((long) RandomMath.randomInt(minimum, maximum + 1), 1, MAX_ANCHOR_CHARGES);
@@ -427,7 +427,7 @@ public class AnchorController implements MinecraftAccess {
     private boolean isHoldingSelectedGlowstone() {
         return selectedAutomationSlot != -1
                 && CLIENT.player.getInventory().getSelectedSlot() == selectedAutomationSlot
-                && CLIENT.player.getMainHandStack().isOf(Items.GLOWSTONE);
+                && CLIENT.player.getMainHandItem().is(Items.GLOWSTONE);
     }
 
     private boolean isAllowedHeldItem() {
@@ -446,15 +446,15 @@ public class AnchorController implements MinecraftAccess {
     }
 
     static boolean isSafetyBlock(ItemStack stack) {
-        return stack.isOf(Items.GLOWSTONE);
+        return stack.is(Items.GLOWSTONE);
     }
 
-    private void rememberExplosion(Vec3d position) {
+    private void rememberExplosion(Vec3 position) {
         if (CLIENT.player == null) {
             return;
         }
         lastExplosionPosition = position;
-        lastExplosionTick = CLIENT.player.age;
+        lastExplosionTick = CLIENT.player.tickCount;
     }
 
     private void applyBlockUpdate(BlockPos position, boolean anchorPresent) {

@@ -16,10 +16,10 @@ import dev.echo.client.render.MinecraftRenderState;
 import dev.echo.client.utils.items.InventoryItems;
 import java.util.function.Consumer;
 import java.util.function.Predicate;
-import net.minecraft.item.Item;
-import net.minecraft.item.ItemStack;
-import net.minecraft.network.packet.c2s.play.PlayerActionC2SPacket;
-import net.minecraft.util.Hand;
+import net.minecraft.network.protocol.game.ServerboundPlayerActionPacket;
+import net.minecraft.world.InteractionHand;
+import net.minecraft.world.item.Item;
+import net.minecraft.world.item.ItemStack;
 
 /** Feature-owned select/swap/reselect state machine, driven by the original input and packet events. */
 public final class TemporaryItemUse {
@@ -67,7 +67,7 @@ public final class TemporaryItemUse {
     @Subscribe
     private void onClientTick(ClientTickEvent event) {
         if (!isBusy() || CLIENT.player == null) { return; }
-        boolean timedOut = (long) CLIENT.player.age - nextActionTick > TIMEOUT_TICKS;
+        boolean timedOut = (long) CLIENT.player.tickCount - nextActionTick > TIMEOUT_TICKS;
         boolean changedSlot = state != TemporaryItemUseState.SELECT && selectedSlot() != targetSlot;
         if (timedOut || changedSlot) { cancelAndRestore(); }
     }
@@ -96,8 +96,8 @@ public final class TemporaryItemUse {
     @Subscribe
     private void onPacketSend(PacketSendEvent event) {
         if (!swapKeyActive || event.cancelled) { return; }
-        if (!(event.getPacket() instanceof PlayerActionC2SPacket packet)
-                || packet.getAction() != PlayerActionC2SPacket.Action.SWAP_ITEM_WITH_OFFHAND) { return; }
+        if (!(event.getPacket() instanceof ServerboundPlayerActionPacket packet)
+                || packet.getAction() != ServerboundPlayerActionPacket.Action.SWAP_ITEM_WITH_OFFHAND) { return; }
         swapKeyActive = false;
         swapLocalHands();
         transferCallback.accept(requestedItem);
@@ -140,7 +140,7 @@ public final class TemporaryItemUse {
 
     private boolean canSwapItem() {
         return MinecraftRenderState.getScreen() == null && selectedSlot() == targetSlot
-                && CLIENT.player.getMainHandStack().isOf(requestedItem) && itemPredicate.test(requestedItem);
+                && CLIENT.player.getMainHandItem().is(requestedItem) && itemPredicate.test(requestedItem);
     }
 
     private void scheduleReselect() {
@@ -152,13 +152,13 @@ public final class TemporaryItemUse {
     }
 
     private void swapLocalHands() {
-        ItemStack offhand = CLIENT.player.getStackInHand(Hand.OFF_HAND);
-        CLIENT.player.setStackInHand(Hand.OFF_HAND, CLIENT.player.getStackInHand(Hand.MAIN_HAND));
-        CLIENT.player.setStackInHand(Hand.MAIN_HAND, offhand);
+        ItemStack offhand = CLIENT.player.getItemInHand(InteractionHand.OFF_HAND);
+        CLIENT.player.setItemInHand(InteractionHand.OFF_HAND, CLIENT.player.getItemInHand(InteractionHand.MAIN_HAND));
+        CLIENT.player.setItemInHand(InteractionHand.MAIN_HAND, offhand);
     }
 
     private boolean canHandleInput() {
-        return isBusy() && CLIENT.player != null && (long) CLIENT.player.age - nextActionTick >= 0L;
+        return isBusy() && CLIENT.player != null && (long) CLIENT.player.tickCount - nextActionTick >= 0L;
     }
 
     private boolean ownsTopSelection() { return DeferredActionQueue.selectedSlot(owner) != -1; }
@@ -166,7 +166,7 @@ public final class TemporaryItemUse {
 
     private void enterState(TemporaryItemUseState next, int delayTicks) {
         state = next;
-        nextActionTick = (long) (CLIENT.player.age + delayTicks);
+        nextActionTick = (long) (CLIENT.player.tickCount + delayTicks);
     }
 
     private void resetState() {

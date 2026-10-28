@@ -3,16 +3,16 @@ package dev.echo.client.events.render;
 import dev.echo.client.events.Event;
 import dev.echo.client.events.EventBus;
 import java.util.UUID;
-import net.minecraft.entity.player.SkinTextures;
+import net.minecraft.world.entity.player.PlayerSkin;
 
 /** Allows subscribers to replace the skin textures selected for a player. */
 public class SkinTexturesEvent extends Event {
     /** UUID of the player whose textures are being queried. */
     public final UUID playerId;
     /** Selected textures, replaceable by subscribers. */
-    public SkinTextures textures;
+    public PlayerSkin textures;
 
-    private SkinTexturesEvent(UUID playerId, SkinTextures textures) {
+    private SkinTexturesEvent(UUID playerId, PlayerSkin textures) {
         this.playerId = playerId;
         this.textures = textures;
     }
@@ -24,7 +24,7 @@ public class SkinTexturesEvent extends Event {
      * @param textures initially selected textures
      * @return the selected textures after synchronous event delivery
      */
-    public static SkinTextures resolve(UUID playerId, SkinTextures textures) {
+    public static PlayerSkin resolve(UUID playerId, PlayerSkin textures) {
         if (!EventBus.hasSubscribers(SkinTexturesEvent.class)) {
             return textures;
         }

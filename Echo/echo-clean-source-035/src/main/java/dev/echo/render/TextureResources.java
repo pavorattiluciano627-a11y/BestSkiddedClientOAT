@@ -1,5 +1,6 @@
 package dev.echo.render;
 
+import com.mojang.blaze3d.platform.NativeImage;
 import dev.echo.client.Echo;
 import dev.echo.render.texture.TextureView;
 import java.io.InputStream;
@@ -7,13 +8,12 @@ import java.nio.ByteBuffer;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.network.PlayerListEntry;
-import net.minecraft.client.texture.AbstractTexture;
-import net.minecraft.client.texture.NativeImage;
-import net.minecraft.client.texture.NativeImageBackedTexture;
-import net.minecraft.resource.Resource;
-import net.minecraft.util.Identifier;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.multiplayer.PlayerInfo;
+import net.minecraft.client.renderer.texture.AbstractTexture;
+import net.minecraft.client.renderer.texture.DynamicTexture;
+import net.minecraft.resources.Identifier;
+import net.minecraft.server.packs.resources.Resource;
 import org.lwjgl.system.MemoryUtil;
 
 /**
@@ -22,17 +22,17 @@ import org.lwjgl.system.MemoryUtil;
  * receipt; this candidate contains no runtime key or substitute avatar lookup.
  */
 public class TextureResources {
-    private static final MinecraftClient CLIENT = MinecraftClient.getInstance();
+    private static final Minecraft CLIENT = Minecraft.getInstance();
     private static final Map<String, TextureView> playerHeads = new HashMap<>();
 
     private TextureResources() {
     }
 
-    public static TextureView playerHead(PlayerListEntry player) {
+    public static TextureView playerHead(PlayerInfo player) {
         if (player == null) {
             return null;
         }
-        Identifier skin = player.getSkinTextures().body().texturePath();
+        Identifier skin = player.getSkin().body().texturePath();
         String key = skin.toString();
         TextureView cached = playerHeads.get(key);
         if (cached != null) {
@@ -64,15 +64,15 @@ public class TextureResources {
 
     private static NativeImage readImage(Identifier skin) {
         AbstractTexture texture = CLIENT.getTextureManager().getTexture(skin);
-        if (texture instanceof NativeImageBackedTexture imageTexture && imageTexture.getImage() != null) {
-            return copyImage(imageTexture.getImage());
+        if (texture instanceof DynamicTexture imageTexture && imageTexture.getPixels() != null) {
+            return copyImage(imageTexture.getPixels());
         }
         try {
             Optional<Resource> resource = CLIENT.getResourceManager().getResource(skin);
             if (resource.isEmpty()) {
                 return null;
             }
-            try (InputStream input = resource.get().getInputStream()) {
+            try (InputStream input = resource.get().open()) {
                 return NativeImage.read(input);
             }
         } catch (Exception unavailable) {
@@ -84,7 +84,7 @@ public class TextureResources {
         NativeImage copy = new NativeImage(source.getWidth(), source.getHeight(), true);
         for (int y = 0; y < source.getHeight(); y++) {
             for (int x = 0; x < source.getWidth(); x++) {
-                copy.setColorArgb(x, y, source.getColorArgb(x, y));
+                copy.setPixel(x, y, source.getPixel(x, y));
             }
         }
         return copy;
@@ -97,8 +97,8 @@ public class TextureResources {
         ByteBuffer pixels = MemoryUtil.memAlloc(256);
         for (int y = 0; y < 8; y++) {
             for (int x = 0; x < 8; x++) {
-                int base = skin.getColorArgb(8 + x, 8 + y);
-                int overlay = skin.getColorArgb(40 + x, 8 + y);
+                int base = skin.getPixel(8 + x, 8 + y);
+                int overlay = skin.getPixel(40 + x, 8 + y);
                 TexturePixelWriter.putRgba(pixels, blendArgb(base, overlay));
             }
         }

@@ -2,7 +2,7 @@ package dev.echo.client.events.lifecycle;
 
 import dev.echo.client.events.Event;
 import java.lang.invoke.MethodHandles;
-import net.minecraft.client.gui.screen.Screen;
+import net.minecraft.client.gui.screens.Screen;
 
 /**
  * Mutable next-screen payload retaining the original field-linkage initialization.

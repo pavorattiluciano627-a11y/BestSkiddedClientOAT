@@ -32,13 +32,13 @@ import dev.echo.client.utils.targeting.TargetSelection;
 import dev.echo.render.FontAsset;
 import java.util.ArrayDeque;
 import java.util.Queue;
-import net.minecraft.client.render.Frustum;
-import net.minecraft.entity.Entity;
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.item.ItemStack;
-import net.minecraft.text.TextColor;
-import net.minecraft.util.math.Box;
-import net.minecraft.util.math.Vec3d;
+import net.minecraft.client.renderer.culling.Frustum;
+import net.minecraft.network.chat.TextColor;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.phys.AABB;
+import net.minecraft.world.phys.Vec3;
 
 /** World boxes/tracers and a FIFO of screen-space player overlays. */
 public class PlayerESPFeature extends Feature {
@@ -95,15 +95,15 @@ public class PlayerESPFeature extends Feature {
 
     @Subscribe
     public void onWorldRender(WorldRenderEvent event) {
-        if (client.world == null) {
+        if (client.level == null) {
             return;
         }
         WorldGeometry geometry = event.getRenderContext().getOverlayGeometry();
         UiRenderer renderer = Echo.uiRenderer;
         float tickDelta = event.getTickProgress();
-        Vec3d camera = MinecraftRenderState.getCamera(client).getCameraPos();
+        Vec3 camera = MinecraftRenderState.getCamera(client).position();
         Frustum frustum = new Frustum(event.getViewMatrix(), event.getProjectionMatrix());
-        frustum.setPosition(camera.x, camera.y, camera.z);
+        frustum.prepare(camera.x, camera.y, camera.z);
         boolean boxMode = modes.isSelected(BOX);
         boolean screenMode = modes.isSelected(TWO_DIMENSIONAL);
         boolean leftHealth = healthBar.isSelected(LEFT);
@@ -112,12 +112,12 @@ public class PlayerESPFeature extends Feature {
         boolean drawHealth = leftHealth || rightHealth || bottomHealth;
         int borderColor = 0xff000000;
         float stroke = 0.5f;
-        for (Entity entity : client.world.getEntities()) {
-            if (!(entity instanceof PlayerEntity player)) {
+        for (Entity entity : client.level.entitiesForRendering()) {
+            if (!(entity instanceof Player player)) {
                 continue;
             }
             boolean self = player == client.player;
-            if (self && (!renderSelf.getValue() || client.options.getPerspective().isFirstPerson())) {
+            if (self && (!renderSelf.getValue() || client.options.getCameraType().isFirstPerson())) {
                 continue;
             }
             if (!self && TargetsFeature.antiBot.getValue() && TargetSelection.isBot(player)) {
@@ -125,19 +125,19 @@ public class PlayerESPFeature extends Feature {
             }
             int argb = playerColor(player);
             int opaqueColor = argb | 0xff000000;
-            Vec3d position = player.getLerpedPos(tickDelta);
+            Vec3 position = player.getPosition(tickDelta);
             EntityHitboxEvent hitbox = new EntityHitboxEvent(player,
-                    player.getBoundingBox().expand((double) player.getTargetingMargin()));
+                    player.getBoundingBox().inflate((double) player.getPickRadius()));
             hitbox.post();
-            Box box = hitbox.getBoundingBox().offset(position.x - player.getX(),
+            AABB box = hitbox.getBoundingBox().move(position.x - player.getX(),
                     position.y - player.getY(), position.z - player.getZ());
             if (boxMode) {
                 geometry.drawBox(box.minX, box.minY, box.minZ,
-                        box.getLengthX(), box.getLengthY(), box.getLengthZ(), argb);
+                        box.getXsize(), box.getYsize(), box.getZsize(), argb);
                 WorldProjection.drawBoxOutline(geometry, box, opaqueColor);
             }
             if (tracers.getValue() && !self) {
-                geometry.drawTracer(position.x, position.y + (double) player.getStandingEyeHeight(), position.z, opaqueColor);
+                geometry.drawTracer(position.x, position.y + (double) player.getEyeHeight(), position.z, opaqueColor);
             }
             if (!screenMode && !drawHealth && !showName.getValue() && !showHeldItem.getValue()) {
                 continue;
@@ -195,11 +195,11 @@ public class PlayerESPFeature extends Feature {
                 overlayCalls.add(() -> renderer.drawTextWithShadow(FontAsset.INTER, name, textX, textY, TEXT_SIZE, -1));
             }
             if (showHeldItem.getValue()) {
-                ItemStack held = player.getMainHandStack();
+                ItemStack held = player.getMainHandItem();
                 if (held.isEmpty()) {
                     continue;
                 }
-                String name = held.getName().getString();
+                String name = held.getHoverName().getString();
                 float textWidth = FontAsset.INTER.measureText(name, TEXT_SIZE);
                 float textX = x + width / 2.0f - textWidth / 2.0f;
                 float textY = y + height + 2.0f + (bottomHealth ? 4.0f : 0.0f);
@@ -260,10 +260,10 @@ public class PlayerESPFeature extends Feature {
         context.drawRect(healthBounds, healthColor(PREVIEW_HEALTH));
     }
 
-    private static int playerColor(PlayerEntity player) {
+    private static int playerColor(Player player) {
         int argb = color.getArgb();
         TextColor nameColor = teamColor.getValue() && player != null ? TargetsFeature.getNameColor(player) : null;
-        return nameColor == null ? argb : argb & 0xff000000 | nameColor.getRgb() & 0xffffff;
+        return nameColor == null ? argb : argb & 0xff000000 | nameColor.getValue() & 0xffffff;
     }
 
     private static String previewName() {
@@ -272,11 +272,11 @@ public class PlayerESPFeature extends Feature {
     }
 
     private static String previewHeldItem() {
-        ItemStack held = client.player == null ? ItemStack.EMPTY : client.player.getMainHandStack();
-        return held.isEmpty() ? "Diamond Sword" : held.getName().getString();
+        ItemStack held = client.player == null ? ItemStack.EMPTY : client.player.getMainHandItem();
+        return held.isEmpty() ? "Diamond Sword" : held.getHoverName().getString();
     }
 
-    private static float healthFraction(PlayerEntity player) {
+    private static float healthFraction(Player player) {
         float health = player.getHealth() + player.getAbsorptionAmount();
         return Math.min(Math.max(health / player.getMaxHealth(), 0.0f), 1.0f);
     }

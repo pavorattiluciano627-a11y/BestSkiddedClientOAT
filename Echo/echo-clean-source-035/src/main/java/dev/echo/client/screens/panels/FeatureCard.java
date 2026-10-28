@@ -14,7 +14,7 @@ import dev.echo.render.FontAsset;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 import java.util.List;
 import java.util.Objects;
-import net.minecraft.client.gui.Click;
+import net.minecraft.client.input.MouseButtonEvent;
 
 /**
  * One feature row and its original ordered setting widgets (hack/TableModel).
@@ -186,7 +186,7 @@ public class FeatureCard {
         return mouseX >= keyLeft && mouseX <= keyRight;
     }
 
-    public boolean mouseClicked(Click click) {
+    public boolean mouseClicked(MouseButtonEvent click) {
         if (!expanded) {
             return false;
         }

@@ -4,10 +4,10 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.function.Predicate;
-import net.minecraft.entity.LivingEntity;
-import net.minecraft.item.ItemStack;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.Vec3d;
+import net.minecraft.core.BlockPos;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.phys.Vec3;
 
 /** Layered enclosure search retaining the caller's exact stack predicate. */
 public class FilteredPlacementSearch extends PlacementSearch {
@@ -23,9 +23,9 @@ public class FilteredPlacementSearch extends PlacementSearch {
     }
 
     @Override
-    public List<PlacementFilter> plan(LivingEntity target, Vec3d displacement) {
+    public List<PlacementFilter> plan(LivingEntity target, Vec3 displacement) {
         PlacementBounds bounds = PlacementBounds.around(target, displacement, PlacementWorldQueries::isReplaceable);
-        Vec3d eye = CLIENT.player.getEyePos();
+        Vec3 eye = CLIENT.player.getEyePosition();
         Comparator<BlockPos> farthest = PlacementDistances.farthestFirst(eye);
         List<PlacementFilter> result = new ArrayList<>();
         for (int y = bounds.minY(); y <= bounds.maxY(); y++) {

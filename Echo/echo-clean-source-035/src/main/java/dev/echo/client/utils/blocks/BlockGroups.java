@@ -4,9 +4,9 @@ import dev.echo.client.setting.list.RegistryEntryGroup;
 import dev.echo.client.text.SegmentedText;
 import java.util.ArrayList;
 import java.util.List;
-import net.minecraft.block.Block;
-import net.minecraft.registry.tag.BlockTags;
-import net.minecraft.registry.tag.TagKey;
+import net.minecraft.tags.BlockTags;
+import net.minecraft.tags.TagKey;
+import net.minecraft.world.level.block.Block;
 
 /** Shared, lazy block-tag groups with fresh outer-list copies. */
 public final class BlockGroups {

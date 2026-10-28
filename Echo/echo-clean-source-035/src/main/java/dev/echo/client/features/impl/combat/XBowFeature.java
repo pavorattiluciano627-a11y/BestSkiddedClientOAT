@@ -28,20 +28,20 @@ import dev.echo.client.utils.targeting.BlockRaycasts;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
-import net.minecraft.block.AbstractFireBlock;
-import net.minecraft.block.AbstractRailBlock;
-import net.minecraft.block.Block;
-import net.minecraft.entity.vehicle.TntMinecartEntity;
-import net.minecraft.item.ItemStack;
-import net.minecraft.item.Items;
-import net.minecraft.registry.tag.BlockTags;
-import net.minecraft.util.hit.BlockHitResult;
-import net.minecraft.util.hit.HitResult;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.Box;
-import net.minecraft.util.math.Direction;
-import net.minecraft.util.math.MathHelper;
-import net.minecraft.util.math.Vec3d;
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
+import net.minecraft.tags.BlockTags;
+import net.minecraft.util.Mth;
+import net.minecraft.world.entity.vehicle.minecart.MinecartTNT;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
+import net.minecraft.world.level.block.BaseFireBlock;
+import net.minecraft.world.level.block.BaseRailBlock;
+import net.minecraft.world.level.block.Block;
+import net.minecraft.world.phys.AABB;
+import net.minecraft.world.phys.BlockHitResult;
+import net.minecraft.world.phys.HitResult;
+import net.minecraft.world.phys.Vec3;
 
 /**
  * Rail/cart/fire/crossbow sequence. Original null-reader, call-binding and nested
@@ -67,8 +67,8 @@ public class XBowFeature extends Feature {
     private static BooleanSetting silentRotations;
     private BlockPos targetBlockPosition;
     private BlockPos supportBlockPosition;
-    private Vec3d cachedTargetPosition;
-    private Vec3d targetHitPosition;
+    private Vec3 cachedTargetPosition;
+    private Vec3 targetHitPosition;
     private long activationTick;
     private BlockHitResult pendingBlockHit;
     private int placementStep;
@@ -124,7 +124,7 @@ public class XBowFeature extends Feature {
         targetBlockPosition = null;
         supportBlockPosition = null;
         try {
-            Class.forName(Vec3d.class.getName(), true, Vec3d.class.getClassLoader());
+            Class.forName(Vec3.class.getName(), true, Vec3.class.getClassLoader());
         } catch (ClassNotFoundException failure) {
             throw new IllegalStateException("Resolved class initialization failed", failure);
         }
@@ -181,7 +181,7 @@ public class XBowFeature extends Feature {
         }
         if (placementStep == SHOOT) {
             if (selectedPlacementSlot == -1) {
-                if (!InventoryItems.isChargedCrossbow(client.player.getOffHandStack())) return;
+                if (!InventoryItems.isChargedCrossbow(client.player.getOffhandItem())) return;
             } else if (DeferredActionQueue.selectedSlot() != selectedPlacementSlot) {
                 return;
             }
@@ -224,13 +224,13 @@ public class XBowFeature extends Feature {
             releaseRotation();
             return;
         }
-        if ((long) client.player.age - activationTick > TIMEOUT_TICKS) {
+        if ((long) client.player.tickCount - activationTick > TIMEOUT_TICKS) {
             abortSequence();
             return;
         }
         if (!prepareStep()) return;
         if (autoAim.getValue() && !rotations().aim(this, RotationPriority.HIGH,
-                placementStep == SHOOT ? targetHitPosition : pendingBlockHit.getPos(),
+                placementStep == SHOOT ? targetHitPosition : pendingBlockHit.getLocation(),
                 RotationSettings.uniform(silentRotations.getValue()
                         ? RotationVisibility.SILENT : RotationVisibility.VISIBLE,
                         AimTransition.EASED, AIM_SPEED))) {
@@ -241,27 +241,27 @@ public class XBowFeature extends Feature {
     private void beginSequence() {
         if (!(place.isSelected(placeOption2) || place.isSelected(placeOption4)
                 || place.isSelected(placeOption3) || place.isSelected(placeOption))) return;
-        if (!(client.crosshairTarget instanceof BlockHitResult hit) || hit.getType() != HitResult.Type.BLOCK) return;
-        BlockPos target = AbstractRailBlock.isRail(client.world, hit.getBlockPos())
+        if (!(client.hitResult instanceof BlockHitResult hit) || hit.getType() != HitResult.Type.BLOCK) return;
+        BlockPos target = BaseRailBlock.isRail(client.level, hit.getBlockPos())
                 ? hit.getBlockPos() : BlockPlacement.placementPosition(hit);
-        Vec3d hitPoint = hit.getPos();
-        Vec3d eye = client.player.getCameraPosVec(1.0F);
-        double reachSquared = MathHelper.square(client.player.getBlockInteractionRange());
-        boolean railPresent = AbstractRailBlock.isRail(client.world, target);
+        Vec3 hitPoint = hit.getLocation();
+        Vec3 eye = client.player.getEyePosition(1.0F);
+        double reachSquared = Mth.square(client.player.blockInteractionRange());
+        boolean railPresent = BaseRailBlock.isRail(client.level, target);
         if (place.isSelected(placeOption4) && !railPresent) {
-            if (!BlockPlacement.isReplaceable(target) || !Block.hasTopRim(client.world, target.down())) return;
+            if (!BlockPlacement.isReplaceable(target) || !Block.canSupportRigidBlock(client.level, target.below())) return;
             if (findStepSlot(RAIL) == -1) return;
             BlockHitResult railHit = BlockAimRotation.findHit(target, hitPoint);
-            if (railHit == null || eye.squaredDistanceTo(railHit.getPos()) > reachSquared) return;
+            if (railHit == null || eye.distanceToSqr(railHit.getLocation()) > reachSquared) return;
         }
         if (place.isSelected(placeOption3)) {
             if (!railPresent && !place.isSelected(placeOption4)) return;
             if (findStepSlot(CART) == -1) return;
-            if (eye.squaredDistanceTo(BlockAimRotation.insetBottomPoint(target, hitPoint)) > reachSquared) return;
+            if (eye.distanceToSqr(BlockAimRotation.insetBottomPoint(target, hitPoint)) > reachSquared) return;
         }
         if (place.isSelected(placeOption) && !hasCrossbow(findStepSlot(SHOOT))) return;
         supportBlockPosition = null;
-        targetHitPosition = Vec3d.add(target, 0.5, 0.35, 0.5);
+        targetHitPosition = Vec3.atLowerCornerWithOffset(target, 0.5, 0.35, 0.5);
         if (place.isSelected(placeOption2)) {
             if (findStepSlot(FIRE) == -1) return;
             if (!findAdjacentFirePosition(target, eye, reachSquared)
@@ -269,52 +269,52 @@ public class XBowFeature extends Feature {
         }
         targetBlockPosition = target;
         cachedTargetPosition = hitPoint;
-        activationTick = client.player.age;
+        activationTick = client.player.tickCount;
     }
 
-    private boolean findAdjacentFirePosition(BlockPos target, Vec3d eye, double reachSquared) {
-        Vec3d offset = eye.subtract(Vec3d.ofCenter(target));
+    private boolean findAdjacentFirePosition(BlockPos target, Vec3 eye, double reachSquared) {
+        Vec3 offset = eye.subtract(Vec3.atCenterOf(target));
         Direction bestDirection = null;
         double bestAlignment = 0.5;
-        for (Direction direction : Direction.Type.HORIZONTAL) {
-            double alignment = direction.getOffsetX() * offset.x + direction.getOffsetZ() * offset.z;
+        for (Direction direction : Direction.Plane.HORIZONTAL) {
+            double alignment = direction.getStepX() * offset.x + direction.getStepZ() * offset.z;
             if (alignment <= bestAlignment) continue;
-            BlockPos candidate = target.offset(direction);
-            if (!AbstractFireBlock.canPlaceAt(client.world, candidate, client.player.getHorizontalFacing())) continue;
-            if (client.player.getBoundingBox().intersects(new Box(candidate))) continue;
+            BlockPos candidate = target.relative(direction);
+            if (!BaseFireBlock.canBePlacedAt(client.level, candidate, client.player.getDirection())) continue;
+            if (client.player.getBoundingBox().intersects(new AABB(candidate))) continue;
             PlacementTarget placement = BlockPlacement.find(candidate, true);
-            if (placement == null || eye.squaredDistanceTo(placement.hitResult().getPos()) > reachSquared) continue;
+            if (placement == null || eye.distanceToSqr(placement.hitResult().getLocation()) > reachSquared) continue;
             bestDirection = direction;
             bestAlignment = alignment;
         }
         if (bestDirection == null) return false;
-        supportBlockPosition = target.offset(bestDirection);
-        targetHitPosition = Vec3d.add(target, 0.5 + bestDirection.getOffsetX() * 0.3,
-                0.35, 0.5 + bestDirection.getOffsetZ() * 0.3);
+        supportBlockPosition = target.relative(bestDirection);
+        targetHitPosition = Vec3.atLowerCornerWithOffset(target, 0.5 + bestDirection.getStepX() * 0.3,
+                0.35, 0.5 + bestDirection.getStepZ() * 0.3);
         return true;
     }
 
-    private boolean findFirePositionAlongShot(BlockPos target, Vec3d eye, double reachSquared) {
-        Vec3d delta = targetHitPosition.subtract(eye);
+    private boolean findFirePositionAlongShot(BlockPos target, Vec3 eye, double reachSquared) {
+        Vec3 delta = targetHitPosition.subtract(eye);
         double distance = delta.length();
-        Vec3d direction = delta.multiply(1.0 / distance);
+        Vec3 direction = delta.scale(1.0 / distance);
         Set<BlockPos> visited = new HashSet<>();
         for (double along = distance; along > 0.0; along -= SEARCH_STEP) {
-            BlockPos candidate = BlockPos.ofFloored(eye.add(direction.multiply(along)));
+            BlockPos candidate = BlockPos.containing(eye.add(direction.scale(along)));
             if (tryFirePosition(candidate, target, eye, reachSquared, visited)
-                    || tryFirePosition(candidate.down(), target, eye, reachSquared, visited)) return true;
+                    || tryFirePosition(candidate.below(), target, eye, reachSquared, visited)) return true;
         }
         return false;
     }
 
-    private boolean tryFirePosition(BlockPos candidate, BlockPos target, Vec3d eye,
+    private boolean tryFirePosition(BlockPos candidate, BlockPos target, Vec3 eye,
             double reachSquared, Set<BlockPos> visited) {
         if (candidate.equals(target) || !visited.add(candidate)) return false;
-        Box bounds = new Box(candidate).expand(FIRE_MARGIN);
-        if (!bounds.contains(eye) && bounds.raycast(eye, targetHitPosition).isEmpty()) return false;
-        if (!AbstractFireBlock.canPlaceAt(client.world, candidate, client.player.getHorizontalFacing())) return false;
+        AABB bounds = new AABB(candidate).inflate(FIRE_MARGIN);
+        if (!bounds.contains(eye) && bounds.clip(eye, targetHitPosition).isEmpty()) return false;
+        if (!BaseFireBlock.canBePlacedAt(client.level, candidate, client.player.getDirection())) return false;
         PlacementTarget placement = BlockPlacement.find(candidate, true);
-        if (placement == null || eye.squaredDistanceTo(placement.hitResult().getPos()) > reachSquared) return false;
+        if (placement == null || eye.distanceToSqr(placement.hitResult().getLocation()) > reachSquared) return false;
         supportBlockPosition = candidate;
         return true;
     }
@@ -348,57 +348,57 @@ public class XBowFeature extends Feature {
         };
     }
 
-    private static boolean isIgnitionItem(ItemStack stack) { return stack.isOf(Items.FLINT_AND_STEEL); }
-    private static boolean isTntCart(ItemStack stack) { return stack.isOf(Items.TNT_MINECART); }
+    private static boolean isIgnitionItem(ItemStack stack) { return stack.is(Items.FLINT_AND_STEEL); }
+    private static boolean isTntCart(ItemStack stack) { return stack.is(Items.TNT_MINECART); }
 
     private static boolean hasCrossbow(int slot) {
-        return slot != -1 || InventoryItems.isChargedCrossbow(client.player.getOffHandStack());
+        return slot != -1 || InventoryItems.isChargedCrossbow(client.player.getOffhandItem());
     }
 
     private int nextStep() {
-        boolean railPresent = AbstractRailBlock.isRail(client.world, targetBlockPosition);
+        boolean railPresent = BaseRailBlock.isRail(client.level, targetBlockPosition);
         if (place.isSelected(placeOption4) && !railPresent) return RAIL;
         boolean cartPresent = findCart(targetBlockPosition) != null;
         if (place.isSelected(placeOption3) && railPresent && !cartPresent) return CART;
-        if (place.isSelected(placeOption2) && !client.world.getBlockState(supportBlockPosition).isIn(BlockTags.FIRE)) return FIRE;
+        if (place.isSelected(placeOption2) && !client.level.getBlockState(supportBlockPosition).is(BlockTags.FIRE)) return FIRE;
         return place.isSelected(placeOption) && cartPresent ? SHOOT : -1;
     }
 
     private BlockHitResult findStepHit() {
-        Vec3d eye = client.player.getCameraPosVec(1.0F);
-        double reachSquared = MathHelper.square(client.player.getBlockInteractionRange());
+        Vec3 eye = client.player.getEyePosition(1.0F);
+        double reachSquared = Mth.square(client.player.blockInteractionRange());
         if (placementStep == FIRE) {
-            if (!AbstractFireBlock.canPlaceAt(client.world, supportBlockPosition, client.player.getHorizontalFacing())) return null;
+            if (!BaseFireBlock.canBePlacedAt(client.level, supportBlockPosition, client.player.getDirection())) return null;
             PlacementTarget placement = BlockPlacement.find(supportBlockPosition, true);
-            return placement != null && eye.squaredDistanceTo(placement.hitResult().getPos()) <= reachSquared
+            return placement != null && eye.distanceToSqr(placement.hitResult().getLocation()) <= reachSquared
                     ? placement.hitResult() : null;
         }
         if (placementStep == RAIL) {
             if (!BlockPlacement.isReplaceable(targetBlockPosition)
-                    || !Block.hasTopRim(client.world, targetBlockPosition.down())) return null;
+                    || !Block.canSupportRigidBlock(client.level, targetBlockPosition.below())) return null;
             BlockHitResult hit = BlockAimRotation.findHit(targetBlockPosition, cachedTargetPosition);
-            return hit != null && eye.squaredDistanceTo(hit.getPos()) <= reachSquared ? hit : null;
+            return hit != null && eye.distanceToSqr(hit.getLocation()) <= reachSquared ? hit : null;
         }
         BlockHitResult hit = new BlockHitResult(BlockAimRotation.insetBottomPoint(targetBlockPosition,
                 cachedTargetPosition), Direction.UP, targetBlockPosition, false);
-        return eye.squaredDistanceTo(hit.getPos()) <= reachSquared ? hit : null;
+        return eye.distanceToSqr(hit.getLocation()) <= reachSquared ? hit : null;
     }
 
     private boolean canShootThroughFire() {
-        Vec3d start = client.player.getCameraPosVec(1.0F).subtract(0.0, 0.1, 0.0);
+        Vec3 start = client.player.getEyePosition(1.0F).subtract(0.0, 0.1, 0.0);
         Rotation rotation = rotations().effectiveRotation();
-        Vec3d direction = Vec3d.fromPolar(rotation.pitch(), rotation.yaw());
-        Vec3d end = start.add(direction.multiply(client.player.getBlockInteractionRange() + 2.0));
+        Vec3 direction = Vec3.directionFromRotation(rotation.pitch(), rotation.yaw());
+        Vec3 end = start.add(direction.scale(client.player.blockInteractionRange() + 2.0));
         if (place.isSelected(placeOption2)) {
-            Box fireBounds = new Box(supportBlockPosition).expand(FIRE_MARGIN);
-            if (!fireBounds.contains(start) && fireBounds.raycast(start, end).isEmpty()) return false;
+            AABB fireBounds = new AABB(supportBlockPosition).inflate(FIRE_MARGIN);
+            if (!fireBounds.contains(start) && fireBounds.clip(start, end).isEmpty()) return false;
         }
-        TntMinecartEntity cart = findCart(targetBlockPosition);
-        return cart != null && cart.getBoundingBox().contract(CART_INSET).raycast(start, end).isPresent();
+        MinecartTNT cart = findCart(targetBlockPosition);
+        return cart != null && cart.getBoundingBox().deflate(CART_INSET).clip(start, end).isPresent();
     }
 
-    private TntMinecartEntity findCart(BlockPos position) {
-        List<TntMinecartEntity> carts = client.world.getNonSpectatingEntities(TntMinecartEntity.class, new Box(position));
+    private MinecartTNT findCart(BlockPos position) {
+        List<MinecartTNT> carts = client.level.getEntitiesOfClass(MinecartTNT.class, new AABB(position));
         return carts.isEmpty() ? null : carts.getFirst();
     }
 
@@ -428,13 +428,13 @@ public class XBowFeature extends Feature {
         }
         supportBlockPosition = null;
         try {
-            Class.forName(Vec3d.class.getName(), true, Vec3d.class.getClassLoader());
+            Class.forName(Vec3.class.getName(), true, Vec3.class.getClassLoader());
         } catch (ClassNotFoundException failure) {
             throw new IllegalStateException("Resolved class initialization failed", failure);
         }
         cachedTargetPosition = null;
         try {
-            Class.forName(Vec3d.class.getName(), true, Vec3d.class.getClassLoader());
+            Class.forName(Vec3.class.getName(), true, Vec3.class.getClassLoader());
         } catch (ClassNotFoundException failure) {
             throw new IllegalStateException("Resolved class initialization failed", failure);
         }

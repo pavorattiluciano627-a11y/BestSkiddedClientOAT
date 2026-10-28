@@ -16,7 +16,7 @@ import dev.echo.render.FontAsset;
 import dev.echo.render.texture.TextureView;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 import java.util.List;
-import net.minecraft.client.gui.Click;
+import net.minecraft.client.input.MouseButtonEvent;
 
 /**
  * Category list, visibility editor, expansion and scrolling (hack/NodeController).
@@ -162,7 +162,7 @@ public class CategoryPanel implements MinecraftAccess {
         expansion.setTarget(target);
     }
 
-    public boolean mouseClicked(Click click) {
+    public boolean mouseClicked(MouseButtonEvent click) {
         if (!expanded) {
             return false;
         }
@@ -184,7 +184,7 @@ public class CategoryPanel implements MinecraftAccess {
         return false;
     }
 
-    private boolean clickVisibility(FeatureCard card, Click click) {
+    private boolean clickVisibility(FeatureCard card, MouseButtonEvent click) {
         if (!InputKey.MOUSE_LEFT.matches(click.button())) {
             return true;
         }
@@ -198,7 +198,7 @@ public class CategoryPanel implements MinecraftAccess {
         return true;
     }
 
-    private boolean clickHeader(FeatureCard card, Click click) {
+    private boolean clickHeader(FeatureCard card, MouseButtonEvent click) {
         if (InputKey.MOUSE_LEFT.matches(click.button())) {
             Feature feature = card.getFeature();
             if (feature.getKey() != InputKey.NONE && InputKey.LEFT_SHIFT.isPressed()) {

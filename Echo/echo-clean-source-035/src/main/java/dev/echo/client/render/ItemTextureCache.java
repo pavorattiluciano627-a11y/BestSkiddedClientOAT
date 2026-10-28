@@ -6,11 +6,11 @@ import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.render.item.KeyedItemRenderState;
-import net.minecraft.entity.LivingEntity;
-import net.minecraft.item.ItemDisplayContext;
-import net.minecraft.item.ItemStack;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.renderer.item.TrackingItemStackRenderState;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.item.ItemDisplayContext;
+import net.minecraft.world.item.ItemStack;
 
 /**
  * Persistent item-atlas slots with per-frame requests and published UV entries.
@@ -37,18 +37,18 @@ public class ItemTextureCache {
     public record Entry(TextureView texture, float uLeft, float vTop, float uRight, float vBottom) {
     }
 
-    private static KeyedItemRenderState createRenderState(ItemStack stack, LivingEntity entity, int seed) {
-        KeyedItemRenderState state = new KeyedItemRenderState();
-        MinecraftClient client = MinecraftClient.getInstance();
-        client.getItemModelManager().clearAndUpdate(state, stack, ItemDisplayContext.GUI, client.world, entity, seed);
+    private static TrackingItemStackRenderState createRenderState(ItemStack stack, LivingEntity entity, int seed) {
+        TrackingItemStackRenderState state = new TrackingItemStackRenderState();
+        Minecraft client = Minecraft.getInstance();
+        client.getItemModelResolver().updateForTopItem(state, stack, ItemDisplayContext.GUI, client.level, entity, seed);
         return state;
     }
 
     public Entry request(ItemStack stack, LivingEntity entity, int seed) {
-        if (stack == null || stack.isEmpty() || MinecraftClient.getInstance().world == null || entity == null) {
+        if (stack == null || stack.isEmpty() || Minecraft.getInstance().level == null || entity == null) {
             return null;
         }
-        List<?> key = List.copyOf((List<?>) createRenderState(stack, entity, seed).getModelKey());
+        List<?> key = List.copyOf((List<?>) createRenderState(stack, entity, seed).getModelIdentity());
         requests.putIfAbsent(key, new Request(stack.copy(), entity, seed));
         return entries.get(key);
     }
@@ -67,7 +67,7 @@ public class ItemTextureCache {
         float uvSize = tileSize / (float) ATLAS_SIZE;
         for (Map.Entry<Object, Request> queued : requests.entrySet()) {
             Request request = queued.getValue();
-            KeyedItemRenderState state = createRenderState(request.stack(), request.entity(), request.seed());
+            TrackingItemStackRenderState state = createRenderState(request.stack(), request.entity(), request.seed());
             Integer slot = slots.get(queued.getKey());
             boolean newSlot = slot == null;
             if (newSlot) {
@@ -88,7 +88,7 @@ public class ItemTextureCache {
     }
 
     private void ensureAtlas() {
-        int requiredTileSize = 16 * MinecraftClient.getInstance().getWindow().getScaleFactor();
+        int requiredTileSize = 16 * Minecraft.getInstance().getWindow().getGuiScale();
         if (atlasTexture != null && tileSize == requiredTileSize) {
             return;
         }

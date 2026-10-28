@@ -2,8 +2,8 @@ package dev.echo.client.events.world;
 
 import dev.echo.client.events.Event;
 import java.lang.invoke.MethodHandles;
-import net.minecraft.block.BlockState;
-import net.minecraft.util.math.BlockPos;
+import net.minecraft.core.BlockPos;
+import net.minecraft.world.level.block.state.BlockState;
 
 /** Position and state are retained by reference, including mutable BlockPos values. */
 public class BlockUpdateEvent extends Event {

@@ -1,6 +1,7 @@
 package dev.echo.client.features.impl.utility;
 
 import dev.echo.client.bootstrap.CatalogSettings;
+import net.minecraft.world.inventory.ContainerInput;
 import dev.echo.client.bootstrap.CatalogText;
 import dev.echo.client.events.Subscribe;
 import dev.echo.client.events.lifecycle.ClientTickEvent;
@@ -13,18 +14,18 @@ import dev.echo.client.setting.BooleanSetting;
 import dev.echo.client.setting.ChoiceSetting;
 import dev.echo.client.setting.FloatRangeSetting;
 import dev.echo.client.utils.ActionTimer;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.gui.screen.ingame.InventoryScreen;
-import net.minecraft.component.DataComponentTypes;
-import net.minecraft.component.type.PotionContentsComponent;
-import net.minecraft.entity.effect.StatusEffect;
-import net.minecraft.entity.effect.StatusEffectInstance;
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.item.ItemStack;
-import net.minecraft.item.Items;
-import net.minecraft.registry.entry.RegistryEntry;
-import net.minecraft.screen.slot.Slot;
-import net.minecraft.screen.slot.SlotActionType;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.screens.inventory.InventoryScreen;
+import net.minecraft.core.Holder;
+import net.minecraft.core.component.DataComponents;
+import net.minecraft.world.effect.MobEffect;
+import net.minecraft.world.effect.MobEffectInstance;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.inventory.ClickAction;
+import net.minecraft.world.inventory.Slot;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
+import net.minecraft.world.item.alchemy.PotionContents;
 
 /** Inventory potion refill. Conditional source domain and ordering receipts accompany this file. */
 public class PotRefillFeature extends Feature {
@@ -68,7 +69,7 @@ public class PotRefillFeature extends Feature {
     @Subscribe
     private void onTick(ClientTickEvent event) {
         if (isOutsideWorld()) return;
-        if (!(MinecraftClient.getInstance().currentScreen instanceof InventoryScreen inventory)) return;
+        if (!(Minecraft.getInstance().gui.screen() instanceof InventoryScreen inventory)) return;
         if (mode.isSelected(HOVER)) {
             refillHovered(inventory);
         } else if (mode.isSelected(SHIFT_LEFT_CLICK)) {
@@ -81,15 +82,15 @@ public class PotRefillFeature extends Feature {
     private void refillHovered(InventoryScreen inventory) {
         Slot slot = ((HandledScreenAccessor) inventory).getFocusedSlot();
         if (slot == null) return;
-        ItemStack stack = slot.getStack();
+        ItemStack stack = slot.getItem();
         if (!shouldRefill(stack)) return;
-        if (isHotbarIndex(slot.getIndex())) return;
+        if (isHotbarIndex(slot.getContainerSlot())) return;
         int destination = findEmptyHotbarSlot();
         if (destination == -1) return;
         if (!refillTimer.hasElapsedMillis((double) delay.sampleGaussian())) return;
         refillTimer.reset();
         // Preserve getIndex(), rather than substituting Slot.id.
-        swapIntoHotbar(inventory.getScreenHandler().syncId, slot.getIndex(), destination, client.player);
+        swapIntoHotbar(inventory.getMenu().containerId, slot.getContainerSlot(), destination, client.player);
     }
 
     private void refillShiftClicked(InventoryScreen inventory) {
@@ -97,25 +98,25 @@ public class PotRefillFeature extends Feature {
         if (slot == null) return;
         if (!InputKey.LEFT_SHIFT.isPressed()) return;
         if (!InputKey.MOUSE_LEFT.isPressed()) return;
-        ItemStack stack = slot.getStack();
+        ItemStack stack = slot.getItem();
         if (!shouldRefill(stack)) return;
-        if (isHotbarIndex(slot.getIndex())) return;
+        if (isHotbarIndex(slot.getContainerSlot())) return;
         int destination = findEmptyHotbarSlot();
         if (destination == -1) return;
         if (!refillTimer.hasElapsedMillis((double) delay.sampleGaussian())) return;
         refillTimer.reset();
-        swapIntoHotbar(inventory.getScreenHandler().syncId, slot.getIndex(), destination, client.player);
+        swapIntoHotbar(inventory.getMenu().containerId, slot.getContainerSlot(), destination, client.player);
     }
 
     private void refillAutomatically(InventoryScreen inventory) {
         if (!refillTimer.hasElapsedMillis((double) delay.sampleGaussian())) return;
         refillTimer.reset();
         for (int slot = 9; slot < 45; ++slot) {
-            ItemStack stack = inventory.getScreenHandler().getSlot(slot).getStack();
+            ItemStack stack = inventory.getMenu().getSlot(slot).getItem();
             if (!shouldRefill(stack)) continue;
             int destination = findEmptyHotbarSlot();
             if (destination == -1) continue;
-            swapIntoHotbar(inventory.getScreenHandler().syncId, slot, destination, client.player);
+            swapIntoHotbar(inventory.getMenu().containerId, slot, destination, client.player);
             break;
         }
     }
@@ -126,33 +127,33 @@ public class PotRefillFeature extends Feature {
 
     private boolean shouldRefill(ItemStack stack) {
         if (!isSplashPotion(stack) || client.player == null) return false;
-        PotionContentsComponent contents = stack.get(DataComponentTypes.POTION_CONTENTS);
+        PotionContents contents = stack.get(DataComponents.POTION_CONTENTS);
         if (contents == null) return false;
-        for (StatusEffectInstance instance : contents.getEffects()) {
-            RegistryEntry<StatusEffect> entry = instance.getEffectType();
-            StatusEffect effect = entry.value();
+        for (MobEffectInstance instance : contents.getAllEffects()) {
+            Holder<MobEffect> entry = instance.getEffect();
+            MobEffect effect = entry.value();
             if (isInstant(effect) && effect.isBeneficial()) return true;
             if (!refillBuffPotions.getValue()) continue;
             if (effect.isBeneficial() && !isInstant(effect)
-                    && !client.player.hasStatusEffect(entry) && !hotbarHasEffect(entry)) return true;
+                    && !client.player.hasEffect(entry) && !hotbarHasEffect(entry)) return true;
         }
         return false;
     }
 
-    private boolean hotbarHasEffect(RegistryEntry<StatusEffect> effect) {
+    private boolean hotbarHasEffect(Holder<MobEffect> effect) {
         for (int slot = 0; slot < 9; ++slot) {
-            if (containsBuffEffect(client.player.getInventory().getStack(slot), effect)) return true;
+            if (containsBuffEffect(client.player.getInventory().getItem(slot), effect)) return true;
         }
         return false;
     }
 
-    private boolean containsBuffEffect(ItemStack stack, RegistryEntry<StatusEffect> wanted) {
+    private boolean containsBuffEffect(ItemStack stack, Holder<MobEffect> wanted) {
         if (!isSplashPotion(stack)) return false;
-        PotionContentsComponent contents = stack.get(DataComponentTypes.POTION_CONTENTS);
+        PotionContents contents = stack.get(DataComponents.POTION_CONTENTS);
         if (contents == null) return false;
-        for (StatusEffectInstance instance : contents.getEffects()) {
-            RegistryEntry<StatusEffect> entry = instance.getEffectType();
-            StatusEffect effect = entry.value();
+        for (MobEffectInstance instance : contents.getAllEffects()) {
+            Holder<MobEffect> entry = instance.getEffect();
+            MobEffect effect = entry.value();
             if (effect.isBeneficial() && !isInstant(effect) && entry.equals(wanted)) return true;
         }
         return false;
@@ -162,17 +163,17 @@ public class PotRefillFeature extends Feature {
 
     private int findEmptyHotbarSlot() {
         for (int slot = 0; slot < 9; ++slot) {
-            if (client.player.getInventory().getStack(slot).isEmpty()) return slot;
+            if (client.player.getInventory().getItem(slot).isEmpty()) return slot;
         }
         return -1;
     }
 
-    private boolean isInstant(StatusEffect effect) { return effect.isInstant(); }
+    private boolean isInstant(MobEffect effect) { return effect.isInstantaneous(); }
 
     /** Inlined SWAP specialization of the original SlotPackets.createConnection helper. */
-    private static void swapIntoHotbar(int syncId, int source, int destination, PlayerEntity player) {
+    private static void swapIntoHotbar(int syncId, int source, int destination, Player player) {
         if (player == null) return;
-        if (client.interactionManager == null) return;
-        client.interactionManager.clickSlot(syncId, source, destination, SlotActionType.SWAP, player);
+        if (client.gameMode == null) return;
+        client.gameMode.handleContainerInput(syncId, source, destination, ContainerInput.SWAP, player);
     }
 }

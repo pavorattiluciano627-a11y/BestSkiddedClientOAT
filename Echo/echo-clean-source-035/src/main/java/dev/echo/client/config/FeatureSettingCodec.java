@@ -4,6 +4,7 @@ import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonPrimitive;
+import com.mojang.blaze3d.platform.InputConstants;
 import dev.echo.client.input.InputKey;
 import dev.echo.client.setting.BooleanSetting;
 import dev.echo.client.setting.ChoiceSetting;
@@ -26,8 +27,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
-import net.minecraft.client.util.InputUtil;
-import net.minecraft.util.Identifier;
+import net.minecraft.resources.Identifier;
 
 /** The twelve setting encodings in the original feature-profile format. */
 final class FeatureSettingCodec {
@@ -146,7 +146,7 @@ final class FeatureSettingCodec {
                 Set<Identifier> ids = new HashSet<>();
                 for (JsonElement entry : data.getAsJsonArray()) {
                     try {
-                        ids.add(Identifier.of(entry.getAsString()));
+                        ids.add(Identifier.parse(entry.getAsString()));
                     } catch (Exception ignored) {
                         // One malformed identifier does not discard the other selections.
                     }
@@ -224,14 +224,14 @@ final class FeatureSettingCodec {
         if (!data.getAsJsonPrimitive().isNumber()) {
             String text = data.getAsString();
             if (text.startsWith("key.") || text.startsWith("scancode.")) {
-                InputUtil.Key translated;
+                InputConstants.Key translated;
                 try {
-                    translated = InputUtil.fromTranslationKey(text);
+                    translated = InputConstants.getKey(text);
                 } catch (IllegalArgumentException ignored) {
                     return InputKey.NONE;
                 }
-                return translated.getCategory() == InputUtil.Type.MOUSE
-                        ? InputKey.fromMouseCode(translated.getCode()) : InputKey.fromCode(translated.getCode());
+                return translated.getType() == InputConstants.Type.MOUSE
+                        ? InputKey.fromMouseCode(translated.getValue()) : InputKey.fromCode(translated.getValue());
             }
             return InputKey.parse(text);
         }

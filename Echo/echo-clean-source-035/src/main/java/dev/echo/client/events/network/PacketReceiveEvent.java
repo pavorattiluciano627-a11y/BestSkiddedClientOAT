@@ -1,7 +1,7 @@
 package dev.echo.client.events.network;
 
 import dev.echo.client.events.Event;
-import net.minecraft.network.packet.Packet;
+import net.minecraft.network.protocol.Packet;
 
 /** Reports an incoming packet before handling; cancellation suppresses its delivery. */
 public class PacketReceiveEvent extends Event {
