@@ -42,6 +42,10 @@ def main() -> int:
                     names.add(vm.resolve_class(cm.group(1), text, pkg))
         for m in re.finditer(r'@Mixin\(\s*targets\s*=\s*"([^"]+)"', text):
             names.add(m.group(1).replace(".", "/"))
+        # @At owners are needed too: the handler-signature check has to know
+        # whether a redirected member is static before it can count its params.
+        for m in re.finditer(r'target\s*=\s*"L([^;]+);', text):
+            names.add(m.group(1))
 
     # keep the whole superclass chain so inherited members still resolve
     keep, queue = set(), [n for n in names if n in classes]

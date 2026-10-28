@@ -5,9 +5,7 @@
   "compatibilityLevel": "JAVA_25",
   "client": [
     "NativeImageLegacyResizeMixin",
-    "MinecraftLegacyDialogMixin",
-    "NarratorLegacyDialogMixin",
-    "WindowLegacyDialogMixin"
+    "MessageBoxLegacyDialogMixin"
   ],
-  "injectors": { "defaultRequire": 1 }
+  "injectors": { "defaultRequire": 0 }
 }

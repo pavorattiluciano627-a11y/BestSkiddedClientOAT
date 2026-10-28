@@ -3,52 +3,38 @@ package dev.echo.client.mixin;
 import dev.echo.client.Echo;
 import dev.echo.client.MinecraftAccess;
 import dev.echo.client.features.impl.render.AmbienceFeature;
-import net.minecraft.client.Camera;
-import net.minecraft.client.DeltaTracker;
-import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.renderer.fog.FogRenderer;
 import org.joml.Vector4f;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
-import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.ModifyArgs;
-import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 import org.spongepowered.asm.mixin.injection.invoke.arg.Args;
 
+/**
+ * Ambience fog colour.
+ *
+ * In 26.2 {@code setupFog} returns {@code FogData} instead of a {@code Vector4f},
+ * and the old internal {@code applyFog(ByteBuffer, int, Vector4f, ...)} call is
+ * gone -- the colour is written with {@code Vector4f.set(r, g, b, a)} at the end
+ * of {@code computeFogColor}. So the hook sits on that call and rewrites the
+ * three colour channels.
+ */
 @Mixin(FogRenderer.class)
 public abstract class FogRendererMixin {
-    @Inject(method = "setupFog(Lnet/minecraft/client/Camera;ILnet/minecraft/client/DeltaTracker;FLnet/minecraft/client/multiplayer/ClientLevel;)Lnet/minecraft/client/renderer/fog/FogData;",
-        at = @At("RETURN"), cancellable = true)
-    private void onApplyFogReturn(Camera camera, int viewDistance, DeltaTracker tickCounter,
-                                  float skyDarkness, ClientLevel world, CallbackInfoReturnable<Vector4f> callback) {
-        if (!Echo.eventsDisabled && MinecraftAccess.CLIENT.player != null
-                && MinecraftAccess.CLIENT.level != null && Echo.featureManager != null) {
-            AmbienceFeature ambience = (AmbienceFeature) Echo.featureManager.findFeature(AmbienceFeature.class);
-            if (ambience != null && ambience.isEnabled() && AmbienceFeature.isFogColorEnabled()) {
-                float red = AmbienceFeature.getFogRed() / 255.0F;
-                float green = AmbienceFeature.getFogGreen() / 255.0F;
-                float blue = AmbienceFeature.getFogBlue() / 255.0F;
-                callback.setReturnValue(new Vector4f(red, green, blue, 1.0F));
-            }
+    @ModifyArgs(method = "computeFogColor(Lnet/minecraft/client/Camera;FLnet/minecraft/client/multiplayer/ClientLevel;IFLorg/joml/Vector4f;)V",
+            at = @At(value = "INVOKE",
+                    target = "Lorg/joml/Vector4f;set(FFFF)Lorg/joml/Vector4f;"),
+            require = 0)
+    private void echo$modifyFogColor(Args arguments) {
+        if (Echo.eventsDisabled || MinecraftAccess.CLIENT.player == null
+                || MinecraftAccess.CLIENT.level == null || Echo.featureManager == null) {
+            return;
         }
-    }
-
-    @ModifyArgs(method = "computeFogColor(Lnet/minecraft/client/Camera;FLnet/minecraft/client/multiplayer/ClientLevel;IFLorg/joml/Vector4f;)V", at = @At(value = "INVOKE",
-        target = "Lnet/minecraft/client/render/fog/FogRenderer;applyFog(Ljava/nio/ByteBuffer;ILorg/joml/Vector4f;FFFFFF)V"))
-    private void modifyArgumentsOfApplyFogAtApplyFog(Args arguments) {
-        if (!Echo.eventsDisabled && MinecraftAccess.CLIENT.player != null
-                && MinecraftAccess.CLIENT.level != null && Echo.featureManager != null) {
-            AmbienceFeature ambience = (AmbienceFeature) Echo.featureManager.findFeature(AmbienceFeature.class);
-            if (ambience != null && ambience.isEnabled() && AmbienceFeature.isFogColorEnabled()) {
-                float red = AmbienceFeature.getFogRed() / 255.0F;
-                float green = AmbienceFeature.getFogGreen() / 255.0F;
-                float blue = AmbienceFeature.getFogBlue() / 255.0F;
-                float distance = AmbienceFeature.getFogDistanceChunks() * 16.0F;
-                arguments.set(2, new Vector4f(red, green, blue, 1.0F));
-                arguments.set(4, distance);
-                arguments.set(7, distance);
-                arguments.set(8, distance);
-            }
+        AmbienceFeature ambience = (AmbienceFeature) Echo.featureManager.findFeature(AmbienceFeature.class);
+        if (ambience != null && ambience.isEnabled() && AmbienceFeature.isFogColorEnabled()) {
+            arguments.set(0, AmbienceFeature.getFogRed() / 255.0F);
+            arguments.set(1, AmbienceFeature.getFogGreen() / 255.0F);
+            arguments.set(2, AmbienceFeature.getFogBlue() / 255.0F);
         }
     }
 }

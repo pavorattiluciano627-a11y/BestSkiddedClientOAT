@@ -96,22 +96,32 @@ _DESC_LINE = re.compile(r"^\s{4}descriptor: (\S+)")
 
 
 def _split_methods(text: str) -> dict[str, str]:
-    """'name desc' -> method body, from `javap -c -s` output."""
+    """'name descriptor' -> method body, from `javap -c -s` output.
+
+    The descriptor line follows the signature and *precedes* the Code block, so
+    the key can only be finalised once the next member starts.
+    """
     methods: dict[str, str] = {}
-    name, body = None, []
+    name, key, body = None, None, []
+
+    def flush():
+        if key:
+            methods[key] = "\n".join(body)
+
     for line in text.splitlines():
         if _MEMBER_LINE.match(line) or re.match(r"^\s{2}[\w$.]+\(\);", line):
+            flush()
             method_name = re.search(r"[\w$]+(?=\()", line)
             name = method_name.group(0) if method_name else None
-            body = []
+            key, body = None, []
             continue
         desc = _DESC_LINE.match(line)
         if desc and name:
-            key = f"{name} {desc.group(1)}"
-            methods[key] = "\n".join(body)
+            key, body = f"{name} {desc.group(1)}", []
             continue
-        if name is not None:
+        if key is not None:
             body.append(line)
+    flush()
     return methods
 
 
@@ -224,9 +234,6 @@ def main() -> int:
                     continue
                 checked += 1
                 for needle, label in points:
-                    owner = needle.split(".")[0].lstrip("// class ")
-                    if not dis.has(owner):
-                        continue  # LWJGL / another library: not in this jar
                     found = False
                     for target in targets:
                         for cls in dis.supers(target):
