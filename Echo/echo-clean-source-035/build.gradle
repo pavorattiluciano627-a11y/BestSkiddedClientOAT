@@ -242,8 +242,28 @@ tasks.register('resolveFoundationDependencies') {
 // tasks retain the source/fidelity completion gate.
 tasks.named('compileJava') {
     options.compilerArgs.add('-proc:none')
-    options.forkOptions.jvmArgs = ['-XX:ActiveProcessorCount=2']
+    // Compile throughput knob only; raise it to match the build host's cores.
+    def compileThreads = providers.gradleProperty('compile_threads').getOrElse('4')
+    options.forkOptions.jvmArgs = ["-XX:ActiveProcessorCount=${compileThreads}".toString()]
 }
+// Fast CI packaging path: compiles and packages the mod without the native
+// (cargo) staging step or the source/verification gates, both of which are
+// release-time concerns. `jar` and `build` remain fully gated.
+tasks.register('fastJar', Jar) {
+    group = 'build'
+    description = 'Compile + package resources only; skips native staging and gates (CI)'
+    dependsOn 'compileJava'
+    archiveFileName = "echo-26.2-fast-${project.version}.jar"
+    destinationDirectory = layout.buildDirectory.dir('fastlibs')
+    from sourceSets.main.output.classesDirs
+    from layout.projectDirectory.dir('src/main/resources')
+    manifest.attributes('Echo-Artifact-Classification': 'unapproved-candidate-verification',
+                        'Echo-Production-Approved': 'false')
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+    preserveFileTimestamps = false
+    reproducibleFileOrder = true
+}
+
 tasks.register('verifySourcePolicy', Exec) {
     commandLine 'python3', 'tools/build/source_gate.py', 'audit', '--root', projectDir
 }

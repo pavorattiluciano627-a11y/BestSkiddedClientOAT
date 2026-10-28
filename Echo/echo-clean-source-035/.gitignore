@@ -6,3 +6,5 @@ build/
 !tools/build/**
 analysis/
 __pycache__/
+# CI scratch
+compile.log
