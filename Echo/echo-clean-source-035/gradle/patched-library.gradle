@@ -38,22 +38,29 @@ def upstreamBinaryFile = configurations.upstreamBinary.singleFile
 def upstreamSourcesFile = configurations.upstreamSources.singleFile
 def patchedSourceCount = sourceSets.main.java.files.size()
 def ownClassesDirs = sourceSets.main.output.classesDirs.files
+// Read the ext values into locals: inside a task closure an unqualified name
+// resolves against the task first, so `upstreamSha256` alone would look for a
+// task property and fail.
+def upstreamSha256Value = upstreamSha256
+def upstreamSourceSha256Value = upstreamSourceSha256
+def expectedPatchedSourcesValue = expectedPatchedSources
+def upstreamCoordinateValue = upstreamCoordinate
 
 tasks.register('verifyUpstream') {
     group = 'verification'
     inputs.files(upstreamBinaryFile, upstreamSourcesFile)
-    inputs.property('expectedBinarySha256', upstreamSha256)
-    inputs.property('expectedSourcesSha256', upstreamSourceSha256)
-    inputs.property('expectedPatchedSources', expectedPatchedSources)
+    inputs.property('expectedBinarySha256', upstreamSha256Value)
+    inputs.property('expectedSourcesSha256', upstreamSourceSha256Value)
+    inputs.property('expectedPatchedSources', expectedPatchedSourcesValue)
     inputs.property('patchedSourceCount', patchedSourceCount)
     doLast {
-        [[upstreamBinaryFile, upstreamSha256],
-         [upstreamSourcesFile, upstreamSourceSha256]].each { pair ->
+        [[upstreamBinaryFile, upstreamSha256Value],
+         [upstreamSourcesFile, upstreamSourceSha256Value]].each { pair ->
             def actual = MessageDigest.getInstance('SHA-256').digest(pair[0].bytes).encodeHex().toString()
             if (actual != pair[1]) { throw new GradleException("Unrecognized public upstream artifact: ${pair[0].name}") }
         }
-        if (patchedSourceCount != expectedPatchedSources) {
-            throw new GradleException("Expected ${expectedPatchedSources} readable patches for ${upstreamCoordinate}")
+        if (patchedSourceCount != expectedPatchedSourcesValue) {
+            throw new GradleException("Expected ${expectedPatchedSourcesValue} readable patches for ${upstreamCoordinateValue}")
         }
     }
 }
@@ -69,7 +76,7 @@ tasks.named('jar', Jar) {
         exclude 'META-INF/MANIFEST.MF', 'META-INF/*.SF', 'META-INF/*.RSA', 'META-INF/*.DSA', 'module-info.class'
         exclude { item -> ownClassesDirs.any { new File(it, item.path).isFile() } }
     }
-    manifest.attributes('Implementation-Title': "${upstreamCoordinate} with readable local URL guards",
+    manifest.attributes('Implementation-Title': "${upstreamCoordinateValue} with readable local URL guards",
             'Implementation-Version': project.version,
             'Echo-Patch-Source': 'seven ordinary Java sources; no classfile rewriting')
 }
