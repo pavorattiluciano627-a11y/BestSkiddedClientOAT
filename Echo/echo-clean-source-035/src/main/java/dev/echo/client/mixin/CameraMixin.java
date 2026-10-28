@@ -18,11 +18,10 @@ public abstract class CameraMixin {
     @Shadow protected abstract void setPosition(Vec3 position);
     @Shadow protected abstract void setRotation(float yaw, float pitch);
 
-    @Inject(method = "setup", at = @At("RETURN"), cancellable = true)
-    private void onUpdateReturn(Level world, Entity focusedEntity, boolean thirdPerson,
-                                boolean inverseView, float tickProgress, CallbackInfo callback) {
-        if (!Echo.eventsDisabled && world != null && focusedEntity != null
-                && MinecraftAccess.CLIENT.player != null && Echo.featureManager != null) {
+    @Inject(method = "update", at = @At("RETURN"), cancellable = true)
+    private void onUpdateReturn(net.minecraft.client.DeltaTracker ticks, CallbackInfo callback) {
+        if (!Echo.eventsDisabled && MinecraftAccess.CLIENT.player != null
+                && Echo.featureManager != null) {
             FreecamFeature freecam = (FreecamFeature) Echo.featureManager.findFeature(FreecamFeature.class);
             if (freecam != null && freecam.isEnabled()) {
                 Vec3 position = freecam.getCameraPosition();

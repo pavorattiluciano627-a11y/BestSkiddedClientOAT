@@ -35,9 +35,10 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 @Mixin(MultiPlayerGameMode.class)
 public abstract class ClientPlayerInteractionManagerMixin {
-    @Inject(method = {"handleInventoryMouseClick", "handleInventoryMouseClick"}, at = @At("HEAD"), cancellable = true, require = 0)
-    private void protectOffhandTotem(int syncId, int slotId, int button, ClickAction action,
-            Player player, CallbackInfo callback) {
+    @Inject(method = "handleContainerInput(IIILnet/minecraft/world/inventory/ContainerInput;Lnet/minecraft/world/entity/player/Player;)V",
+            at = @At("HEAD"), cancellable = true)
+    private void protectOffhandTotem(int syncId, int slotId, int button,
+            net.minecraft.world.inventory.ContainerInput action, Player player, CallbackInfo callback) {
         if (Echo.eventsDisabled) {
             return;
         }

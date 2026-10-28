@@ -6,7 +6,7 @@ import dev.echo.client.features.impl.render.FreecamFeature;
 import net.minecraft.client.Camera;
 import net.minecraft.client.DeltaTracker;
 import net.minecraft.client.player.LocalPlayer;
-import net.minecraft.client.renderer.LevelRenderer;
+import net.minecraft.client.renderer.extract.LevelExtractor;
 import net.minecraft.client.renderer.culling.Frustum;
 import net.minecraft.client.renderer.entity.state.EntityRenderState;
 import net.minecraft.client.renderer.state.level.LevelRenderState;
@@ -19,7 +19,7 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 /** Candidate: FeatureManager key-free lookup requires callee proof and interface merge. */
-@Mixin(LevelRenderer.class)
+@Mixin(LevelExtractor.class)
 public abstract class WorldRendererEntityStateMixin {
     @Shadow
     protected abstract EntityRenderState extractEntity(Entity entity, float tickProgress);

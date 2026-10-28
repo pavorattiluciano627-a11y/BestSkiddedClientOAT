@@ -17,7 +17,7 @@ import org.spongepowered.asm.mixin.injection.invoke.arg.Args;
 
 @Mixin(FogRenderer.class)
 public abstract class FogRendererMixin {
-    @Inject(method = "setupFog(Lnet/minecraft/client/Camera;ILnet/minecraft/client/DeltaTracker;FLnet/minecraft/client/multiplayer/ClientLevel;)Lorg/joml/Vector4f;",
+    @Inject(method = "setupFog(Lnet/minecraft/client/Camera;ILnet/minecraft/client/DeltaTracker;FLnet/minecraft/client/multiplayer/ClientLevel;)Lnet/minecraft/client/renderer/fog/FogData;",
         at = @At("RETURN"), cancellable = true)
     private void onApplyFogReturn(Camera camera, int viewDistance, DeltaTracker tickCounter,
                                   float skyDarkness, ClientLevel world, CallbackInfoReturnable<Vector4f> callback) {
@@ -33,7 +33,7 @@ public abstract class FogRendererMixin {
         }
     }
 
-    @ModifyArgs(method = "applyFog(Lnet/minecraft/client/render/Camera;ILnet/minecraft/client/render/RenderTickCounter;FLnet/minecraft/client/world/ClientWorld;)Lorg/joml/Vector4f;", at = @At(value = "INVOKE",
+    @ModifyArgs(method = "computeFogColor(Lnet/minecraft/client/Camera;FLnet/minecraft/client/multiplayer/ClientLevel;IFLorg/joml/Vector4f;)V", at = @At(value = "INVOKE",
         target = "Lnet/minecraft/client/render/fog/FogRenderer;applyFog(Ljava/nio/ByteBuffer;ILorg/joml/Vector4f;FFFFFF)V"))
     private void modifyArgumentsOfApplyFogAtApplyFog(Args arguments) {
         if (!Echo.eventsDisabled && MinecraftAccess.CLIENT.player != null

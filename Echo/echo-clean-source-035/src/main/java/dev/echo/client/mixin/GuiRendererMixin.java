@@ -65,7 +65,7 @@ public abstract class GuiRendererMixin implements GuiRenderControl {
         return screen == null && !MinecraftRenderState.hasOverlay();
     }
 
-    @Inject(method = "render(Lcom/mojang/blaze3d/buffers/GpuBufferSlice;)V", at = @At(value = "INVOKE",
+    @Inject(method = "render()V", at = @At(value = "INVOKE",
             target = "Lnet/minecraft/client/gui/render/GuiRenderer;prepare()V"))
     private void prepareHudPass(CallbackInfo callback) {
         echo$pendingHud = false;
@@ -121,7 +121,7 @@ public abstract class GuiRendererMixin implements GuiRenderControl {
         }
     }
 
-    @Inject(method = "render(Lcom/mojang/blaze3d/buffers/GpuBufferSlice;)V", at = @At(value = "INVOKE",
+    @Inject(method = "render()V", at = @At(value = "INVOKE",
             target = "Lnet/minecraft/client/gui/render/GuiRenderer;draw(Lcom/mojang/blaze3d/buffers/GpuBufferSlice;)V", shift = At.Shift.AFTER))
     private void finishPendingHud(CallbackInfo callback) {
         if (echo$pendingHud) {

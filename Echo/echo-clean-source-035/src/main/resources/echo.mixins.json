@@ -8,7 +8,7 @@
     "PacketByteBufMixin"
   ],
   "injectors": {
-    "defaultRequire": 1
+    "defaultRequire": 0
   },
   "client": [
     "PersistentProjectileEntityAccessor",
@@ -66,6 +66,7 @@
     "GuiRendererMixin",
     "GuiRenderStateMixin",
     "ScreenMixin",
+    "HudMixin",
     "InGameHudMixin",
     "WorldRendererFramebufferMixin",
     "WorldRendererEntityStateMixin",

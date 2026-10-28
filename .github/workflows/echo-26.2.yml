@@ -48,6 +48,12 @@ jobs:
         with:
           cache-read-only: false
 
+      # A green compile proves nothing about mixin selectors: they are strings
+      # in annotations, invisible to javac, and a stale one crashes the client at
+      # class-load time. This gate fails the build instead, in under a second.
+      - name: Verify mixin targets against 26.2
+        run: python3 tools/port/verify_mixins.py tools/port/mc262-mixin-index.json.gz
+
       # One Gradle invocation for the whole build: fastJar depends on
       # compileJava, so a second JVM startup would be pure overhead.
       #

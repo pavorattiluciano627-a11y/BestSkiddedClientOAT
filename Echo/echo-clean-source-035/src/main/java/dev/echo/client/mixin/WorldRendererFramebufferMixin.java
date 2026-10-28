@@ -25,7 +25,7 @@ public abstract class WorldRendererFramebufferMixin implements WorldFramebufferC
     @Shadow protected abstract boolean shouldShowEntityOutlines();
     @Unique private boolean echo$skipNextOutlineDraw;
 
-    @WrapOperation(method = "renderLevel", at = @At(value = "INVOKE",
+    @WrapOperation(method = "render(Lcom/mojang/blaze3d/resource/GraphicsResourceAllocator;Lnet/minecraft/client/DeltaTracker;ZLnet/minecraft/client/renderer/state/level/CameraRenderState;Lorg/joml/Matrix4fc;Lcom/mojang/blaze3d/buffers/GpuBufferSlice;Lorg/joml/Vector4f;Z)V", at = @At(value = "INVOKE",
             target = "Lnet/minecraft/client/renderer/ShaderManager;getPostChain(Lnet/minecraft/resources/Identifier;Ljava/util/Set;)Lnet/minecraft/client/renderer/PostChain;"))
     private PostChain loadOutlinePostEffect(ShaderManager loader, Identifier id,
             Set<Identifier> framebufferIds, Operation<PostChain> original) {

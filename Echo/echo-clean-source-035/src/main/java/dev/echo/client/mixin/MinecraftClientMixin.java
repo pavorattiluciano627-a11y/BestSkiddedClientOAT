@@ -164,14 +164,14 @@ public class MinecraftClientMixin {
         }
     }
 
-    @Inject(method = "destroy", at = @At("HEAD"))
+    @Inject(method = "close", at = @At("HEAD"))
     private void autosaveFeatureConfig(CallbackInfo callback) {
         if (!Echo.eventsDisabled && Echo.featureConfig != null) {
             Echo.featureConfig.save("_autosave");
         }
     }
 
-    @Inject(method = "setScreen", at = @At("HEAD"), cancellable = true)
+    @Inject(method = "setScreenAndShow", at = @At("HEAD"), cancellable = true)
     private void beforeScreenChange(Screen screen, CallbackInfo callback) {
         if (Echo.eventsDisabled) {
             return;

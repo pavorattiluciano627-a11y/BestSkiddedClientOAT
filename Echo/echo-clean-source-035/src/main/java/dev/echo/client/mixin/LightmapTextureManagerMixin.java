@@ -16,8 +16,8 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 public class LightmapTextureManagerMixin {
     @Shadow @Final private GpuTexture texture;
 
-    @Inject(method = "updateLightTexture", at = @At("HEAD"), cancellable = true)
-    private void replaceLightmapWithWhite(float tickProgress, CallbackInfo callback) {
+    @Inject(method = "render", at = @At("HEAD"), cancellable = true)
+    private void replaceLightmapWithWhite(CallbackInfo callback) {
         if (Echo.eventsDisabled) {
             return;
         }

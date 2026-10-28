@@ -21,14 +21,14 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 @Mixin(ItemInHandRenderer.class)
 public class HeldItemRendererMixin {
-    @Inject(method = "renderHandsWithItems(FLcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/SubmitNodeCollector;Lnet/minecraft/client/player/LocalPlayer;I)V",
+    @Inject(method = "submitHandsWithItems(FLcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/SubmitNodeCollector;Lnet/minecraft/client/player/LocalPlayer;I)V",
             at = @At("HEAD"))
     private void beginHandChams(float tickProgress, PoseStack matrices, SubmitNodeCollector queue,
             LocalPlayer player, int light, CallbackInfo callback) {
         HandChamsRenderer.beginCapture();
     }
 
-    @Inject(method = "renderHandsWithItems(FLcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/SubmitNodeCollector;Lnet/minecraft/client/player/LocalPlayer;I)V",
+    @Inject(method = "submitHandsWithItems(FLcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/SubmitNodeCollector;Lnet/minecraft/client/player/LocalPlayer;I)V",
             at = @At("RETURN"))
     private void finishHandChams(float tickProgress, PoseStack matrices, SubmitNodeCollector queue,
             LocalPlayer player, int light, CallbackInfo callback) {
@@ -36,7 +36,7 @@ public class HeldItemRendererMixin {
         HandChamsRenderer.flushCapturedOutlines();
     }
 
-    @Inject(method = "renderArmWithItem(Lnet/minecraft/client/player/AbstractClientPlayer;FFLnet/minecraft/world/InteractionHand;FLnet/minecraft/world/item/ItemStack;FLcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/SubmitNodeCollector;I)V",
+    @Inject(method = "submitArmWithItem(Lnet/minecraft/client/player/AbstractClientPlayer;FFLnet/minecraft/world/InteractionHand;FLnet/minecraft/world/item/ItemStack;FLcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/SubmitNodeCollector;I)V",
             at = @At(value = "INVOKE", target = "Lcom/mojang/blaze3d/vertex/PoseStack;pushPose()V", shift = At.Shift.AFTER))
     private void applyViewModelTransform(AbstractClientPlayer player, float tickProgress, float pitch,
             InteractionHand hand, float swingProgress, ItemStack stack, float equipProgress, PoseStack matrices,
