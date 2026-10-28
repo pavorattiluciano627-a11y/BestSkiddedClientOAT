@@ -5,7 +5,14 @@ pluginManagement {
         mavenCentral()
     }
     plugins {
-        id 'net.fabricmc.fabric-loom-remap' version '1.16.3'
+        // 26.x uses the non-remapping Loom plugin id and resolves Minecraft's
+        // official names, so no mapping artifact is involved. `fabric-loom-remap`
+        // was the transitional id used while Minecraft was still obfuscated.
+        //
+        // Keep this version in sync with `loom_version` in gradle.properties;
+        // Gradle requires pluginManagement to be the first block of this file,
+        // so the property cannot be read before it.
+        id 'net.fabricmc.fabric-loom' version '1.19-SNAPSHOT'
     }
 }
 

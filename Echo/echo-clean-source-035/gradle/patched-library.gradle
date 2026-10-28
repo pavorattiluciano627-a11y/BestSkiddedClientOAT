@@ -5,7 +5,7 @@ apply plugin: 'java-library'
 group = 'echo.clean.thirdparty'
 
 java {
-    toolchain { languageVersion = JavaLanguageVersion.of(21) }
+    toolchain { languageVersion = JavaLanguageVersion.of(25) }
     withSourcesJar()
 }
 

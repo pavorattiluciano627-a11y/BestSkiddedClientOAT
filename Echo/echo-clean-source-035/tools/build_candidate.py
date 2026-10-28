@@ -23,9 +23,9 @@ def run(name, command):
 def main():
     wrapper = [sys.executable, ROOT / 'tools/with_heavy_tool.py', '--']
     gradle = [ROOT / ('gradlew.bat' if os.name == 'nt' else 'gradlew'), '--no-daemon', '--max-workers=1', '--no-build-cache']
+    # Minecraft 26.2 ships named classes, so the old `remap-closure` and
+    # `loom-remap` stages were retired: compiled output is the shipped artifact.
     run('compile-native', wrapper + gradle + ['prepareCandidate'])
-    run('remap-closure', [sys.executable, ROOT / 'tools/build/remap_closure.py'])
-    run('loom-remap', wrapper + gradle + ['-p', 'verification-remap', 'candidateJar'])
     run('provenance', [sys.executable, ROOT / 'tools/build/publish_candidate.py'])
     print((ROOT / 'build/candidate/HANDOFF.json').read_text())
 

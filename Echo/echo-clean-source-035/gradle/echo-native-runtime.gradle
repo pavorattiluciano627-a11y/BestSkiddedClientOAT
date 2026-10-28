@@ -37,7 +37,7 @@ configurations {
 dependencies {
     modules.each { add('echoLwjglRuntime', "org.lwjgl:${it}:${version}") }
     nativeModules.each { add('echoLwjglRuntime', "org.lwjgl:${it}:${version}:${target.lwjgl}") }
-    add('echoLauncherMods', 'net.fabricmc.fabric-api:fabric-api:0.141.6+1.21.11')
+    add('echoLauncherMods', "net.fabricmc.fabric-api:fabric-api:${fabric_version}")
 }
 configurations.named('compileClasspath') { extendsFrom configurations.echoLwjglRuntime }
 configurations.named('runtimeClasspath') { extendsFrom configurations.echoLwjglRuntime }
@@ -135,7 +135,7 @@ tasks.register('compileEchoRuntimeAudit', JavaCompile) {
     source new File(integrationRoot, 'tools/build/LwjglLinkageAudit.java')
     classpath = configurations.compileClasspath
     destinationDirectory = layout.buildDirectory.dir('echo-runtime-audit/classes')
-    options.release = 21
+    options.release = 25
     options.fork = true
     options.forkOptions.memoryMaximumSize = '256m'
     options.forkOptions.jvmArgs = ['-XX:ActiveProcessorCount=2']
@@ -144,7 +144,7 @@ tasks.register('verifyEchoMinecraftRuntimeCompatibility', JavaExec) {
     group = 'verification'
     description = 'Rejects a coherent LWJGL upgrade that removes actual Minecraft call descriptors'
     dependsOn 'compileEchoRuntimeAudit', 'verifyEchoRuntimeClasspath'
-    javaLauncher = javaToolchains.launcherFor { languageVersion = JavaLanguageVersion.of(21) }
+    javaLauncher = javaToolchains.launcherFor { languageVersion = JavaLanguageVersion.of(25) }
     classpath = files(layout.buildDirectory.dir('echo-runtime-audit/classes')) + configurations.runtimeClasspath
     mainClass = 'LwjglLinkageAudit'
     maxHeapSize = '256m'
@@ -152,10 +152,11 @@ tasks.register('verifyEchoMinecraftRuntimeCompatibility', JavaExec) {
     doFirst {
         def game = configurations.compileClasspath.files.find { path ->
             path.name.endsWith('.jar') && new ZipFile(path).withCloseable { zip ->
-                zip.getEntry('net/minecraft/client/MinecraftClient.class') != null
+                // 26.x official name; `MinecraftClient` was the Yarn name.
+                zip.getEntry('net/minecraft/client/Minecraft.class') != null
             }
         }
-        if (game == null) { throw new GradleException('Named Minecraft JAR missing for runtime linkage validation') }
+        if (game == null) { throw new GradleException('Official-named Minecraft JAR missing for runtime linkage validation') }
         args game.absolutePath
     }
 }
@@ -171,18 +172,18 @@ tasks.register('prepareEchoLauncher', Exec) {
 }
 tasks.register('verifyEchoNativeArchive', Exec) {
     group = 'verification'
-    dependsOn 'remapJar'
+    dependsOn 'jar'
     commandLine 'python3', nativeTool, 'verify-archive', '--targets', targetsFile,
-            '--target', selected, '--archive', tasks.named('remapJar').get().archiveFile.get().asFile
+            '--target', selected, '--archive', tasks.named('jar').get().archiveFile.get().asFile
 }
-tasks.named('remapJar') { dependsOn 'verifyEchoRuntimeClasspath', 'verifyEchoMinecraftRuntimeCompatibility' }
+tasks.named('jar') { dependsOn 'verifyEchoRuntimeClasspath', 'verifyEchoMinecraftRuntimeCompatibility' }
 tasks.named('build') { dependsOn 'verifyEchoNativeArchive' }
 tasks.register('stageEchoLauncherApplication', Copy) {
     group = 'distribution'
-    description = 'Stage the admitted remapped clean application into the new isolated launcher instance'
+    description = 'Stage the admitted clean application into the new isolated launcher instance'
     dependsOn 'prepareEchoLauncher', 'verifyEchoNativeArchive'
-    from tasks.named('remapJar').flatMap { it.archiveFile }
+    from tasks.named('jar').flatMap { it.archiveFile }
     into runtimeOutput.map { it.dir('launcher/instance/mods') }
 }
-// Root jar/remapJar/build/run* completion gates remain authoritative. This script
+// Root jar/build/run* completion gates remain authoritative. This script
 // does not add an alternate application archive or any runnable application task.

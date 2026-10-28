@@ -1,4 +1,4 @@
-# Echo — editable source candidate
+# Echo — editable source candidate (Minecraft 26.2 port)
 
 This package contains **977 readable application Java sources**, the real renderer/UI/assets,
 native Rust/JNI projects, licensed STB1 source, and the JSVG/Rhino source patches and licenses.
@@ -6,26 +6,29 @@ No reconstruction checkout, shard directory, original application binary, or cla
 
 ## Build
 
-Tested host: macOS ARM64. Install **JDK 21**, **Python 3**, Rust **1.97.1**, and Xcode command-line tools.
-Gradle 9.4 and public Maven/Cargo dependencies are downloaded or reused from checksum-verified caches.
+Target: **Minecraft 26.2** (unobfuscated, Fabric Loader 0.20.1, Fabric API 0.161.0+26.2, Java 25).
+Install **JDK 25**, **Python 3**, Rust **1.97.1**, and Xcode command-line tools.
+Gradle 9.8.2 and public Maven/Cargo dependencies are downloaded or reused from checksum-verified caches.
+
+> **Port status:** the build wiring, metadata and verification tooling are migrated to 26.2.
+> The Java sources are still written against Yarn names and must be remapped to Mojang's
+> official names — see [`docs/PORT-26.2.md`](docs/PORT-26.2.md) for the ordered procedure.
 
 ```sh
 rustup toolchain install 1.97.1
 python3 tools/build_candidate.py
 ```
 
-Output: `build/candidate/echo-clean-candidate-intermediary.jar` and
+Output: `build/candidate/echo-clean-candidate-named.jar` and
 `build/candidate/provenance.json`. This is an **unapproved verification candidate**, not a release.
-The builder runs ordinary Gradle compilation/native builds, then normal Loom remapping in a
-separate bounded-heap project. Every application class remains in the input; a checked
-inheritance/mapping closure reduces only remapper resolution memory.
+The builder runs ordinary Gradle compilation and native builds only. Minecraft 26.2 ships named
+classes, so the former named→intermediary remapping stage (and its `verification-remap` project)
+was retired: the compiler output is the distributable artifact.
 
 The helper runs these local Gradle stages and records their commands before publishing provenance:
 
 ```sh
 python3 tools/with_heavy_tool.py -- ./gradlew --no-daemon --max-workers=1 prepareCandidate
-python3 tools/build/remap_closure.py
-python3 tools/with_heavy_tool.py -- ./gradlew --no-daemon --max-workers=1 -p verification-remap candidateJar
 python3 tools/build/publish_candidate.py
 ```
 
@@ -75,7 +78,7 @@ origin is not retrospectively claimed. Build-time sidecar flags remain immutable
 runtime receipt records the later test of that exact hash pair. Different rebuilt artifacts
 require their own verification.
 
-`build`, `assemble`, production `jar`/`remapJar`, and game-launch tasks retain the incomplete
+`build`, `assemble`, production `jar`, and game-launch tasks retain the incomplete
 release gate. Use the explicit candidate build above for source review/testing. The retained
 source policy is a review aid; named JDK reflection/native APIs still require their documented
 scope review and are not silently approved by a successful compile.

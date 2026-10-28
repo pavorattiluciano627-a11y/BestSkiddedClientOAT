@@ -87,5 +87,5 @@ tasks.register('verifyCompatibilityFabricRegistration') {
         if (mixins.required != true || mixins.client.size() != 4 || mixins.injectors.defaultRequire != 1) throw new GradleException('Compatibility Mixin requirements changed')
     }
 }
-tasks.named('remapJar') { dependsOn 'verifyCompatibilityFabricRegistration' }
+tasks.named('jar') { dependsOn 'verifyCompatibilityFabricRegistration' }
 import org.gradle.process.CommandLineArgumentProvider

@@ -8,6 +8,9 @@
   "unresolved": [
     "Global source/caller/cache/initialization proof remains incomplete.",
     "Settings and actual UI/gameplay parity are not established by title readiness.",
-    "Release/native/platform acceptance remains independently gated."
+    "Release/native/platform acceptance remains independently gated.",
+    "Minecraft 26.2 port: Java sources and mixin/AW entries still use Yarn names; the Yarn-to-official mapping migration is pending (docs/PORT-26.2.md step 1).",
+    "Minecraft 26.2 port: dependency locks, verification metadata and launcher metadata pins must be regenerated against 26.2 (docs/PORT-26.2.md step 3).",
+    "Minecraft 26.2 port: no compile has been performed in the porting environment (no JDK/Gradle and no Maven or Mojang metadata access)."
   ]
 }
