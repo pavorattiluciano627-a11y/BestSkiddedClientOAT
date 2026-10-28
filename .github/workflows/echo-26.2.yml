@@ -47,7 +47,21 @@ jobs:
       # first 26.2 resolution would reject the new artifacts. Verification is
       # disabled for this build; regenerating the metadata is a separate task.
       - name: Compile
-        run: ./gradlew --no-daemon --console=plain --dependency-verification=off compileJava
+        run: |
+          set -o pipefail
+          # Loom pulls large artifacts (mercury, Minecraft, mappings) on a cold
+          # cache; a transient read timeout should not fail the whole build.
+          for attempt in 1 2 3; do
+            echo "::group::compileJava attempt $attempt"
+            if ./gradlew --no-daemon --console=plain --dependency-verification=off compileJava 2>&1 | tee /tmp/compile.log; then
+              echo "::endgroup::"
+              exit 0
+            fi
+            echo "::endgroup::"
+            echo "attempt $attempt failed"
+            sleep 20
+          done
+          exit 1
         env:
           GRADLE_OPTS: -Xmx3g
 
