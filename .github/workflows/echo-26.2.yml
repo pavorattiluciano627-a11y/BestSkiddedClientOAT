@@ -43,8 +43,6 @@ jobs:
 
       - name: Set up Rust
         uses: dtolnay/rust-toolchain@stable
-        with:
-          targets: x86_64-pc-windows-gnu
 
       - name: Cache cargo
         uses: actions/cache@v4
@@ -56,19 +54,46 @@ jobs:
             Echo/echo-clean-source-035/native/media/target
           key: cargo-${{ runner.os }}-${{ hashFiles('Echo/echo-clean-source-035/native/*/Cargo.lock') }}
 
+      # A gnu build links its CRT statically, which is safer to hand to System.load
+      # than depending on the VC redistributable. If the target's std/linker is not
+      # available, fall back to the host toolchain: the artifact is still a PE DLL.
       - name: Build naga_jni, media_session
         working-directory: Echo/echo-clean-source-035
+        shell: pwsh
         run: |
-          cargo build --release --manifest-path native/renderer/Cargo.toml --target x86_64-pc-windows-gnu
-          cargo build --release --manifest-path native/media/Cargo.toml    --target x86_64-pc-windows-gnu
+          $triple = 'x86_64-pc-windows-gnu'
+          $ok = $true
+          rustup target add $triple
+          if ($LASTEXITCODE -ne 0) { $ok = $false }
+          if ($ok) {
+            cargo build --release --manifest-path native/renderer/Cargo.toml --target $triple
+            if ($LASTEXITCODE -ne 0) { $ok = $false }
+          }
+          if ($ok) {
+            cargo build --release --manifest-path native/media/Cargo.toml --target $triple
+            if ($LASTEXITCODE -ne 0) { $ok = $false }
+          }
+          if (-not $ok) {
+            Write-Host "::warning::$triple unavailable; falling back to the host target"
+            $triple = 'release'
+            cargo build --release --manifest-path native/renderer/Cargo.toml
+            if ($LASTEXITCODE -ne 0) { exit 1 }
+            cargo build --release --manifest-path native/media/Cargo.toml
+            if ($LASTEXITCODE -ne 0) { exit 1 }
+            "TARGET_TRIPLE=$triple" | Out-File -FilePath $env:GITHUB_ENV -Append
+          } else {
+            "TARGET_TRIPLE=x86_64-pc-windows-gnu" | Out-File -FilePath $env:GITHUB_ENV -Append
+          }
+          rustup target list --installed
 
       - name: Collect natives
         working-directory: Echo/echo-clean-source-035
         run: |
           $out = "staged-natives/native/windows-x86_64"
           New-Item -ItemType Directory -Force -Path $out | Out-Null
-          Copy-Item native/renderer/target/x86_64-pc-windows-gnu/release/naga_jni.dll      $out
-          Copy-Item native/media/target/x86_64-pc-windows-gnu/release/media_session.dll    $out
+          $dir = if ($env:TARGET_TRIPLE -eq 'release') { 'release' } else { "$env:TARGET_TRIPLE/release" }
+          Copy-Item "native/renderer/target/$dir/naga_jni.dll"   $out
+          Copy-Item "native/media/target/$dir/media_session.dll" $out
           Get-ChildItem $out | Format-Table Name, Length
 
       - name: Upload natives
