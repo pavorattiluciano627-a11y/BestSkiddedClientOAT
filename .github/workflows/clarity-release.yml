@@ -1,0 +1,100 @@
+name: Clarity clean build
+
+# Rebuilds a shippable Clarity jar from the "Official stage 0.jar" drop and
+# publishes it as a release.
+#
+# Why a rebuild step instead of just uploading the jar: the shipped jar has
+# zeroed local-header sizes and trailing data descriptors, so it reads as a zip
+# bomb to every standard tool and *every* entry fails to extract. The packaging
+# also carries a paid-licence path under need/clarity/agent/ (WebSocket licence
+# handshake: licence key + HWID + UUID + PID). rebuild_jar.py ignores the
+# broken central directory, inflates each entry up to the next local header,
+# drops that package, and neutralises the default-on friends/presence relay.
+#
+# The gates below fail the build if any of that creeps back in.
+
+on:
+  push:
+    paths:
+      - 'Clarity/discord.gg-clarityclient-source-main/Official stage 0.jar'
+      - 'tools/clarity/rebuild_jar.py'
+      - '.github/workflows/clarity-release.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Rebuild jar (strip licence loader, disable presence relay)
+        run: |
+          mkdir -p out
+          python3 tools/clarity/rebuild_jar.py \
+            "Clarity/discord.gg-clarityclient-source-main/Official stage 0.jar" \
+            out/clarity-1.1.5b-clean.jar \
+            --strip-loader --neutralise-presence
+
+      # Hard gates. Any hit here means the artifact is not shippable.
+      - name: Verify no licence path, no telemetry, valid zip
+        run: |
+          python3 - <<'PY'
+          import zipfile, sys
+          z = zipfile.ZipFile("out/clarity-1.1.5b-clean.jar")
+          bad = z.testzip()
+          names = z.namelist()
+          classes = [n for n in names if n.endswith(".class")]
+          assets = [n for n in names if n.startswith("assets/")]
+          blob = b"".join(z.read(n) for n in classes)
+
+          checks = {
+              "zip integrity":          bad is None,
+              "agent package removed":  not any(n.startswith("need/clarity/agent/") for n in names),
+              "no licence handshake":   b"licenceKey" not in blob and b"ClarityConnect" not in blob,
+              "no HWID computation":    b"computeHwid" not in blob,
+              "no presence IP":         b"169.128.191.166" not in blob and b"169-128-191-166" not in blob,
+              "no vendor relay":        b"104-156-154-148" not in blob,
+              "mod entrypoint intact":  b"need/clarity/Clarity" in blob,
+              "fabric.mod.json present": "fabric.mod.json" in names,
+              "mixins config present":   "clarity.mixins.json" in names,
+          }
+          print(f"classes={len(classes)} assets={len(assets)}")
+          for k, ok in checks.items():
+              print(f"  {'PASS' if ok else 'FAIL'}  {k}")
+          sys.exit(0 if all(checks.values()) else 1)
+          PY
+
+      - name: Publish release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: clarity-1.1.5b
+          name: Clarity 1.1.5b (auth-free build)
+          body: |
+            Clarity 1.1.5b, de-licensed and de-telemetered.
+
+            **Removed**
+            - `need/clarity/agent/**` (149 classes) — paid-licence path: WebSocket
+              handshake sending licence key, HWID, UUID and PID, then a
+              signature-verified class manifest.
+            - The friends/presence relay. `Online Features` defaulted to `true`,
+              so a stock build dialled the vendor's relay on launch and broadcast
+              your status and current server. The host literals are zeroed; flip
+              `Online Features` off in Friend Settings for a fully local client.
+
+            **Kept, deliberately**
+            - Microsoft/Xbox OAuth alt manager (`alts/**`) — talks only to
+              `login.microsoftonline.com`, `auth.xboxlive.com`, `xsts.auth.xboxlive.com`
+              and `api.minecraftservices.com`, on your behalf.
+            - `localhost:7420` media IPC, `playerctl` / `nowplaying-cli` lookups,
+              and the OS file-manager reveal action.
+
+            **Requirements:** Fabric Loader >= 0.19.5, Minecraft ~26.1.2, Java 25+, Fabric API.
+            This jar is built for 26.1.2 and will not load on 26.2 (see the
+            compatibility notes in the repo).
+
+            No loader, no install wrapper — drop it in `mods/` and play.
+          files: out/clarity-1.1.5b-clean.jar
+          fail_on_unmatched_files: true
