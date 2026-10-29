@@ -52,6 +52,7 @@ jobs:
             ~/.cargo/git
             Echo/echo-clean-source-035/native/renderer/target
             Echo/echo-clean-source-035/native/media/target
+            Echo/echo-clean-source-035/native/lwjgl-compat/target
           key: cargo-${{ runner.os }}-${{ hashFiles('Echo/echo-clean-source-035/native/*/Cargo.lock') }}
 
       # A gnu build links its CRT statically, which is safer to hand to System.load
@@ -73,12 +74,18 @@ jobs:
             cargo build --release --manifest-path native/media/Cargo.toml --target $triple
             if ($LASTEXITCODE -ne 0) { $ok = $false }
           }
+          if ($ok) {
+            cargo build --release --manifest-path native/lwjgl-compat/Cargo.toml --target $triple
+            if ($LASTEXITCODE -ne 0) { $ok = $false }
+          }
           if (-not $ok) {
             Write-Host "::warning::$triple unavailable; falling back to the host target"
             $triple = 'release'
             cargo build --release --manifest-path native/renderer/Cargo.toml
             if ($LASTEXITCODE -ne 0) { exit 1 }
             cargo build --release --manifest-path native/media/Cargo.toml
+            if ($LASTEXITCODE -ne 0) { exit 1 }
+            cargo build --release --manifest-path native/lwjgl-compat/Cargo.toml
             if ($LASTEXITCODE -ne 0) { exit 1 }
             "TARGET_TRIPLE=$triple" | Out-File -FilePath $env:GITHUB_ENV -Append
           } else {
@@ -93,7 +100,8 @@ jobs:
           New-Item -ItemType Directory -Force -Path $out | Out-Null
           $dir = if ($env:TARGET_TRIPLE -eq 'release') { 'release' } else { "$env:TARGET_TRIPLE/release" }
           Copy-Item "native/renderer/target/$dir/naga_jni.dll"   $out
-          Copy-Item "native/media/target/$dir/media_session.dll" $out
+          Copy-Item "native/media/target/$dir/media_session.dll"        $out
+          Copy-Item "native/lwjgl-compat/target/$dir/echo_stb_legacy.dll" $out
           Get-ChildItem $out | Format-Table Name, Length
 
       - name: Upload natives
@@ -150,7 +158,7 @@ jobs:
       - name: Assert natives are packaged
         run: |
           set -eu
-          for lib in naga_jni.dll media_session.dll; do
+          for lib in naga_jni.dll media_session.dll echo_stb_legacy.dll; do
             test -f "src/main/resources/native/windows-x86_64/$lib" || {
               echo "::error::missing native $lib - the client would start without a renderer"
               exit 1
