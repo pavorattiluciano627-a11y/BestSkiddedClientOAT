@@ -36,15 +36,26 @@ public final class MinecraftItemAtlasSurface {
         this.projection = projection;
     }
 
+    /**
+     * 26.2 validates usage when a render pass is created, not at allocation: a
+     * colour attachment needs USAGE_RENDER_ATTACHMENT (8) *and* USAGE_COPY_DST (1),
+     * depth the same. Usage 12 omitted COPY_DST and threw
+     *   IllegalStateException: Color texture must have USAGE_COPY_DST
+     * on the first item draw, which took out every item-rendering module.
+     * Vanilla's RenderTarget allocates with 15.
+     */
+    private static final int COLOR_USAGE = 1 | 2 | 4 | 8;
+    private static final int DEPTH_USAGE = 1 | 2 | 8;
+
     /** Allocates the original named color/depth surfaces in their original order. */
     public void allocate() {
         allocate(RenderSystem.getDevice());
     }
 
     void allocate(GpuDevice device) {
-        color = device.createTexture("echo items atlas", 12, GpuFormat.RGBA8_UNORM, SIZE, SIZE, 1, 1);
+        color = device.createTexture("echo items atlas", COLOR_USAGE, GpuFormat.RGBA8_UNORM, SIZE, SIZE, 1, 1);
         colorView = device.createTextureView(color);
-        depth = device.createTexture("echo items atlas depth", 8, GpuFormat.D32_FLOAT, SIZE, SIZE, 1, 1);
+        depth = device.createTexture("echo items atlas depth", DEPTH_USAGE, GpuFormat.D32_FLOAT, SIZE, SIZE, 1, 1);
         depthView = device.createTextureView(depth);
         device.createCommandEncoder().clearColorAndDepthTextures(color,
                 new org.joml.Vector4f(0.0F, 0.0F, 0.0F, 0.0F), depth, 1.0);
