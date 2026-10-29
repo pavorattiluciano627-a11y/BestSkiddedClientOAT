@@ -66,7 +66,7 @@ public abstract class GuiRendererMixin implements GuiRenderControl {
     }
 
     @Inject(method = "render()V", at = @At(value = "INVOKE",
-            target = "Lnet/minecraft/client/gui/render/GuiRenderer;prepare()V"), require = 0)
+            target = "Lnet/minecraft/client/gui/render/GuiRenderer;prepare()V"), require = 1)
     private void prepareHudPass(CallbackInfo callback) {
         echo$pendingHud = false;
         echo$drawHudBeforeBlur = false;
@@ -110,19 +110,18 @@ public abstract class GuiRendererMixin implements GuiRenderControl {
     }
 
     @WrapOperation(method = "draw", at = @At(value = "INVOKE",
-            target = "Lnet/minecraft/client/gui/render/GuiRenderer;executeDrawRange(Ljava/util/function/Supplier;Lcom/mojang/blaze3d/pipeline/RenderTarget;Lcom/mojang/blaze3d/buffers/GpuBufferSlice;Lcom/mojang/blaze3d/buffers/GpuBufferSlice;Lcom/mojang/blaze3d/buffers/GpuBuffer;Lcom/mojang/blaze3d/vertex/VertexFormat$IndexType;II)V", ordinal = 1), require = 0)
+            target = "Lnet/minecraft/client/gui/render/GuiRenderer;executeDrawRange(Ljava/util/function/Supplier;Lcom/mojang/blaze3d/pipeline/RenderTarget;Lcom/mojang/blaze3d/buffers/GpuBufferSlice;II)V", ordinal = 1), require = 0)
     private void mirrorGuiDraw(GuiRenderer renderer, Supplier<String> label, RenderTarget target,
-            GpuBufferSlice dynamicTransforms, GpuBufferSlice fog, GpuBuffer indices,
-            IndexType indexType, int start, int end, Operation<Void> original) {
-        original.call(renderer, label, target, dynamicTransforms, fog, indices, indexType, start, end);
+            GpuBufferSlice dynamicTransforms, int start, int end, Operation<Void> original) {
+        original.call(renderer, label, target, dynamicTransforms, start, end);
         if (echo$mirrorDraws) {
             RenderTarget overlay = Echo.externalRenderer.framebufferBlur().framebuffer();
-            original.call(renderer, label, overlay, dynamicTransforms, fog, indices, indexType, start, end);
+            original.call(renderer, label, overlay, dynamicTransforms, start, end);
         }
     }
 
     @Inject(method = "render()V", at = @At(value = "INVOKE",
-            target = "Lnet/minecraft/client/gui/render/GuiRenderer;draw(Lcom/mojang/blaze3d/buffers/GpuBufferSlice;)V", shift = At.Shift.AFTER), require = 0)
+            target = "Lnet/minecraft/client/gui/render/GuiRenderer;draw()V", shift = At.Shift.AFTER), require = 1)
     private void finishPendingHud(CallbackInfo callback) {
         if (echo$pendingHud) {
             echo$pendingHud = false;

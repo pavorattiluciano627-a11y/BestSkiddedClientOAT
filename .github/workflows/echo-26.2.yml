@@ -146,6 +146,11 @@ jobs:
           python3 tools/port/verify_mixins.py tools/port/mc262-mixin-index.json.gz
           # a target that changed shape invalidates the handler, not the selector
           python3 tools/port/verify_handler_signatures.py tools/port/mc262-mixin-index.json.gz
+          # Prove every @At INVOKE/FIELD still exists inside the method it hooks.
+          # A stale one is not a crash: it silently draws nothing (that is how the
+          # GUI shipped invisible once), so this runs before packaging.
+          python3 tools/port/fetch_client_jar.py --out /tmp/client-26.2.jar
+          python3 tools/port/verify_at_targets.py /tmp/client-26.2.jar
 
       # Drop the built natives where the runtime looks for them. fastJar copies
       # src/main/resources verbatim, so this is all the staging the jar needs.

@@ -235,8 +235,13 @@ def main() -> int:
                 checked += 1
                 for needle, label in points:
                     found = False
+                    raw_owner = needle.split(".")[0].lstrip("// class ")
                     for target in targets:
                         for cls in dis.supers(target):
+                            # javap prints a same-class call without its owner
+                            # (`Method prepare:()V`), so accept that spelling too.
+                            local = (needle.split(".", 1)[1]
+                                     if raw_owner == cls else None)
                             for key, code in dis.methods(cls).items():
                                 tname, tdesc = key.split(" ", 1)
                                 # the call may sit in a synthetic lambda of the method
@@ -244,7 +249,7 @@ def main() -> int:
                                     continue
                                 if desc and tdesc != desc and tname == name:
                                     continue
-                                if needle in code:
+                                if needle in code or (local and local in code):
                                     found = True
                                     break
                             if found:
