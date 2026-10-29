@@ -180,6 +180,15 @@ public final class ClientBootstrap {
             Echo.handlerManager.initialize();
             Echo echo = new Echo();
             echo.onInitialize();
+            Echo.LOGGER.info("[echo] bootstrap INITIALIZED: features={} registered={} "
+                    + "skipped={} handlers={} screenManager={}",
+                    allocated.size(), sorted.size(), skipped.size(),
+                    Echo.handlerManager != null ? Echo.handlerManager.size() : -1,
+                    Echo.screenManager != null);
+            for (SkippedFeature miss : skipped) {
+                Echo.LOGGER.error("[echo] feature not allocated: {} -> {}",
+                        miss.name(), miss.cause() == null ? "?" : miss.cause().toString());
+            }
 
             result = new Result(echo, List.copyOf(allocated), List.copyOf(sorted),
                     Collections.unmodifiableMap(categories), List.copyOf(skipped));

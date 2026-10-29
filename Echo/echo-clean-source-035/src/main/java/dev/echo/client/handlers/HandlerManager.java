@@ -8,6 +8,11 @@ public class HandlerManager {
     private final ArrayList<ClientHandler> handlers = new ArrayList<>();
     private final RotationManager rotationManager = new RotationManager();
 
+    /** Number of initialized handlers; 0 means {@link #initialize()} never ran. */
+    public int size() {
+        return handlers.size();
+    }
+
     /** Returns the rotation manager created with this handler manager. */
     public RotationManager getRotationManager() {
         return rotationManager;

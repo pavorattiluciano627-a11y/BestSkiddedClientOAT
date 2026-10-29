@@ -61,6 +61,8 @@ public class Echo implements ModInitializer, SimpleSynchronousResourceReloadList
     public static ScriptEngine scriptEngine;
     public static ScriptManager scriptManager;
     public static final Logger LOGGER;
+    /** Non-null when the renderer could not be built; see the reload listener. */
+    public static volatile Throwable rendererFailure;
 
     static {
         ID = "echo";
@@ -101,18 +103,38 @@ public class Echo implements ModInitializer, SimpleSynchronousResourceReloadList
     /** Initializes renderer consumers and then completes the deferred autosave load. */
     @Override
     public void onResourceManagerReload(ResourceManager resources) {
+        LOGGER.info("[echo] reload listener fired: uiRenderer={} renderDevice={} "
+                + "featureManager={} featureConfig={}",
+                uiRenderer != null, renderDevice != null,
+                featureManager != null, featureConfig != null);
         initializeReferencedClass(UiRenderer.class);
         if (uiRenderer != null) {
             return;
         }
         initializeReferencedClass(RenderDevice.class);
         if (renderDevice == null) {
-            renderDevice = createDefaultRenderDevice();
-            uiRenderer = new UiRenderer(renderDevice);
-            worldRenderer = new WorldRenderContext(renderDevice);
-            DashboardController.INSTANCE.initialize(renderDevice);
-            HudRenderer.INSTANCE.initialize(renderDevice);
-            EventBus.register(HudRenderer.INSTANCE);
+            // Building the renderer loads the staged natives (naga_jni,
+            // echo_stb_legacy). If packaging dropped them, an exception here used
+            // to escape the reload listener, which makes Minecraft throw away
+            // every selected resource pack and leaves the client with no renderer
+            // and no explanation. Degrade loudly instead of poisoning the reload.
+            try {
+                renderDevice = createDefaultRenderDevice();
+                uiRenderer = new UiRenderer(renderDevice);
+                worldRenderer = new WorldRenderContext(renderDevice);
+                DashboardController.INSTANCE.initialize(renderDevice);
+                HudRenderer.INSTANCE.initialize(renderDevice);
+                EventBus.register(HudRenderer.INSTANCE);
+            } catch (Throwable failure) {
+                renderDevice = null;
+                uiRenderer = null;
+                worldRenderer = null;
+                rendererFailure = failure;
+                LOGGER.error("[echo] renderer initialization FAILED - the ClickGUI and HUD "
+                        + "cannot start. This build is missing its native libraries "
+                        + "(native/windows-x86_64/naga_jni.dll, echo_stb_legacy.dll).",
+                        failure);
+            }
         }
         initializeReferencedClass(ParticleManager.class);
         if (particleManager == null) {
@@ -129,6 +151,9 @@ public class Echo implements ModInitializer, SimpleSynchronousResourceReloadList
         particleManager.initialize();
         featureConfig.load("_autosave");
         featureConfig.loading = false;
+        LOGGER.info("[echo] client runtime ready: uiRenderer={} worldRenderer={} handlers={}",
+                uiRenderer != null, worldRenderer != null,
+                handlerManager != null ? handlerManager.size() : -1);
         SystemInformation.send();
     }
 

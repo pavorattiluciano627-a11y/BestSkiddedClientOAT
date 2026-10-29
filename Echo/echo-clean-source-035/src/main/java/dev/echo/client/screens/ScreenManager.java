@@ -26,6 +26,14 @@ public class ScreenManager implements MinecraftAccess {
     /** Opens the stored dashboard when the client and its renderer are available. */
     public void open() {
         if (Echo.eventsDisabled || Echo.uiRenderer == null) {
+            Echo.LOGGER.warn("[echo] ClickGUI open refused: eventsDisabled={} uiRenderer={} "
+                    + "(the renderer is built by the resource-reload listener; if this "
+                    + "repeats, that listener never ran)",
+                    Echo.eventsDisabled, Echo.uiRenderer != null);
+            if (Echo.rendererFailure != null) {
+                Echo.LOGGER.error("[echo] renderer is unavailable because startup failed earlier: {}",
+                        Echo.rendererFailure.toString());
+            }
             return;
         }
         Minecraft.getInstance().gui.setScreen(dashboardScreen);

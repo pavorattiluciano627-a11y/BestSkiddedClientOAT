@@ -275,6 +275,9 @@ public final class ProfileStore {
     }
 
     private JsonObject readStore() throws IOException {
+        // Materialize config/echo on the first load, not only on the first save:
+        // a player who never opens the GUI still expects the directory to exist.
+        Files.createDirectories(this.directory);
         Path file = this.directory.resolve("profiles.json");
         if (!Files.exists(file)) {
             JsonObject store = new JsonObject();
