@@ -178,8 +178,18 @@ public final class ClientBootstrap {
             Echo.blockEspManager = new BlockEspManager();
             Echo.spotifyManager = new SpotifyManager();
             Echo.handlerManager.initialize();
+            dev.echo.client.diag.StartupDiagnostics.install();
             Echo echo = new Echo();
             echo.onInitialize();
+            Echo.LOGGER.info("[echo] bootstrap INITIALIZED: features={} skipped={} handlers={} "
+                    + "uiRenderer={} screenManager={}",
+                    allocated.size(), skipped.size(),
+                    Echo.handlerManager.size(), Echo.uiRenderer != null,
+                    Echo.screenManager != null);
+            for (SkippedFeature miss : skipped) {
+                Echo.LOGGER.error("[echo] feature not allocated: {} -> {}",
+                        miss.name(), miss.cause());
+            }
             Echo.LOGGER.info("[echo] bootstrap INITIALIZED: features={} registered={} "
                     + "skipped={} handlers={} screenManager={}",
                     allocated.size(), sorted.size(), skipped.size(),

@@ -135,6 +135,7 @@ public final class EventBus {
         if (Echo.eventsDisabled) {
             return false;
         }
+        dev.echo.client.diag.StartupDiagnostics.countDispatch();
         MethodHandle[] methods = dispatchCache.get(event.getClass());
         if (methods != null) {
             for (MethodHandle method : methods) {
